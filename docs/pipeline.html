@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceStudio dubbing pipeline — as implemented</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font: 10.5pt/1.5 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1a; margin: 0;
+  }
+  h1 { font-size: 19pt; margin: 0 0 2mm; letter-spacing: -0.01em; }
+  .sub { color: #5b5b5b; font-size: 9.5pt; margin: 0 0 7mm; }
+  h2 {
+    font-size: 12.5pt; margin: 8mm 0 2.5mm; padding-bottom: 1.2mm;
+    border-bottom: 1.4pt solid #1a1a1a; break-after: avoid;
+  }
+  h3 { font-size: 10.5pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin: 0 0 1.4mm; }
+  code {
+    font-family: Consolas, "SF Mono", monospace; font-size: 9pt;
+    background: #f2f2f2; padding: 0.3mm 1mm; border-radius: 1mm;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 0 0 4mm; font-size: 9.2pt; }
+  th, td { border: 0.5pt solid #c8c8c8; padding: 1.5mm 2mm; text-align: left; }
+  th { background: #ececec; font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .stage {
+    break-inside: avoid; margin: 0 0 3.5mm; padding-left: 8mm; position: relative;
+  }
+  .stage .num {
+    position: absolute; left: 0; top: 0.2mm; width: 5.6mm; height: 5.6mm;
+    background: #1a1a1a; color: #fff; border-radius: 50%;
+    font-size: 8.5pt; font-weight: 600; text-align: center; line-height: 5.6mm;
+  }
+  .stage h3 { margin: 0 0 1mm; }
+  .stage .tag {
+    font-size: 8pt; font-weight: 600; color: #7a3d00; background: #ffeccc;
+    border: 0.4pt solid #e8b567; border-radius: 1mm; padding: 0.2mm 1.4mm;
+    margin-left: 1.5mm; vertical-align: 1.2pt; letter-spacing: 0.02em;
+  }
+  .note {
+    border-left: 2pt solid #999; padding: 1.5mm 0 1.5mm 3mm; margin: 0 0 3.5mm;
+    background: #f8f8f8; break-inside: avoid;
+  }
+  .note strong { display: block; margin-bottom: 0.8mm; }
+  .foot { margin-top: 9mm; padding-top: 2mm; border-top: 0.5pt solid #c8c8c8;
+          color: #6a6a6a; font-size: 8.5pt; }
+  .best { background: #eef6ee; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>VoiceStudio dubbing pipeline</h1>
+<p class="sub">As implemented and running &mdash; verified against the container, 17 August 2026.
+Hindi &rarr; Telugu, ~9 minute videos, wall-to-wall speech.
+Sections marked <span class="tag">OURS</span> are work added on top of the stock application.</p>
+
+<h2>Where it runs</h2>
+<p>VoiceStudio 0.4.2 in Docker on an AWS T4 box, publishing port 3900. Its Python lives inside the
+container at <code>/app/backend</code> and is patched in place. A separate <code>gemini_proxy.py</code>
+on the host, port 8900, presents an OpenAI-compatible <code>/v1</code> API over Google Vertex; both the
+ASR engine and the LLM engine point at it.</p>
+
+<h2>The stages, in order</h2>
+
+<div class="stage"><span class="num">1</span>
+<h3>Extract and separate</h3>
+<p>Audio is taken off the video and Demucs splits it into <code>vocals.wav</code> and
+<code>no_vocals.wav</code>. The background stem survives into the final mix &mdash; that is how the
+music is kept.</p></div>
+
+<div class="stage"><span class="num">2</span>
+<h3>Transcribe</h3>
+<p><code>asr_backend: openai-compat-asr</code> &rarr; the proxy &rarr; <strong>gemini-3.7-flash</strong>.
+It runs on the <em>vocals</em> stem rather than the mixed audio, in timed chunks streamed to the UI over
+SSE. Word-level times are kept on the global timeline so the next stage can re-split. Because this is an
+LLM doing transcription, its segmentation and timestamps are non-deterministic between runs.
+<code>clean_up_segments</code> then runs.</p></div>
+
+<div class="stage"><span class="num">3</span>
+<h3>Diarize</h3>
+<p>pyannote assigns speaker turns, unless the ASR backend returned turns inline.
+<code>assign_speakers_from_diarization</code> labels each segment and
+<code>resplit_segments_by_diarization</code> cuts any segment straddling a speaker change.</p></div>
+
+<div class="stage"><span class="num">4</span>
+<h3>Retime <span class="tag">OURS</span></h3>
+<p><code>services/chirp_wire.py</code>, hooked into <code>dub_core.py</code> at the SSE endpoint the
+UI's button hits and at the legacy CLI endpoint. It runs <em>after</em> diarization and <em>before</em>
+clone extraction, so the cast, the per-segment reference clips and the voice bindings are all built on
+the timeline that ships. Inside it, in this order:</p>
+<ul>
+  <li><strong>Chirp 2</strong> returns words with times, in 55&nbsp;s chunks fetched in parallel, cached
+      per job and keyed on the audio's size and mtime.</li>
+  <li><strong>Partition search.</strong> A line is a contiguous run of words, so choosing line
+      boundaries is choosing a partition. Four (pause, max-length, snap) starting points, each one
+      repaired before a winner is picked.</li>
+  <li><strong>Partition repair.</strong> Any line forced alignment cannot place gets three candidate
+      moves &mdash; merge left, merge right, split at an internal pause &mdash; worst line first, and a
+      move is taken only if it strictly improves the weaker side.</li>
+  <li><strong>Re-recognition of weak spans.</strong> A line that will not align has bad word
+      <em>times</em>, not a bad window, so that span alone is re-asked. Chirp's times drift inside a long
+      chunk; a short call has no drift to inherit.</li>
+  <li><strong>MMS re-anchoring.</strong> Each block's span is replaced by where forced alignment
+      actually finds its words.</li>
+  <li><strong>Repetition collapse.</strong> Chirp once emitted one word 90 times over 8&nbsp;s of
+      shouting, and handing that to the TTS is what made the &ldquo;aaaahhh&rdquo; noises. A line is
+      dropped only if its text is degenerate <em>and</em> its audio fails the speech test.
+      <code>DROP_NONDIALOGUE</code> is <strong>off</strong>: a shouting character is still that
+      character.</li>
+  <li><strong>Gap recovery.</strong> Every stretch of speech with no line over it is re-recognised on
+      its own; where Chirp returns nothing, the transcriber's words are used with forced-aligned
+      positions, gated on their own alignment confidence.</li>
+  <li><strong>Sparse-line splitting.</strong> A line averaging over 1.2&nbsp;s per word is not one line;
+      a line under 0.45&nbsp;s cannot be spoken.</li>
+  <li><strong>Speaker split.</strong> Blocks are chosen on acoustic evidence, then cut at speaker
+      changes. Blocks decide timing, parts decide voices &mdash; a line carries one
+      <code>speaker_id</code>, so a line holding three people would get one cloned voice for all of
+      it.</li>
+  <li><strong>Resolve and breathe.</strong> Overlaps are fixed by trimming the <em>earlier</em> line's
+      end, never by moving a later start, because an early start is the expensive error.
+      <code>breathe</code> then extends ends toward the next onset, capped at 0.30&nbsp;s.</li>
+  <li><strong>Onset snap.</strong> Starts move onto the voiced run they sit in, capped at 0.60&nbsp;s,
+      never past the previous line's end.</li>
+</ul>
+<p>Four gates can reject the whole result and return the transcriber's timing untouched: too few or too
+many lines, under 60% of the original character count, under 50% of the speaking time, or an unplayable
+timeline.</p></div>
+
+<div class="stage"><span class="num">5</span>
+<h3>Clone voices <span class="tag">OURS</span></h3>
+<p>Per speaker, reference clips are cut from spans where that character is actually <em>talking</em>,
+clear of neighbouring speakers. Four candidate assemblies are built (clean and properly-spoken &rarr;
+clean &rarr; above-gate &rarr; best-available) and whichever measures best <em>as an assembled
+reference</em> wins &mdash; scoring individual slices backfired, because three short &ldquo;good&rdquo;
+clips concatenated read as non-speech at the joins. The speech gate is a hard reject, not a
+demotion.</p></div>
+
+<div class="stage"><span class="num">6</span>
+<h3>Translate</h3>
+<p>Two branches, chosen by the provider picked in the UI. The <strong>LLM branch</strong> batches 20
+lines per call across a 12-thread pool, with <code>gemini-3.1-pro-preview</code> for the direct pass and
+<code>gemini-3.6-flash</code> for the reflect pass; <code>length_broker.py</code> sets and enforces a
+per-line character budget calibrated against the transcript it is given. The <strong>Argos branch</strong>
+is offline and <em>skips the broker entirely</em>.</p></div>
+
+<div class="stage"><span class="num">7</span>
+<h3>Render</h3>
+<p>Per-line TTS in the cloned voice, with <code>voice_binding</code> guaranteeing each segment maps to
+the right one. Under <strong>strict slot</strong> the engine is asked for the whole slot as its target;
+underruns are filled by slowing the audio toward its slot with a floor at 0.85&times;; trailing silence
+is trimmed. Then the clean-audio work &mdash; lead-in attenuation, sibilant-burst removal, the 32-step
+floor &mdash; which is off limits and verified at 5 markers after every change.</p></div>
+
+<div class="stage"><span class="num">8</span>
+<h3>Mux</h3>
+<p>Dubbed lines over <code>no_vocals.wav</code>, total duration unchanged.</p></div>
+
+<h2>Settings in force</h2>
+<table>
+  <tr><th style="width:26%">Area</th><th>Setting</th></tr>
+  <tr><td>ASR</td><td><code>openai-compat-asr</code> &rarr; proxy &rarr; gemini-3.7-flash</td></tr>
+  <tr><td>Timing</td><td>Chirp 2, <code>MODE=native</code>; optimiser, repair and re-ASR all on</td></tr>
+  <tr><td>Added 17 Aug</td><td><code>REANCHOR</code> on; <code>SNAP_ONSET</code> on at 0.60&nbsp;s;
+      precise gap recovery; fills gated at 0.25</td></tr>
+  <tr><td>Content</td><td><code>SANITISE</code> on; <code>DROP_NONDIALOGUE</code> off;
+      <code>GAP_MIN_S</code> 0.25; <code>MIN_LINE_S</code> 0.45</td></tr>
+  <tr><td>Speakers</td><td><code>SPEAKER_SPLIT</code> on</td></tr>
+  <tr><td>Breathe</td><td>capped at 0.30&nbsp;s</td></tr>
+</table>
+
+<h2>Two switches that change what you get</h2>
+<div class="note"><strong>Fit strategy</strong>
+Use strict slot. Smart Fit re-times the <em>video</em> in a 162-chunk ffmpeg render, which hides timing
+errors by warping the picture instead of fixing them.</div>
+<div class="note"><strong>Translation provider</strong>
+Argos is offline and free but bypasses the length broker. The LLM branch is the one the length control
+was built for.</div>
+
+<h2>Measured, 17 August</h2>
+<p>Through the live hook on two videos, scored by forced alignment independent of the transcriber.
+Coverage is the share of detected speech with a line over it; ITU and EBU are onset accuracy against
+ITU-R BT.1359-1 and EBU R37.</p>
+<table>
+  <tr>
+    <th>Configuration</th><th class="n">Lines</th><th class="n">Well</th><th class="n">Badly</th>
+    <th class="n">Cover</th><th class="n">Median onset</th><th class="n">ITU</th><th class="n">EBU</th>
+    <th class="n">Uncovered</th>
+  </tr>
+  <tr><td>Hindi, before</td><td class="n">97</td><td class="n">68.0%</td><td class="n">17.5%</td>
+      <td class="n">91.3%</td><td class="n">&minus;800 ms</td><td class="n">19.6%</td>
+      <td class="n">16.5%</td><td class="n">47.3 s</td></tr>
+  <tr class="best"><td>Hindi, now</td><td class="n">101</td><td class="n">67.3%</td><td class="n">18.8%</td>
+      <td class="n">93.9%</td><td class="n">&minus;660 ms</td><td class="n">20.8%</td>
+      <td class="n">17.8%</td><td class="n">33.5 s</td></tr>
+  <tr><td>Telugu, before</td><td class="n">61</td><td class="n">88.5%</td><td class="n">3.3%</td>
+      <td class="n">92.5%</td><td class="n">&minus;140 ms</td><td class="n">34.4%</td>
+      <td class="n">21.3%</td><td class="n">33.2 s</td></tr>
+  <tr class="best"><td>Telugu, now</td><td class="n">65</td><td class="n">84.6%</td><td class="n">7.7%</td>
+      <td class="n">95.7%</td><td class="n">&minus;140 ms</td><td class="n">38.5%</td>
+      <td class="n">29.2%</td><td class="n">19.1 s</td></tr>
+</table>
+<p>Read this as a coverage and sync change, not a placement change. Missing dialogue fell 29% on Hindi
+and 42% on Telugu. The two metrics pull against each other for a structural reason: the placement metric
+rewards long lines, and every second of recovered dialogue arrives as a short one.</p>
+
+<h2>What is <em>not</em> in the pipeline</h2>
+<ul>
+  <li><strong>No lip sync.</strong> ElevenLabs does not do it either; &ldquo;100% match&rdquo; in their
+      marketing means phrase-level isochrony.</li>
+  <li><strong>No video intelligence.</strong> The speaker-change information it would give us already
+      comes from pyannote, which runs on the audio and is more precise about turn boundaries.</li>
+  <li><strong>No Chirp 3.</strong> It is behind an allowlist and refuses
+      <code>word_level_confidence</code>, which is the only feature we want from it.</li>
+  <li><strong><code>MODE=lines</code> is built but off.</strong> Transcriber's words, forced-aligned
+      times, no Chirp at all. It lost 7 points of placement for a whisker of coverage at twice the wall
+      clock.</li>
+</ul>
+
+<p class="foot">Revert levers: <code>MODE=wire bash _revert_today.sh</code> undoes the 17 August timing
+work and keeps the hook; <code>MODE=coverage</code> undoes only the gap work; <code>MODE=all</code>
+covers timing, cloning, render and proxy. Nothing in any lever deletes a job, an audio file or a
+transcript.</p>
+
+</body>
+</html>

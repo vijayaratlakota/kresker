@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Backend Stack, Explained Simply</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 9.6pt; line-height: 1.5; color: #14171a; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 2mm 0; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm 0; padding-bottom: 1.2mm;
+       border-bottom: 1.6pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 6mm 0 1.5mm 0; page-break-after: avoid; color: #0b3d6b; }
+  h4 { font-size: 9.8pt; margin: 3.5mm 0 1mm 0; page-break-after: avoid; }
+  p  { margin: 0 0 2.2mm 0; }
+  ul, ol { margin: 0 0 2.2mm 0; padding-left: 5mm; }
+  li { margin: 0 0 1.2mm 0; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt;
+              background: #f2f4f6; padding: 0.3mm 1mm; border-radius: 1mm; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.1pt;
+        background: #f6f8fa; border: 0.4pt solid #d5dbe0; border-left: 2.4pt solid #6b7d8f;
+        padding: 2mm 2.5mm; margin: 1.5mm 0 2.5mm 0; white-space: pre-wrap;
+        overflow-wrap: break-word; page-break-inside: avoid; line-height: 1.42; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm 0; font-size: 8.5pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.3mm 1.6mm;
+       font-weight: 600; font-size: 8.2pt; }
+  td { border-bottom: 0.4pt solid #dfe4e8; padding: 1.3mm 1.6mm; vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.m, th.m { font-family: Consolas, monospace; font-size: 8pt; }
+  .box { border: 0.5pt solid #c8ced4; border-left: 3pt solid #14171a;
+         background: #f7f9fa; padding: 2.5mm 3mm; margin: 2.5mm 0; page-break-inside: avoid; }
+  .warn { border-left-color: #a8321a; background: #fdf4f2; }
+  .good { border-left-color: #0a7a3d; background: #f2faf5; }
+  .note { border-left-color: #1a5fa8; background: #f2f7fd; }
+  .plain { border-left-color: #7a5a1a; background: #fdfaf2; }
+  .cover { text-align: left; padding-top: 32mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #4a5560; margin-top: 1mm; }
+  .cover .meta { margin-top: 15mm; font-family: Consolas, monospace; font-size: 9pt;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 4mm; }
+  .newpage { page-break-before: always; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; font-size: 9.4pt; }
+  .toc td.n { width: 9mm; font-family: Consolas, monospace; color: #4a5560; }
+  .small { font-size: 8.2pt; color: #4a5560; }
+  .card { border: 0.5pt solid #c8ced4; border-radius: 1.5mm; padding: 3mm 3.5mm;
+          margin: 3mm 0; page-break-inside: avoid; }
+  .card h3 { margin-top: 0; }
+  .card .role { font-size: 8.4pt; color: #4a5560; margin: 0 0 2mm 0; font-style: italic; }
+  .kv { font-size: 8.6pt; }
+  .kv b { display: inline-block; min-width: 34mm; color: #0b3d6b; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>The Backend Stack, Explained Simply</h1>
+  <div class="sub">What each piece of technology is, why we picked it, and how they all
+  work together to turn an uploaded video into a dubbed one</div>
+
+  <div class="box plain" style="margin-top:10mm">
+    <strong>Who this is for.</strong> You, reading it without a computing background. Every
+    technical word is explained the first time it appears, there is a glossary at the back, and
+    nothing assumes you have written code before. Where I make a claim about cost or speed I say
+    where the number comes from, and where I am unsure I say so.
+  </div>
+
+  <div class="box good">
+    <strong>The one thing to hold on to.</strong> Your dubbing engine is finished and working.
+    Everything in this document sits <em>around</em> it, like a reception desk sits around a
+    workshop. The reception desk takes the order, handles the money, and hands the work to the
+    workshop. It never walks in and rearranges the tools.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written</strong>&nbsp;&nbsp;2026-08-22</div>
+    <div><strong>Companion to</strong>&nbsp;&nbsp;Website_Backend_Plan.pdf (the detailed plan)</div>
+    <div><strong>And to</strong>&nbsp;&nbsp;VoiceStudio_Pipeline_Handbook.pdf (the engine we must not disturb)</div>
+  </div>
+</div>
+
+<h2>Contents</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>The whole thing in one page</td></tr>
+<tr><td class="n">2</td><td>The pieces, one at a time</td></tr>
+<tr><td class="n">3</td><td>How they work together: following one video</td></tr>
+<tr><td class="n">4</td><td>Seeing your own data: the database and the folders</td></tr>
+<tr><td class="n">5</td><td>How each piece is protected</td></tr>
+<tr><td class="n">6</td><td>What each piece costs</td></tr>
+<tr><td class="n">7</td><td>A simpler version, if you want to start smaller</td></tr>
+<tr><td class="n">8</td><td>Glossary: words you will hear</td></tr>
+</table>
+
+<h2 class="newpage">1. The whole thing in one page</h2>
+
+<h3>1.1 An everyday comparison</h3>
+<p>Think of a photo printing shop.</p>
+<table>
+<tr><th>In the shop</th><th>In our system</th><th>The technology</th></tr>
+<tr><td>The front door and the security guard</td><td>Checks every visitor before they reach the counter</td><td><strong>CloudFront + WAF</strong></td></tr>
+<tr><td>The person at the counter</td><td>Takes orders, checks your membership card, tells you when it is ready</td><td><strong>FastAPI</strong> (our API)</td></tr>
+<tr><td>The register of customers and orders</td><td>Who signed up, who paid, which orders exist, what state each is in</td><td><strong>PostgreSQL on RDS</strong></td></tr>
+<tr><td>The shelf of envelopes at the back</td><td>Where the actual photos live &mdash; too big to keep at the counter</td><td><strong>S3</strong></td></tr>
+<tr><td>The printing machine in the back room</td><td>Does the real work. Expensive to run, so it is only switched on when there is a job</td><td><strong>Your GPU box</strong> (already built)</td></tr>
+<tr><td>The staff member who carries work to the machine and back</td><td>Takes one order at a time to the machine, waits, brings the result</td><td><strong>The worker</strong></td></tr>
+<tr><td>The caretaker who switches the machine off at night</td><td>Checks every minute; if nothing is waiting, turns the machine off</td><td><strong>EventBridge + Lambda</strong></td></tr>
+<tr><td>The locked safe with the keys</td><td>Holds every password and key. Staff borrow them; they are never left on the counter</td><td><strong>Secrets Manager</strong></td></tr>
+<tr><td>The shop's floor plan and fittings list</td><td>Written down, so an identical shop can be built elsewhere</td><td><strong>Terraform</strong></td></tr>
+</table>
+<p>The customer only ever talks to the counter. They never walk into the back room, never touch
+the machine, and never see the safe. That is the entire security design in one sentence.</p>
+
+<h3>1.2 The picture</h3>
+<pre>
+   A visitor's browser
+          |
+          |  HTTPS  (encrypted)
+          v
+   +--------------------------+
+   |  CloudFront + WAF        |   the front door and the guard
+   +--------------------------+
+          |
+          v
+   +--------------------------+        +---------------------------+
+   |  FastAPI  (the API)      |<------>|  PostgreSQL  (the ledger) |
+   |  running on ECS Fargate  |        +---------------------------+
+   +--------------------------+
+          |            \
+          |             \  gives out short-lived links
+          |              v
+          |        +---------------------------+
+          |        |  S3  (the shelf)          |  videos in and out
+          |        +---------------------------+
+          v
+   +--------------------------+
+   |  Worker (same code,      |   takes one job at a time
+   |  different job)          |
+   +--------------------------+
+          |
+          |  private network only, never the internet
+          v
+   +--------------------------+
+   |  YOUR GPU BOX            |   VoiceStudio, unchanged
+   |  started and stopped     |
+   |  automatically           |
+   +--------------------------+
+          ^
+          |  every minute: "is anyone using this?"
+   +--------------------------+
+   |  EventBridge + Lambda    |   the caretaker
+   +--------------------------+
+</pre>
+
+<h2 class="newpage">2. The pieces, one at a time</h2>
+
+<div class="card">
+<h3>Python and FastAPI &mdash; the counter staff</h3>
+<p class="role">The program that answers every request from the website.</p>
+<p><strong>What an API is.</strong> When you click "Upload" on a website, the page does not do the
+work itself. It sends a message to a program on a server: <em>"this user wants to upload a
+video."</em> That program is the API. It decides whether you are allowed, does the work, and sends
+an answer back. Every app on your phone works this way.</p>
+<p><strong>What FastAPI is.</strong> A toolkit for writing that program in the Python language. It
+handles the boring, error-prone parts &mdash; reading the incoming message, checking the fields are
+the right type, sending a clean reply.</p>
+<p><strong>Why we chose it.</strong> Three reasons, in order of importance:</p>
+<ul>
+<li><strong>Your dubbing pipeline is already written in Python.</strong> One language across the
+whole project means one set of skills to hire for and one set of habits.</li>
+<li><strong>It checks incoming data automatically.</strong> If someone sends
+<code>video_length: "banana"</code>, FastAPI rejects it before our code sees it. That is a security
+feature, not a convenience &mdash; a large share of real break-ins start with unexpected input.</li>
+<li>It is ordinary and widely used, so problems have known answers.</li>
+</ul>
+<p class="kv"><b>What it does here:</b> signup, login, issuing upload links, creating jobs, reporting progress, handling payments.</p>
+<p class="kv"><b>What it never does:</b> dubbing. It hands work to the queue and answers immediately, because a web request cannot sit there for 20 minutes.</p>
+</div>
+
+<div class="card">
+<h3>PostgreSQL on Amazon RDS &mdash; the register</h3>
+<p class="role">The organised memory of the business.</p>
+<p><strong>What a database is.</strong> A set of tables, each like a spreadsheet with fixed
+columns. One table for people, one for orders, one for payments. Unlike a spreadsheet it can be
+read and written by many programs at once without going wrong.</p>
+<p><strong>What "on RDS" means.</strong> RDS is Amazon running the database for you: backups,
+security patches, and restoring to any point in the last few days if something goes badly wrong.
+Without it, somebody has to remember to do all of that.</p>
+<p><strong>Why PostgreSQL and not MongoDB.</strong> One concrete reason: <strong>money has to add
+up.</strong> A customer's remaining minutes is a sum of what they bought minus what they used, and
+two things must never happen at once in a way that produces the wrong total. Postgres is built for
+exactly this and guarantees it. Since subscriptions, payments and quota are the parts where a bug
+costs you money or a refund argument, that guarantee is worth more than familiarity.</p>
+<p><strong>The second reason: moving house.</strong> You asked that everything be movable to
+another AWS account. Postgres can be copied out and copied in with two standard commands, taking
+every user and password with it.</p>
+<p class="kv"><b>What it stores:</b> users, sessions, jobs, the queue, plans, subscriptions, payments, minutes used, audit trail.</p>
+<p class="kv"><b>What it never stores:</b> the videos themselves. They are far too big; only the note saying where each one lives.</p>
+<p class="kv"><b>Reachable from the internet:</b> no. Never. Only our own programs can talk to it.</p>
+</div>
+
+<div class="card">
+<h3>Amazon S3 &mdash; the shelf at the back</h3>
+<p class="role">Where the big files live.</p>
+<p><strong>What it is.</strong> Unlimited file storage. You put a file in with a name, you get it
+back later. It is not a hard disk attached to a server; it is a service, so it never fills up and
+never needs replacing.</p>
+<p><strong>Why not just keep videos on the API server.</strong> Three problems that all bite at
+once. A server has a fixed disk that fills. If the server is replaced &mdash; which happens
+routinely &mdash; the files vanish. And a 500 MB upload passing through the server ties up memory
+that other users need. S3 solves all three.</p>
+<p><strong>The clever part: the browser uploads straight to S3.</strong> Our API does not receive
+the video at all. Instead it hands the browser a <strong>presigned link</strong>: a web address
+with a signature attached that says <em>"whoever holds this may write one file, to this exact name,
+for the next 15 minutes, and nothing else."</em> After 15 minutes it is dead. The video goes
+browser &rarr; S3 directly, and our small API server is never the bottleneck.</p>
+<p><strong>Downloads work the same way in reverse.</strong> When a dub is ready, the API checks it
+is really your job and hands you a 15-minute read link. The bucket itself stays completely private
+&mdash; there is no public address for anybody's video, ever.</p>
+<p class="kv"><b>What it stores:</b> uploaded source videos, finished dubbed videos.</p>
+<p class="kv"><b>Encrypted:</b> yes, on disk, with a key that belongs to your account.</p>
+<p class="kv"><b>Automatic cleaning:</b> sources deleted after 7 days, outputs after 30. Less stored is less to leak, and a smaller bill.</p>
+</div>
+
+<div class="card">
+<h3>ECS Fargate &mdash; where our program actually runs</h3>
+<p class="role">The place the counter staff stand.</p>
+<p><strong>First, what a container is.</strong> A container is your program packed together with
+everything it needs to run &mdash; the exact Python version, the exact libraries. Like a shipping
+container: whatever machine it lands on, the contents behave identically. This is what kills the
+classic complaint "it worked on my laptop". Your dubbing engine is already in a container called
+<code>omnivoice</code>, so you have seen this work.</p>
+<p><strong>What Fargate is.</strong> Amazon runs your container for you. You say "run this, give it
+this much memory", and there is <strong>no server that you own, log into, or patch</strong>. That
+matters more than it sounds: an unpatched server is one of the most common ways small companies get
+broken into, and here there is no server to forget about.</p>
+<p><strong>Why not a normal server.</strong> You could rent an ordinary virtual machine and run the
+program on it, and it would be cheaper &mdash; see section 7, where I lay that option out
+honestly. The trade is that you become responsible for security updates, and replacing a broken
+machine becomes a manual job at a bad moment.</p>
+<p class="kv"><b>What runs here:</b> two things from the same container image &mdash; the <strong>API</strong> (answers people) and the <strong>worker</strong> (does jobs). Same code, different mode.</p>
+<p class="kv"><b>Why the worker is separate:</b> a job takes 20 minutes. If the API did that work itself, the website would freeze for everyone else.</p>
+</div>
+
+<div class="card">
+<h3>CloudFront and WAF &mdash; the front door and the guard</h3>
+<p class="role">Everything from the internet arrives here first.</p>
+<p><strong>CloudFront</strong> is Amazon's delivery network. It has machines in many countries; a
+visitor connects to a nearby one instead of crossing the world to Mumbai. It also provides the
+padlock in the browser &mdash; the HTTPS encryption &mdash; and remembers unchanging things like
+your logo so they load instantly.</p>
+<p><strong>WAF</strong> stands for Web Application Firewall. It is the guard reading requests
+before they reach us, and it does two useful jobs:</p>
+<ul>
+<li><strong>Blocks well-known attacks.</strong> Amazon maintains rule sets for the standard
+techniques people try on every website in the world. We switch them on rather than inventing our
+own.</li>
+<li><strong>Rate limiting.</strong> If one address sends 10,000 requests a minute, it is blocked
+before our code wakes up. This is what stops someone guessing passwords all night, and what stops
+a flood knocking the site over.</li>
+</ul>
+<p class="kv"><b>Why it matters that this is first:</b> attacks that never reach your program cannot exploit a bug in your program.</p>
+</div>
+
+<div class="card">
+<h3>Terraform &mdash; the floor plan</h3>
+<p class="role">A written description of every piece of AWS we use.</p>
+<p><strong>The problem it solves.</strong> Normally you build cloud infrastructure by clicking
+around a website: create a database, tick some boxes, set a password, create a bucket, adjust a
+setting. Six months later nobody remembers what was ticked. Rebuilding it elsewhere means
+rediscovering every choice, and the one setting you forget is usually a security one.</p>
+<p><strong>What Terraform does.</strong> You write the description in files instead:</p>
+<pre>resource "aws_db_instance" "main" {
+  engine                  = "postgres"
+  instance_class          = "db.t4g.micro"
+  storage_encrypted       = true      # encrypted on disk
+  publicly_accessible     = false     # not reachable from the internet
+  backup_retention_period = 7         # a week of backups
+  deletion_protection     = true      # cannot be deleted by accident
+}</pre>
+<p>Then one command builds it. The files live in your private repository, so every decision is
+recorded, reviewable, and repeatable.</p>
+<p><strong>Why this is the answer to "easily movable to another AWS account".</strong> Moving
+becomes: run the same files against the new account with a different account number, then copy the
+data in. Without Terraform, moving means weeks of clicking and hoping you matched every setting.
+<strong>This single choice is what makes your migration requirement realistic rather than
+aspirational.</strong></p>
+</div>
+
+<div class="card">
+<h3>Secrets Manager &mdash; the safe</h3>
+<p class="role">Where every password and key lives.</p>
+<p><strong>The thing to avoid.</strong> Keys written into code, or into a settings file, end up in
+the code repository, in someone's laptop backup, in a screenshot. This is how keys leak &mdash;
+almost never by clever hacking.</p>
+<p><strong>How it works instead.</strong> The key is stored in Secrets Manager. Our program is
+given an <em>identity</em> by AWS &mdash; not a password, an identity &mdash; and that identity is
+permitted to read one specific secret. When the program starts, it asks for it. The key exists in
+the program's memory and nowhere else.</p>
+<p><strong>What goes in it:</strong></p>
+<ul>
+<li>The database password</li>
+<li>The payment provider's keys</li>
+<li><strong>Your GPU box's keys</strong> &mdash; the Hugging Face token, the Google service
+account, the Gemini proxy key. Right now the Hugging Face token sits in the container's
+environment, where it shows up in diagnostics. It should be rotated once and delivered from the
+safe from then on.</li>
+</ul>
+<p class="kv"><b>What the browser gets:</b> none of it. Ever. The website sends the visitor exactly three things &mdash; their own session cookie, their own data, and 15-minute file links.</p>
+</div>
+
+<div class="card">
+<h3>EventBridge and Lambda &mdash; the caretaker who turns the machine off</h3>
+<p class="role">The piece that saves you money while you sleep.</p>
+<p><strong>Lambda</strong> runs a small piece of code without any server, only when called, and
+costs essentially nothing at this scale. <strong>EventBridge</strong> is the alarm clock that calls
+it &mdash; here, once a minute.</p>
+<p><strong>What it checks, every minute:</strong></p>
+<pre>Is any job being worked on right now?      -> if yes, do nothing
+Is any job waiting in the queue?            -> if yes, do nothing
+Did the last job finish over 5 minutes ago? -> if yes, and the GPU is on:
+                                               turn it off</pre>
+<p><strong>Why it lives outside the main program.</strong> If the API crashes or is restarted, the
+caretaker keeps working. The expensive machine is never left running because something else
+failed.</p>
+<p><strong>Why it asks the database and not the machine.</strong> A GPU that is loading a model
+looks idle. The database knows the truth: there is a job with the state "processing". Guessing from
+how busy the machine looks would eventually kill somebody's job halfway through.</p>
+<div class="box warn">
+<strong>The rule I would defend hardest in the whole design:</strong> if the caretaker cannot reach
+the database, it does <em>nothing</em> and raises an alarm. Leaving the machine on wastes about 50
+cents an hour. Turning it off during a render destroys 20 minutes of a paying customer's work. So
+the failure is deliberately the expensive one.
+</div>
+</div>
+
+<div class="card">
+<h3>The supporting cast</h3>
+<table>
+<tr><th>Piece</th><th>In one sentence</th></tr>
+<tr><td><strong>SES</strong></td><td>Sends the emails: verify your address, reset your password, your dub is ready.</td></tr>
+<tr><td><strong>ECR</strong></td><td>The cupboard where our container images are kept so Fargate can fetch them.</td></tr>
+<tr><td><strong>GitHub Actions</strong></td><td>When you save new code, it automatically tests it, packs it and puts it live &mdash; so deploying is not a risky manual ritual.</td></tr>
+<tr><td><strong>CloudWatch</strong></td><td>Keeps the logs and raises the alarms &mdash; including "the GPU has been on too long".</td></tr>
+<tr><td><strong>Alembic</strong></td><td>Keeps a numbered history of every change to the database's shape, so the exact same structure can be rebuilt anywhere from scratch.</td></tr>
+</table>
+</div>
+
+<h2 class="newpage">3. How they work together: following one video</h2>
+<p>One person, one video, from arriving at the site to downloading the dub. At every step I name
+which piece is working and, where it matters, what is deliberately <em>not</em> happening.</p>
+
+<h3>Step 1 &mdash; Signing up</h3>
+<pre>Browser  --> CloudFront/WAF --> FastAPI --> PostgreSQL
+                                        --> SES (email)</pre>
+<ul>
+<li>The visitor types an email and password. It travels encrypted.</li>
+<li><strong>WAF</strong> checks this address is not flooding us.</li>
+<li><strong>FastAPI</strong> scrambles the password with <strong>Argon2id</strong> &mdash; a
+deliberately slow, memory-hungry one-way scrambler. Slow is the point: it makes guessing millions
+of passwords impractical even if the database is stolen. It cannot be reversed, so nobody, including
+you, can ever read anyone's password.</li>
+<li><strong>PostgreSQL</strong> stores the user as "not yet verified".</li>
+<li><strong>SES</strong> emails a link that works once and expires in 24 hours.</li>
+</ul>
+<p class="small"><strong>Deliberately not happening:</strong> the reply does not say whether that
+email already had an account. Otherwise the signup form becomes a tool for discovering who your
+customers are.</p>
+
+<h3>Step 2 &mdash; Logging in, and what a cookie really is</h3>
+<pre>Browser  --> FastAPI --> PostgreSQL
+Browser  <-- cookie</pre>
+<p>A <strong>cookie</strong> is a small note the server asks your browser to keep and show again on
+every later visit &mdash; like a cloakroom ticket. Ours contains a long random number and nothing
+else. It carries no name, no email, no plan.</p>
+<p>Three properties, and each one blocks a specific attack:</p>
+<table>
+<tr><th>Property</th><th>Plain meaning</th><th>What it stops</th></tr>
+<tr><td><code>HttpOnly</code></td><td>Code running in the page cannot read the cookie</td><td>If an attacker ever manages to inject a script into the page, it still cannot steal the login</td></tr>
+<tr><td><code>Secure</code></td><td>Only ever sent over an encrypted connection</td><td>Someone watching public wifi cannot copy it</td></tr>
+<tr><td><code>SameSite</code></td><td>Not sent when another website triggers the request</td><td>A malicious page cannot make your browser perform actions as you</td></tr>
+</table>
+<p>And in the database we store <strong>only a fingerprint of the ticket, not the ticket</strong>.
+If someone stole the entire database they still could not log in as anybody. Deleting the row logs
+that device out instantly &mdash; which is why we use this design rather than the popular
+alternative that cannot be revoked.</p>
+
+<h3>Step 3 &mdash; Uploading the video</h3>
+<pre>Browser  --> FastAPI            "may I upload?"
+FastAPI  --> PostgreSQL         checks plan and minutes left
+FastAPI  --> Browser            a 15-minute write link
+Browser  --> S3                 THE VIDEO GOES HERE, DIRECTLY
+Browser  --> FastAPI            "done, here is the id"
+FastAPI  --> ffprobe            what is this file really?
+FastAPI  --> PostgreSQL         create the job, state = queued</pre>
+<ul>
+<li>The API checks quota <em>before</em> the upload, so nobody waits ten minutes to be told no.</li>
+<li>The video never passes through our API. That keeps the API small and cheap.</li>
+<li><strong>ffprobe</strong> is a tool that opens the file and reports what it truly is. We use it
+because <strong>a filename is a claim, not a fact</strong> &mdash; anyone can rename anything to
+<code>.mp4</code>. We check the real duration and format, and bill on the real duration.</li>
+<li>The stored filename is one we generate. The visitor's own filename is kept only as a label to
+show them, never used as a location on disk &mdash; using it would be one of the classic ways
+attackers reach files they should not.</li>
+</ul>
+
+<h3>Step 4 &mdash; The GPU wakes up</h3>
+<pre>FastAPI  --> PostgreSQL   "is the GPU already on?"
+FastAPI  --> AWS EC2      StartInstances
+Worker   --> GPU box      "are you ready yet?" (polling)</pre>
+<ul>
+<li>If it is already running, nothing happens &mdash; the job simply queues behind the current one.</li>
+<li>If not, it is started. About two minutes to boot, plus about a minute to load the voice model.
+The visitor sees an honest message rather than a spinner that pretends.</li>
+<li>The decision is made while the relevant database row is locked, so two people uploading at the
+same instant cannot start two machines.</li>
+</ul>
+
+<h3>Step 5 &mdash; The dubbing, which is the part we do not touch</h3>
+<pre>Worker --> S3         fetch the video
+Worker --> GPU box    upload, transcribe, translate, generate, export
+Worker --> PostgreSQL store progress, and store the transcript + translation
+Worker --> S3         put the finished dub back</pre>
+<p>The worker takes <strong>one job at a time</strong> &mdash; there is one GPU, so two jobs at
+once would only make both slower. It calls the same VoiceStudio steps your browser calls, in the
+same order, with the same settings.</p>
+<div class="box note">
+<strong>The one genuinely new thing.</strong> Today the translated text lives in your browser
+&mdash; that is why refreshing the page loses it. A server cannot depend on a browser, so the
+worker keeps the transcript and translation in <strong>PostgreSQL</strong> between the translate
+step and the render step, then hands the identical text back. We store what the engine gives us and
+return it unchanged. This is bookkeeping around the engine, not a change to how it dubs.
+</div>
+
+<h3>Step 6 &mdash; Getting the result</h3>
+<pre>Browser --> FastAPI      "is job 12345 done?"
+FastAPI --> PostgreSQL   look it up, but only if it belongs to this user
+Browser --> FastAPI      "give me the file"
+FastAPI --> Browser      a 15-minute read link
+Browser --> S3           download</pre>
+<p>Every lookup is written so that ownership is part of the question, not an afterthought:</p>
+<pre>SELECT * FROM jobs WHERE id = :job_id AND user_id = :the_logged_in_user</pre>
+<p>Not "fetch the job, then check who owns it" &mdash; because one forgotten check in that style is
+how people end up seeing strangers' videos. And if the job is not yours, the answer is <strong>"not
+found" rather than "not allowed"</strong>, so the API will not even confirm that someone else's job
+exists.</p>
+
+<h3>Step 7 &mdash; Five minutes later, the machine turns itself off</h3>
+<pre>EventBridge --> Lambda --> PostgreSQL   "anything running? anything waiting?"
+Lambda      --> AWS EC2                 StopInstances</pre>
+<p>Nothing running, nothing queued, five quiet minutes: off. A quiet day costs you the fixed
+monthly charges and not one rupee of GPU time.</p>
+<p class="small">A pleasant side effect: because it waits for the queue to be empty too, a burst of
+uploads is handled back-to-back on one boot. That is both faster for users and cheaper per video
+than starting and stopping repeatedly &mdash; worth remembering when you set prices.</p>
+
+<h2 class="newpage">4. Seeing your own data: the database and the folders</h2>
+
+<h3>4.1 Postgres does not have "folders" &mdash; it has tables</h3>
+<p>If you are used to MongoDB Atlas, here is the translation:</p>
+<table>
+<tr><th>MongoDB Atlas</th><th>PostgreSQL</th><th>Ours</th></tr>
+<tr><td>Database</td><td>Database</td><td><code>dubbing</code></td></tr>
+<tr><td><strong>Collection</strong> (feels like a folder)</td><td><strong>Table</strong></td><td><code>users</code>, <code>jobs</code>, <code>payments</code>…</td></tr>
+<tr><td>Document</td><td>Row</td><td>one person, one job</td></tr>
+<tr><td>Field</td><td>Column</td><td><code>email</code>, <code>created_at</code></td></tr>
+</table>
+<p>Fourteen tables, and each opens like a spreadsheet:</p>
+<pre>dubbing
++-- users            one row per person
++-- sessions         who is logged in right now
++-- email_tokens     verification and reset links
++-- login_attempts   for lockout and after-the-fact investigation
++-- uploads          files people sent us
++-- jobs             dubbing jobs, and the queue itself
++-- job_artifacts    the transcript and translation for each job
++-- job_events       the progress history of each job
++-- gpu_state        is the GPU on right now (a single row)
++-- plans            free, pro, and so on
++-- subscriptions    who is on which plan
++-- payments         what was actually paid
++-- usage_ledger     minutes used, one line per job
++-- audit_log        who did what, and when</pre>
+<p>Opening <code>users</code> looks like this:</p>
+<table>
+<tr><th>id</th><th>email</th><th>email_verified_at</th><th>status</th><th>role</th><th>created_at</th></tr>
+<tr><td class="m">a3f1…</td><td>ravi@example.com</td><td>2026-08-22 10:04</td><td>active</td><td>user</td><td>2026-08-22 09:58</td></tr>
+<tr><td class="m">b7c2…</td><td>anita@example.com</td><td class="m">(empty)</td><td>active</td><td>user</td><td>2026-08-22 11:20</td></tr>
+</table>
+<p>You can sort, filter, search and click into any row, exactly as in Atlas. You can also ask
+questions across several tables at once, which is where a relational database earns its place:</p>
+<pre>-- everyone who signed up but never confirmed their email
+SELECT email, created_at FROM users WHERE email_verified_at IS NULL;
+
+-- this week's failed jobs, with who they belonged to and why they failed
+SELECT j.id, u.email, j.error_code, j.finished_at
+FROM jobs j JOIN users u ON u.id = j.user_id
+WHERE j.state = 'failed' AND j.finished_at > now() - interval '7 days';</pre>
+
+<h3>4.2 The honest difference from Atlas</h3>
+<div class="box warn">
+Atlas gives you a data browser <strong>hosted by MongoDB</strong> &mdash; you log into their
+website and look at your data. <strong>AWS does not provide that for PostgreSQL.</strong> The AWS
+console shows the database's health, size and settings, but not its rows. So the browsing screen
+comes from a free tool you run on your own laptop instead. Same result, different place.
+</div>
+<table>
+<tr><th>Option</th><th>How it feels</th><th>Security</th><th>My view</th></tr>
+<tr><td><strong>DBeaver</strong> or <strong>pgAdmin</strong> on your laptop, connected through a secure AWS tunnel</td><td>A desktop app with the familiar grid of rows</td><td><strong>Best.</strong> The database stays private, nothing is exposed to the internet, and every connection is recorded by AWS</td><td><strong>Recommended.</strong> Free, about ten minutes to set up</td></tr>
+<tr><td>A web tool such as pgweb or Metabase, hosted by us</td><td>Closest to Atlas &mdash; open a web address</td><td>Weaker: it is a login page standing in front of your database, and it becomes something else to secure and patch</td><td>Only if the browser feel really matters to you</td></tr>
+<tr><td>Use Aurora instead of plain RDS</td><td>AWS's own query editor, in the console</td><td>Good, fully AWS-native</td><td>Possible, but Aurora costs more, and I would want to confirm current support before committing</td></tr>
+</table>
+<p>The tunnel is two steps. One command opens a private, authenticated pipe:</p>
+<pre>aws ssm start-session --target &lt;instance&gt; \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters '{"host":["&lt;database-address&gt;"],"portNumber":["5432"],
+                 "localPortNumber":["5432"]}'</pre>
+<p>Then you point DBeaver at <code>localhost:5432</code> and it behaves like a database on your own
+machine. No SSH key to lose, no public database, and AWS records who connected and when.</p>
+
+<h3>4.3 The folders you <em>can</em> browse: S3</h3>
+<p>The videos are not in the database &mdash; they are in S3, and that <strong>is</strong> a
+folder-style browser, built into the AWS console, with no extra tool:</p>
+<pre>s3://dubbing-prod-media/
++-- uploads/{user_id}/{upload_id}.mp4    source videos, deleted after 7 days
++-- outputs/{user_id}/{job_id}.mp4       finished dubs, deleted after 30 days</pre>
+<p>Click through the folders, preview, download. Each user's files sit under their own id, which
+makes "delete everything belonging to this person" a single, reliable operation.</p>
+
+<h3>4.4 Two logins for you, not one</h3>
+<div class="box good">
+I would give you <strong>two</strong> database accounts:
+<ul>
+<li>A <strong>read-only</strong> one for everyday looking, so you cannot change production by
+accident while browsing.</li>
+<li>An <strong>admin</strong> one you reach for deliberately when you genuinely need to change
+something.</li>
+</ul>
+And a <strong>support view</strong> &mdash; a saved query that shows what you need and hides what
+you do not:
+<pre>CREATE VIEW support_users AS
+SELECT id, email, status, role, email_verified_at, created_at
+FROM users;        -- the scrambled password is deliberately absent</pre>
+You will never see anyone's password in any case &mdash; they are one-way scrambled. But there is
+no reason for that column to be on your screen during routine support either.
+</div>
+
+<h2 class="newpage">5. How each piece is protected</h2>
+<p>One row per piece, so you can see there is a specific defence rather than a general hope.</p>
+<table>
+<tr><th>Piece</th><th>The worry</th><th>What protects it</th></tr>
+<tr><td><strong>Passwords</strong></td><td>Database stolen, passwords cracked</td><td>Argon2id one-way scrambling, deliberately slow and memory-hungry. Cannot be reversed. Changing a password logs out every device.</td></tr>
+<tr><td><strong>Login sessions</strong></td><td>Someone steals a login</td><td>Only a fingerprint of the ticket is stored, so a stolen database yields no working logins. The cookie is unreadable by page code, encrypted-only, and not sent from other sites.</td></tr>
+<tr><td><strong>One user seeing another's videos</strong></td><td>The classic serious leak</td><td>Ownership is part of every database question, not a separate check. Unguessable random ids. "Not found" rather than "not allowed", so nothing is confirmed.</td></tr>
+<tr><td><strong>The API</strong></td><td>Bad input, floods, guessing</td><td>WAF and rate limits at the door; FastAPI validates every field; login lockout with backoff; no endpoint accepts a URL or file path from the client.</td></tr>
+<tr><td><strong>The database</strong></td><td>Direct attack from the internet</td><td>No public address at all. Only our own programs may connect. Encrypted on disk, encrypted in transit, backed up with point-in-time recovery, protected against accidental deletion.</td></tr>
+<tr><td><strong>The videos</strong></td><td>Someone finds a public link</td><td>The bucket is fully private. Access only ever by a 15-minute link tied to one file. Encrypted at rest. Old files deleted automatically.</td></tr>
+<tr><td><strong>Keys and passwords</strong></td><td>Leaking through code or git</td><td>All in Secrets Manager, fetched by identity at startup. Nothing in code, nothing in the repository, nothing sent to the browser. Automated scanning blocks a key being committed by mistake.</td></tr>
+<tr><td><strong>Your GPU box</strong></td><td><strong>It has no password of its own</strong></td><td>No public address. Its door opens only to our worker, identified by AWS's own grouping &mdash; not by an IP address, and not to the internet. Fine today because your firewall allows one home address; a public website makes this essential.</td></tr>
+<tr><td><strong>Payments</strong></td><td>Fake "I paid" claims; card data</td><td>Card details are entered on the payment company's own page and never touch us. Upgrades happen only when a signed message from the provider arrives. Each message is recorded once, so a replayed one does nothing.</td></tr>
+<tr><td><strong>Deployments</strong></td><td>Stolen AWS keys from the build system</td><td>There are no stored AWS keys. The build system borrows a short-lived identity for each run.</td></tr>
+<tr><td><strong>Uploads</strong></td><td>Disguised or oversized files</td><td>Checked with ffprobe after upload, not trusted by name. Size and length capped by plan. Stored under a name we generate, never the visitor's.</td></tr>
+<tr><td><strong>Logs</strong></td><td>Secrets leaking into logs</td><td>Passwords, tickets, reset links and file links are never written to logs. User ids are logged rather than email addresses.</td></tr>
+</table>
+<div class="box note">
+<strong>The single sentence version:</strong> the visitor's browser holds one meaningless random
+ticket and receives short-lived links to its own files. Everything else &mdash; every key, every
+password, all the logic, all the data &mdash; stays on the server side, and the expensive machine
+that does the dubbing has no door to the internet at all.
+</div>
+
+<h2>6. What each piece costs</h2>
+<p>Rough monthly figures for the Mumbai region at low traffic. Prices change, so read these as the
+shape of the bill rather than a quotation.</p>
+<table>
+<tr><th>Piece</th><th class="m">Per month</th><th>Note</th></tr>
+<tr><td>PostgreSQL (RDS, smallest sensible size)</td><td class="m">$13&ndash;18</td><td>Can be doubled later for automatic failover; not needed at first</td></tr>
+<tr><td>API and worker (Fargate)</td><td class="m">$18&ndash;30</td><td>An ordinary small server would be about $12 &mdash; see section 7</td></tr>
+<tr><td>Front door (CloudFront + WAF)</td><td class="m">$8&ndash;15</td><td>The firewall rule sets carry a small fixed fee</td></tr>
+<tr><td>S3 storage and traffic</td><td class="m">$3&ndash;10</td><td>Depends entirely on how long files are kept</td></tr>
+<tr><td>Secrets, email, logs, encryption keys</td><td class="m">$5&ndash;10</td><td>Small per-item charges that add up</td></tr>
+<tr><td><strong>Fixed total</strong></td><td class="m"><strong>$45&ndash;85</strong></td><td>This is what a day with zero customers costs</td></tr>
+<tr><td><strong>The GPU, only while running</strong></td><td class="m">about $0.53/hour</td><td>Off the rest of the time, thanks to the caretaker</td></tr>
+</table>
+<h3>6.1 One 12-minute video</h3>
+<p>Using your own measured pipeline timings &mdash; about 12 minutes of translation and 7 minutes of
+rendering, so roughly 25 minutes of GPU time including the boot:</p>
+<pre>25 minutes of GPU                      about $0.22
+Google Chirp 3 and Gemini              about $0.05 to $0.20
+S3 storage and transfer                about $0.01 to $0.05
+                                       ---------------------
+per 12-minute video                    about $0.28 to $0.47</pre>
+<p>Two things follow from this, and both matter for pricing:</p>
+<ul>
+<li><strong>Idle time is free.</strong> The five-minute shutdown is what makes a quiet week cost
+almost nothing.</li>
+<li><strong>Busy is cheaper per video.</strong> Several jobs on one boot share the two-minute
+start-up, so the cost per video falls as usage rises.</li>
+</ul>
+
+<h2 class="newpage">7. A simpler version, if you want to start smaller</h2>
+<p>I recommended Fargate, but I should be straight with you: for a first launch you could run the
+whole API on one small ordinary server and save roughly $15 a month.</p>
+<table>
+<tr><th></th><th>One small server (EC2 + Docker Compose)</th><th>Fargate (recommended)</th></tr>
+<tr><td>Cost</td><td>about $12/month</td><td>about $18&ndash;30/month</td></tr>
+<tr><td>Setup</td><td>Simpler to picture: one machine you log into</td><td>Slightly more to learn up front</td></tr>
+<tr><td>Security updates</td><td><strong>Your job, forever</strong></td><td>Amazon's job</td></tr>
+<tr><td>If it breaks at 2am</td><td>You log in and fix it</td><td>It is replaced automatically</td></tr>
+<tr><td>Growing</td><td>Buy a bigger machine and move everything</td><td>Change one number</td></tr>
+<tr><td>Migrating accounts</td><td>Same either way &mdash; Terraform describes both</td><td>Same</td></tr>
+</table>
+<p><strong>My honest view:</strong> the $15 saving is real but small, and the thing you are buying
+is <em>not having a server to forget about</em>. An unpatched server is one of the most common ways
+small companies get broken into, and the risk grows quietly with every month nobody looks at it.
+Since you are handling other people's videos and card-adjacent data, I would spend the $15.</p>
+<p>What I would <strong>not</strong> compromise on regardless of which you choose: Postgres on RDS
+rather than a database you run yourself, S3 rather than server disks, Secrets Manager rather than
+configuration files, Terraform rather than clicking, and the GPU box kept off the internet. Those
+five are what make the difference between a system that is safe and one that merely has not been
+attacked yet.</p>
+
+<h2>8. Glossary: words you will hear</h2>
+<table>
+<tr><th>Word</th><th>Plain meaning</th></tr>
+<tr><td><strong>API</strong></td><td>The program that answers requests from the website. The counter staff.</td></tr>
+<tr><td><strong>Endpoint</strong></td><td>One specific thing the API can do, with an address, like <code>/api/jobs</code>.</td></tr>
+<tr><td><strong>Backend / frontend</strong></td><td>Backend is everything on the server. Frontend is what runs in the visitor's browser. Secrets live only in the backend.</td></tr>
+<tr><td><strong>Container</strong></td><td>Your program packed with everything it needs, so it behaves the same on any machine.</td></tr>
+<tr><td><strong>Image</strong></td><td>The saved recipe of a container. Fargate fetches the image and runs it.</td></tr>
+<tr><td><strong>Queue</strong></td><td>A waiting line of jobs, so work is done one at a time in order.</td></tr>
+<tr><td><strong>Worker</strong></td><td>The program that takes jobs off the queue and does them.</td></tr>
+<tr><td><strong>Table / row / column</strong></td><td>A database's spreadsheet, one entry, and one field of that entry.</td></tr>
+<tr><td><strong>Query</strong></td><td>A question asked of the database.</td></tr>
+<tr><td><strong>Migration</strong> (database)</td><td>A recorded change to the database's shape, numbered so it can be replayed anywhere.</td></tr>
+<tr><td><strong>Bucket</strong></td><td>A container for files in S3. Ours is private.</td></tr>
+<tr><td><strong>Presigned link</strong></td><td>A web address with a signature that allows one action, on one file, for a short time.</td></tr>
+<tr><td><strong>Cookie</strong></td><td>A small note the browser keeps and shows on each visit. Ours holds a random ticket only.</td></tr>
+<tr><td><strong>Session</strong></td><td>The record on our side that says this ticket belongs to this person until it expires.</td></tr>
+<tr><td><strong>Hash</strong></td><td>A one-way scramble. Passwords are stored scrambled and cannot be unscrambled.</td></tr>
+<tr><td><strong>Authentication</strong></td><td>Proving who you are (logging in).</td></tr>
+<tr><td><strong>Authorization</strong></td><td>Deciding what you are allowed to do once we know who you are.</td></tr>
+<tr><td><strong>TLS / HTTPS</strong></td><td>The encryption behind the padlock in the browser.</td></tr>
+<tr><td><strong>Firewall / security group</strong></td><td>A rule about who may connect to what.</td></tr>
+<tr><td><strong>WAF</strong></td><td>A firewall that understands web requests, not just addresses.</td></tr>
+<tr><td><strong>Webhook</strong></td><td>Another company's server calling ours to report an event, such as a completed payment.</td></tr>
+<tr><td><strong>Idempotent</strong></td><td>Safe to receive twice. The same payment message arriving again changes nothing.</td></tr>
+<tr><td><strong>Infrastructure as code</strong></td><td>Describing your cloud setup in files instead of clicking. Terraform.</td></tr>
+<tr><td><strong>Environment</strong></td><td>A complete separate copy of the system. We have staging (for testing) and production (for real customers).</td></tr>
+<tr><td><strong>CI/CD</strong></td><td>The automation that tests and releases new code.</td></tr>
+<tr><td><strong>Lambda</strong></td><td>A small piece of code that runs when called, with no server to manage.</td></tr>
+<tr><td><strong>PII</strong></td><td>Personally identifiable information &mdash; an email address, a name. Handled carefully and kept out of logs.</td></tr>
+</table>
+
+<div class="box good" style="margin-top:6mm">
+<strong>If you remember five things from this document.</strong>
+<ol>
+<li>The dubbing engine is untouched. Everything here sits around it and talks to it the way your
+browser already does.</li>
+<li>The visitor's browser holds one random ticket and nothing else. Every key stays on the server.</li>
+<li>The GPU turns itself on for work and off after five idle minutes &mdash; and the caretaker will
+never turn it off while a job is running.</li>
+<li>Because the whole setup is written down as files, moving to another AWS account is a repeatable
+procedure rather than a rebuild.</li>
+<li>You can browse your data any time with a free desktop tool through a private, logged tunnel;
+your files you can browse in the AWS console directly.</li>
+</ol>
+</div>
+
+<p class="small" style="margin-top:6mm">Companion to <code>Website_Backend_Plan.pdf</code> (the
+detailed plan, including database design, migration runbook and build phases) and
+<code>VoiceStudio_Pipeline_Handbook.pdf</code> (the dubbing pipeline this must not disturb).
+Source: <code>docs/stack_explained.html</code>.</p>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "kresker-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && npm run build:ssr && npm run prerender",
+    "build:ssr": "vite build --ssr src/entry-server.tsx --outDir dist-ssr --emptyOutDir",
+    "prerender": "node scripts/prerender.mjs",
+    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@number-flow/react": "0.5.5",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "^6.30.6",
+    "sonner": "1.7.4",
+    "zustand": "5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.13",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@vitejs/plugin-react": "4.3.4",
+    "tailwindcss": "4.1.13",
+    "typescript": "5.7.3",
+    "vite": "6.0.11"
+  }
+}

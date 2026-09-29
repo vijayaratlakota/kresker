@@ -1,0 +1,2916 @@
+﻿/*
+  ── THE TYPEFACE ────────────────────────────────────────────────────────────
+
+  **Century Gothic Pro Bold**, supplied as a file and verified from its own name
+  table (family "Century Gothic Pro", subfamily "Bold", usWeightClass 700, 418
+  glyphs, 1000 upm). Converted .otf -> .woff2: 45.5 KB -> 20.1 KB, same glyphs.
+
+  LICENCE, stated once. Its embedded licence URL points at a Typekit EULA, so this
+  is a commercial Adobe/Monotype face and the copy in `public/fonts/` is not
+  licensed for web distribution. It is correct for local development and for
+  deciding whether the look is right. Before this is public, either buy a webfont
+  licence for Century Gothic Pro, or swap the @font-face `src` below for an
+  open geometric alternative — Questrial, Jost or Outfit are the near neighbours.
+  Nothing outside this block names a font, so that swap is one edit.
+
+  IT IS LATIN ONLY. Measured, not assumed: no Devanagari, Telugu, Tamil, Kannada,
+  Malayalam, Bengali or Gujarati — and no rupee sign or rightwards arrow. That
+  matters more here than in most products, because the transcript table is the
+  thing this app exists to produce and it is full of Telugu and Hindi. So:
+
+    * Century Gothic Pro is declared with the standard latin `unicode-range`, so
+      the browser only ever reaches for it for Latin text.
+    * Space Grotesk sits behind it and supplies ₹ among other things.
+    * A system Indic font (Nirmala UI on Windows, Noto Sans elsewhere) sits behind
+      that, because neither of the first two has a single Indic glyph.
+
+  Without that third layer every transcript would render as tofu boxes.
+*/
+@font-face {
+  font-family: 'Century Gothic Pro';
+  src: url('/fonts/CenturyGothicPro-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  /* the standard latin subset. Deliberately excludes U+20B9 (₹) and U+2192 (→),
+     which this file does not contain — the fallback must take them. */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@import '@fontsource-variable/space-grotesk/wght.css';
+@import 'tailwindcss';
+
+/*
+  Scope class detection to this app.
+
+  Tailwind v4 auto-detects content from the project root, and this app lives
+  inside a much larger repository — so without these lines it scans the backend,
+  the pipeline scripts and every log file, and emits utilities for class names
+  that appear in none of the frontend. That was not theoretical: a
+  `transition-[width]` rule kept shipping after the last usage had been removed,
+  which made a bundle audit unable to tell a real regression from a ghost.
+*/
+@source './';
+@source not '../dist';
+@source not '../public';
+
+@custom-variant pointer-fine (@media (hover: hover) and (pointer: fine));
+
+/*
+  The other half of the pair, added when the site was made to work on a phone.
+
+  `pointer-fine:` already existed to stop hover motion sticking after a tap. This one
+  is for the opposite need: making a control BIGGER on a finger without inflating it
+  on a mouse. A 32px button is comfortable with a cursor and a miss with a thumb, and
+  growing every button to 44px everywhere would make the desktop UI look like a
+  tablet toy.
+
+  `(pointer: coarse)` rather than a width breakpoint, deliberately. Width is a proxy
+  for input device and a bad one — a touchscreen laptop is wide and coarse, a phone in
+  landscape is 800px wide, and a desktop window dragged narrow is 380px wide with a
+  mouse. The question being asked is "is a finger doing this", so ask that.
+*/
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
+@theme {
+  /* ── surfaces, darkest to lightest ────────────────────────────────────── */
+  --color-ink-950: #08090b; /* page */
+  --color-ink-900: #0c0e11; /* raised page */
+  --color-ink-850: #101317; /* card */
+  --color-ink-800: #16191e; /* card hover, input */
+  --color-ink-750: #1d2128; /* border strong */
+  --color-ink-700: #262b33; /* border */
+  --color-ink-600: #363c45; /* border on emphasis */
+  /* One more step, added when borders went from 1px to 2px: a 2px edge at ink-600
+     already reads clearly, so the hover state needed somewhere brighter to go
+     that was not a jump all the way to fg-subtle. */
+  --color-ink-500: #464e59; /* border on hover */
+
+  /* ── text ─────────────────────────────────────────────────────────────── */
+  --color-fg: #f4f6f8;
+  --color-fg-muted: #9ba5b0;
+  --color-fg-subtle: #6c757f;
+
+  /*
+    The accent is WHITE, not a hue.
+
+    A monochrome interface has one advantage that matters here: colour is left
+    free to mean something. Green, amber and red below are the only hues in the
+    product, so when one appears it is always a state and never decoration.
+  */
+  --color-accent: #ffffff;
+  --color-accent-ink: #0a0b0d; /* text ON the white accent */
+
+  /*
+    Iris — the one saturated colour, for the single most important action on a
+    page. Kept to that: if it appears twice in a viewport it has stopped meaning
+    "this one" and become decoration, which is how the orange went wrong.
+  */
+  --color-iris: #5b5bf0;
+  --color-iris-hover: #6d6df5;
+  --color-iris-press: #4e4ee0;
+
+  /* ── semantic. ────────────────────────────────────────────────────────── */
+  --color-good: #3ddc97;
+  --color-warn: #f5c451;
+  --color-bad: #ff6b6b;
+
+  /*
+    ── the dashboard palette ──────────────────────────────────────────────
+
+    The marketing site is monochrome on purpose. The DASHBOARD is not, and the
+    reason is different: it is a working surface somebody stares at while five
+    dubs queue, and in a grey table every row looks like every other row. Colour
+    here is wayfinding, not decoration.
+
+    Two rules keep it from becoming a fruit salad:
+
+      1. **A hue is assigned to a MEANING, never to a shape.** `--stage-render`
+         is the rendering stage everywhere it appears — the bar, the dot, the
+         row. Nothing is coloured because it looked plain.
+      2. **Buttons stay monochrome.** The primary action is white, which is the
+         highest-contrast thing on the page. If buttons also carried hues there
+         would be nothing left to make one of them the obvious one.
+
+    So: icons, progress, state and stage get colour. Actions do not.
+  */
+  --color-sky: #38bdf8;
+  --color-cyan: #22d3ee;
+  --color-violet: #a78bfa;
+  --color-pink: #f472b6;
+
+  /*
+    The pipeline, in order. Deliberately a progression from cool to warm so the
+    colour alone says roughly how far along a job is, before the label is read.
+  */
+  --color-stage-prepare: #38bdf8;   /* sky      */
+  --color-stage-listen: #22d3ee;    /* cyan     */
+  --color-stage-translate: #a78bfa; /* violet   */
+  --color-stage-speak: #f472b6;     /* pink     */
+  --color-stage-deliver: #3ddc97;   /* good     */
+
+  /* ── easing (from the animate skill; do not hand-roll new ones) ───────── */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* ── duration scale ───────────────────────────────────────────────────── */
+  --duration-press: 160ms;
+  --duration-menu: 200ms;
+  --duration-modal: 250ms;
+  --duration-drawer: 500ms;
+  --duration-reveal: 600ms;
+
+  /*
+    One family, everywhere — including form controls, which are forced to inherit
+    it in the base layer below because they otherwise use the browser's own UI
+    font.
+  */
+  /*
+    Three layers, in this order, for the reason spelled out at the top of the
+    file: Latin, then the symbols Century Gothic lacks, then Indic scripts that
+    neither Latin face has at all.
+  */
+  --font-sans:
+    'Century Gothic Pro', 'Space Grotesk Variable', 'Space Grotesk',
+    'Nirmala UI', 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Telugu',
+    /*
+      A fourth layer, added when the catalogue went from 12 languages to 43. The
+      picker and the homepage marquee print every language's NATIVE name, so a
+      script with no face on the machine renders as tofu — empty boxes where
+      العربية or ไทย should be, which reads as a broken page rather than a missing
+      font. These are the platform faces that already exist rather than webfonts:
+      shipping ten more scripts as webfonts would cost more than the whole bundle.
+
+      'Nirmala UI' above already covers the Indic additions on Windows (Gurmukhi,
+      Odia, Sinhala, Bengali, Gujarati). These cover the rest.
+    */
+    'Segoe UI Emoji', 'Noto Sans Arabic', 'Segoe UI Historic',
+    'Noto Sans Hebrew', 'Noto Sans Thai', 'Leelawadee UI',
+    'Noto Sans SC', 'Microsoft YaHei', 'Noto Sans JP', 'Yu Gothic UI',
+    'Noto Sans KR', 'Malgun Gothic',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', 'DM Mono', 'JetBrains Mono', Menlo, Consolas,
+    monospace;
+
+  --radius-card: 14px;
+
+  /*
+    ── ONE WEIGHT. 700, everywhere. ──────────────────────────────────────────
+
+    The supplied file is Bold and only Bold, and bold everywhere is what was
+    asked for. All three tokens therefore resolve to 700 rather than being
+    deleted, so that `font-medium` in a component still means something readable
+    and the whole set can be re-pointed at 400/500/700 in one place if a fuller
+    family is licensed later.
+
+    Setting them all to 700 is not cosmetic here. The fallbacks — Space Grotesk
+    for ₹, Nirmala UI for Telugu and Hindi — are multi-weight, so leaving a token
+    at 500 would render the Telugu in a transcript visibly lighter than the Latin
+    beside it, in the same table cell.
+
+    With one weight, hierarchy comes from SIZE and COLOUR: the scale below, and
+    the fg / fg-muted / fg-subtle ramp.
+  */
+  --font-weight-regular: 700;
+  --font-weight-medium: 700;
+  --font-weight-bold: 700;
+
+  /*
+    ── Type scale ────────────────────────────────────────────────────────────
+    The reference's own px values, in order of how often they appear:
+      14, 16, 32, 40, 18, 20, 22, 24, 28, 56, 10, 12, 36, 48, 64
+    So: a 2px-then-4px-then-8px ramp on a 16px base. Note the base is **16px**,
+    not the 14px this file used to assume — that alone is why the old build read
+    smaller and denser than the reference.
+
+    Tracking follows the reference too, and it is the opposite of what the old
+    scale did: near-neutral, slightly NEGATIVE only at display sizes, slightly
+    POSITIVE on small text. The old scale went to -0.035em on the hero, which is
+    tighter than the reference ever gets.
+  */
+  --text-display: 4rem; /* 64 */
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+
+  --text-h1: 3rem; /* 48 */
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.018em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 2.5rem; /* 40 */
+  --text-h2--line-height: 1.18;
+  --text-h2--letter-spacing: -0.014em;
+  --text-h2--font-weight: 700;
+
+  --text-h3: 2rem; /* 32 */
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 700;
+
+  --text-h4: 1.5rem; /* 24 */
+  --text-h4--line-height: 1.3;
+  --text-h4--letter-spacing: -0.008em;
+  --text-h4--font-weight: 700;
+
+  --text-h5: 1.25rem; /* 20 */
+  --text-h5--line-height: 1.4;
+  --text-h5--letter-spacing: -0.005em;
+  --text-h5--font-weight: 700;
+
+  /* 18 — intro paragraphs. Regular weight: bold body text is emphasis, not
+     hierarchy. */
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.6;
+  --text-lead--letter-spacing: 0em;
+  --text-lead--font-weight: 700;
+
+  /* 16 — the base. */
+  --text-body: 1rem;
+  --text-body--line-height: 1.55;
+  --text-body--letter-spacing: 0.01em;
+  --text-body--font-weight: 700;
+
+  /* 14 */
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-small--letter-spacing: 0.014em;
+  --text-small--font-weight: 700;
+
+  /* 12 */
+  --text-tiny: 0.75rem;
+  --text-tiny--line-height: 1.45;
+  --text-tiny--letter-spacing: 0.02em;
+  --text-tiny--font-weight: 700;
+
+  /* 10 — all-caps labels only, where wide tracking is what makes caps readable */
+  --text-eyebrow: 0.625rem;
+  --text-eyebrow--line-height: 1.4;
+  --text-eyebrow--letter-spacing: 0.1em;
+  --text-eyebrow--font-weight: 700;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-ink-700);
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  /*
+    ── the marketing bar's height, defined once ───────────────────────────────
+
+    Three things have to agree on this number: the bar itself, the mobile sheet's
+    max-height, and the hero's top padding. They were three separate literals, which
+    is how the hero ended up almost touching the bar on a phone.
+
+    56px below `sm`, 64px above. A phone screen is short and the bar is fixed, so it
+    is charged against every screenful of content — 8px back is worth having, and at
+    56px the 40px logo and the 36px hamburger still have room to breathe.
+  */
+  :root {
+    --nav-h: 3.5rem;
+  }
+  @media (min-width: 640px) {
+    :root {
+      --nav-h: 4rem;
+    }
+  }
+
+  /*
+    The app element fills the screen, not just whatever a given page happens to set.
+
+    Every page wrapper carries `min-h-dvh` today, so this changes nothing visible — it
+    is here so that a page which forgets to cannot leave the canvas showing through.
+    `dvh` rather than `vh`: with `viewport-fit=cover`, `vh` on iOS is the viewport with
+    the browser chrome ignored, which overshoots and creates a scrollbar on a page that
+    should not have one.
+  */
+  #root {
+    min-height: 100dvh;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-ink-950);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.55;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /*
+      No faux bold, ever. The supplied face IS bold, so if the browser were also
+      allowed to synthesise weight it would smear an already-bold geometric face
+      into mud — and it would do it inconsistently, only on the fallback fonts.
+    */
+    font-synthesis: none;
+  }
+
+  /* Numbers in tables and stats should not jitter as they change. */
+  .tabular-nums,
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    THE reason "use the same font in the buttons" had to be asked.
+
+    Form controls do NOT inherit font-family from their ancestors — the user agent
+    substitutes its own stylesheet, so a <button> renders in the browser's default
+    UI font while the paragraph beside it renders in yours. Every control has to
+    be told explicitly, and forgetting it is invisible on a machine where the two
+    happen to look similar.
+  */
+  button,
+  input,
+  select,
+  textarea,
+  optgroup,
+  ::placeholder {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    font-synthesis: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  optgroup {
+    color: inherit;
+  }
+
+  /* Buttons carry the same single weight as everything else. Stated explicitly
+     because a UA stylesheet can set its own weight on controls. */
+  button {
+    font-weight: var(--font-weight-bold);
+  }
+
+  /* Headings carry their weight from the type scale, not from the UA default. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-weight: inherit;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /*
+    ── TOUCH BEHAVIOUR ────────────────────────────────────────────────────────
+
+    Four separate defects, all invisible on a desktop, all present on every control
+    before this block existed.
+
+    1. THE 300ms TAP DELAY. Mobile browsers historically waited a third of a second
+       after a tap to see whether a second tap was coming (a double-tap zoom). On a
+       page that declares `width=device-width` most engines skip it, but not all and
+       not in every embedded webview — and a third of a second between press and
+       response is the difference between "responsive" and "laggy". `touch-action:
+       manipulation` says outright that this element has no double-tap gesture, which
+       removes the wait. It keeps panning and pinch-zoom.
+
+    2. THE GREY FLASH. `-webkit-tap-highlight-color` defaults to a translucent grey
+       block drawn over the whole tapped element. On a dark UI with rounded corners it
+       appears as a light rectangle that ignores the border radius. It is turned off
+       here and replaced by the `active:scale` press feedback the buttons already
+       carry, which is a better signal anyway because it is instant.
+
+    3. SCROLL CHAINING. Reaching the bottom of a scrollable panel used to hand the
+       remaining momentum to the page behind it, and at the top of the page that
+       triggers pull-to-refresh — so dragging a table sideways or a long popup
+       downwards could reload the page mid-task. `overscroll-behavior: contain` on
+       the scroll containers stops the hand-off without disabling their own scroll.
+
+    4. DOUBLE-TAP TEXT SELECTION on things that are not text. Interactive elements
+       get `user-select: none` so a determined tap on a button does not leave a blue
+       selection highlight over its label.
+  */
+  a,
+  button,
+  [role='button'],
+  label,
+  summary,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  [role='button'],
+  summary {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /*
+    Momentum scrolling that does not leak into the page. Applied to the ELEMENT
+    rather than through a utility class, so every existing `overflow-auto` and
+    `overflow-x-auto` in the app is covered without hunting for them — there are
+    nine, across the tables, the popup lists and the sidebar nav.
+  */
+  [class*='overflow-auto'],
+  [class*='overflow-x-auto'],
+  [class*='overflow-y-auto'] {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+    A COARSE POINTER GETS BIGGER HIT AREAS, WITHOUT THE LAYOUT MOVING.
+
+    The floor is 44px, which is the smallest target both Apple and Google publish as
+    comfortable. `min-height`/`min-width` rather than `height`, so a control that is
+    already bigger is untouched and nothing is resized on a mouse.
+
+    NOT a blanket rule on every `a`. Body copy is full of inline links inside
+    paragraphs, and giving those a 44px minimum would space paragraph lines apart like
+    a list. The rule targets elements that are STANDALONE controls: real buttons, and
+    anything explicitly opted in with `data-touch-target`.
+  */
+  @media (pointer: coarse) {
+    button,
+    [role='button'],
+    [data-touch-target],
+    input[type='checkbox'],
+    input[type='radio'] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /*
+      The exception, and it needs one: a control that sits INSIDE another control or
+      inside a text flow cannot be 44px without breaking the thing around it. The
+      language chip's remove ✕ lives in a 24px-tall pill; forcing it to 44 would
+      make every chip 44 tall and the chip row three times its height.
+
+      These opt out of the floor and get a padded pseudo-element instead — the hit
+      area extends past the visible glyph without occupying layout space. `inset`
+      negative on all sides, centred, so it grows symmetrically.
+    */
+    [data-touch-inset] {
+      min-height: 0;
+      min-width: 0;
+      position: relative;
+    }
+    [data-touch-inset]::after {
+      content: '';
+      position: absolute;
+      /* -12px on a 20px glyph gives a 44px tap area. */
+      inset: -12px;
+    }
+
+    /*
+      THE TOAST'S CLOSE BUTTON IS THE SAME CASE, and it was the "✕ half off the screen"
+      on a phone. Sonner hangs its 20px ✕ on the toast's top-left corner and pulls it
+      outwards by 35% of the button's OWN size. Floored to 44px by the rule above, 35%
+      became 15px - past the toast's 16px screen margin, so the circle sat on the very
+      edge of the display, clipped. It keeps its drawn size and gets the invisible 44px
+      hit area instead, like the chip ✕. (0,2,0) beats the `button` floor's (0,0,1).
+    */
+    [data-sonner-toast] [data-close-button] {
+      min-height: 0;
+      min-width: 0;
+    }
+    [data-sonner-toast] [data-close-button]::after {
+      content: '';
+      position: absolute;
+      inset: -12px;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  /*
+    Custom scrollbar, DESKTOP ONLY.
+
+    Styling `::-webkit-scrollbar` at all opts the document out of the overlay
+    scrollbar that phones use, and replaces it with a permanently visible 10px
+    track — a grey line pinned down the right edge of every page on iOS and
+    Android, over content that was laid out expecting the full width. It is
+    purely decorative there and it looked like a rendering fault.
+
+    A pointer query rather than a width query on purpose: the thing that decides
+    whether a scrollbar should be visible is whether there is a cursor to grab it
+    with, not how wide the window is.
+  */
+  @media (hover: hover) and (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--color-ink-950);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-ink-750);
+      border-radius: 99px;
+      border: 2px solid var(--color-ink-950);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-ink-600);
+    }
+  }
+
+  /*
+    Reduced-motion safety net.
+
+    Individual components carry their own `motion-reduce:` handling, but relying
+    on that alone means every future component is one forgotten class away from
+    ignoring the preference. Movement collapses to almost nothing while colour
+    and opacity transitions survive — "fewer and gentler, not zero". A button
+    that gives no feedback at all reads as broken rather than as considerate.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 120ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /*
+    ── safe areas, for notches and home indicators ────────────────────────────
+
+    Inert until `viewport-fit=cover` is on the viewport meta, which is why these
+    were pointless to add before index.html set it.
+
+    MEASURED ON A REAL DEVICE, because this was guessed wrong repeatedly. In an iOS
+    Safari TAB every inset reports 0px:
+
+        safe-area-inset-top    0px      window.innerHeight   715
+        safe-area-inset-bottom 0px      screen.height        932
+        safe-area-inset-left   0px      standalone           false
+
+    715 of 932 points means Safari keeps 217 points of chrome for itself, and the strip
+    holding the clock is simply not part of our viewport — there is no "unsafe" area to
+    report, so the insets are legitimately zero and `.pt-safe` adds nothing there. It is
+    kept because it becomes real the moment the site is opened from the Home Screen,
+    where `standalone` is true, the status bar has no background of its own, and these
+    values start reporting the actual notch.
+
+    `max()` rather than the raw inset: on a device with no notch the inset is 0, and
+    a bottom-anchored element with zero padding sits flush against the screen edge.
+    The max keeps the design's own spacing as the floor and only grows past it where
+    the hardware demands.
+
+    Used by the cookie banner (bottom-anchored, its buttons were under the iPhone
+    home indicator) and the sidebar drawer (its sign-out row was too).
+  */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /*
+    How tall the mobile nav sheet may get: the viewport, less the 64px bar, less the
+    status-bar inset the bar now sits below.
+
+    Written here rather than as a Tailwind arbitrary value because `calc()` needs spaces
+    around its operators and a bracket utility needs them escaped as underscores — which
+    is unreadable for something this fiddly, and silently produces no rule at all if one
+    underscore is missed.
+
+    `dvh`, not `vh`: on mobile `vh` is the viewport with the browser chrome ignored, so
+    the sheet would be taller than the visible area and its last item unreachable.
+  */
+  .sheet-max {
+    max-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-top));
+  }
+
+  /*
+    The hero's top padding, derived rather than guessed.
+
+    It has to clear two things it does not control: the status-bar inset and the fixed
+    bar. As a literal `pt-32` it happened to leave 17px of air under the bar on a
+    notched phone, which is why the headline looked crammed against it while the space
+    ABOVE the bar looked like dead weight. Derived, the gap under the bar is a
+    deliberate 12px at every inset and every bar height, and the headline sits about
+    13px higher than it did.
+
+    Above `sm` there is no inset and the page wants air, so it goes back to a flat
+    value — the desktop hero is not fighting for vertical space.
+  */
+  /*
+    The scrolled header's background. STRONGEST AT THE TOP, FADING DOWNWARD.
+
+    Filled from the very first pixel, so the top edge is completely covered. An earlier
+    version faded IN from the top — clear at 0%, tinted across the middle, clear again at
+    the bottom — so that a phone's status strip could show content through it. On a 64px
+    desktop bar that left the first ~16px with almost no fill, and the page scrolling
+    behind showed through unobscured up there while the rest of the bar was tinted. It
+    read as a GAP along the top edge rather than as transparency.
+
+    It still reaches zero at the BOTTOM, so there is no hairline where the bar ends. A
+    hard edge there is what makes a bar read as a separate surface stuck on the page.
+
+    The top stop is very close to solid and is the same hue as the `theme-color` meta
+    value. While Safari's toolbars are expanded the strip above the page is filled with
+    that flat colour, so matching it keeps the two reading as one surface instead of two
+    shades of near-black meeting at a line.
+
+    A FULL-BLEED BAR AND A SEE-THROUGH STATUS STRIP CANNOT BOTH BE HAD. Whichever way
+    this gradient runs, a background spanning the header covers that strip. The
+    alternative — no background on the header at all, with the surface on a rounded pill
+    inset from the edges, as dododisk.com and bluorng.com do — was implemented and then
+    reverted, because it turns the bar into a floating pill at every width and that is a
+    different design. Full-width bar is the deliberate choice.
+
+    Literal `rgb(8 9 11 / ...)` rather than `color-mix` with the token: one gradient in
+    one place, and a colour function Safari only learned in 16.4 is not worth the
+    compatibility question for a decoration.
+  */
+  .nav-scrim {
+    background-image: linear-gradient(
+      to bottom,
+      rgb(8 9 11 / 0.95) 0%,
+      rgb(8 9 11 / 0.85) 42%,
+      rgb(8 9 11 / 0.45) 76%,
+      rgb(8 9 11 / 0) 100%
+    );
+  }
+
+  .hero-top {
+    padding-top: calc(env(safe-area-inset-top) + var(--nav-h) + 0.75rem);
+  }
+  @media (min-width: 640px) {
+    .hero-top {
+      padding-top: 10rem;
+    }
+  }
+
+  /*
+    Top padding for the dashboard's off-canvas drawer, below `lg`.
+
+    The drawer is `fixed inset-y-0`, so it starts at y=0 — underneath the sticky
+    mobile bar, which is `min-h-14` plus the status-bar inset and sits on a higher
+    z-index. The first nav row (Dubbing) was completely covered and the second
+    (Library) was half covered, which is what "Library goes inside the header"
+    means. 3.5rem is the bar's own `min-h-14`.
+
+    A class rather than a Tailwind arbitrary value for the same reason as
+    `.sheet-max`: `calc()` needs real spaces around its operators, a bracket
+    utility needs them written as underscores, and one missed underscore emits no
+    rule at all — silently putting the bug back.
+  */
+  /*
+    SCOPED IN A MEDIA QUERY, NOT RESET WITH `lg:pt-0`, and that distinction was a real
+    bug rather than a style preference.
+
+    This was written as a plain rule and cancelled at desktop with `lg:pt-0` on the
+    element. Both are single-class selectors, so specificity is equal and the LATER one
+    in the stylesheet wins — and Tailwind emits its own generated utilities before the
+    custom ones in this file. Measured in the build: `.lg\:pt-0` landed at character
+    86961 and `.drawer-safe-top` at 89538, so the reset never applied to anything.
+
+    On a phone that was invisible, because the padding is wanted there. On desktop
+    `env(safe-area-inset-top)` is 0, so it became a flat 56px that pushed the whole
+    sidebar down — and because the panel is `lg:h-dvh` with an `h-full` column inside
+    it, the content box was 56px shorter than the viewport, so the last nav rows were
+    clipped and the plan card overlapped them.
+
+    Bounded here instead, so above `lg` the rule does not exist and there is nothing to
+    win a cascade race against. 1023.98px rather than 1023px: `lg` is a `min-width:
+    1024px` query, and an integer max-width leaves a gap on fractional viewport widths
+    (browser zoom, some Windows scaling) where NEITHER rule applies.
+  */
+  @media (max-width: 1023.98px) {
+    .drawer-safe-top {
+      padding-top: calc(3.5rem + env(safe-area-inset-top));
+    }
+  }
+
+  /*
+    ── keep the top strip of the page EXACTLY the theme-color ──────────────────
+
+    Safari fills the strip behind the clock with the `theme-color` meta value, which is
+    a single FLAT colour. It cannot be a gradient. So the only way that strip becomes
+    invisible is for the top of the page to be that same flat colour — and then the join
+    disappears and the background reads as running underneath, which is the whole effect
+    being asked for.
+
+    Confirmed by comparing against dododisk.com, which does this without trying: its
+    theme-color is #000000 and its page background is the same flat #000000, so there is
+    nothing to mismatch. Ours has a glow and a grid layered over #08090b, and near the
+    top they lift it a few values above flat — enough to draw a visible boundary against
+    the strip on an OLED screen. That boundary is the reported "black border".
+
+    So both decorations are masked out of the first 4.5rem and fade in over the next
+    4rem, which puts them entirely below the strip and below the bar. Masking rather than
+    repositioning because it is geometry-independent: tuning the glow's offset so its
+    ellipse happens to reach zero alpha at the right pixel is the kind of sum that breaks
+    the next time the box size changes.
+
+    Above `sm` the mask is removed: there is no status bar to match and the hero wants
+    its full wash.
+  */
+  .top-strip-clear {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 4.5rem,
+      black 8.5rem
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 4.5rem,
+      black 8.5rem
+    );
+  }
+  @media (min-width: 640px) {
+    .top-strip-clear {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+
+  /*
+    The grid needs the same clearance, but it ALREADY has a mask — the radial fade that
+    keeps it near the headline rather than tiling the whole section. A second
+    `mask-image` would simply replace that one, quietly removing the fade, so the two are
+    COMPOSITED instead: the grid shows only where both masks agree.
+
+    `mask-composite: intersect` is the standard property; `-webkit-mask-composite:
+    source-in` is the older WebKit spelling of the same thing and is what actually
+    applies on some Safari versions. Both are declared because getting this wrong shows
+    up as the grid vanishing entirely, not as a subtle difference.
+
+    This replaces a Tailwind arbitrary mask utility that lived on the element. Kept here
+    for the reason `.sheet-max` is: the value needs real spaces and commas, and a bracket
+    utility needs every one of them escaped, which silently emits nothing when one is
+    missed.
+  */
+  .bg-grid-mask {
+    -webkit-mask-image:
+      radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent),
+      linear-gradient(to bottom, transparent 0, transparent 4.5rem, black 8.5rem);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent),
+      linear-gradient(to bottom, transparent 0, transparent 4.5rem, black 8.5rem);
+    mask-composite: intersect;
+  }
+  @media (min-width: 640px) {
+    .bg-grid-mask {
+      -webkit-mask-image: radial-gradient(
+        ellipse 60% 50% at 50% 0%,
+        black,
+        transparent
+      );
+      mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black, transparent);
+    }
+  }
+
+  /* Faint grid for the hero. Pure CSS, so it costs no request. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.032) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.032) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /*
+    The hero glow, in white.
+
+    A coloured wash behind a headline decides the whole page's temperature, which
+    is why the orange one read as an orange-themed product. White reads as light
+    rather than as a brand colour.
+  */
+  .glow-top {
+    background: radial-gradient(
+      ellipse at center,
+      rgb(255 255 255 / 0.1) 0%,
+      rgb(255 255 255 / 0.04) 45%,
+      transparent 72%
+    );
+  }
+
+  .text-gradient {
+    background: linear-gradient(
+      180deg,
+      #ffffff 26%,
+      color-mix(in oklab, #ffffff 62%, transparent) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /*
+    Scroll reveal via clip-path, per the animate skill's recipe: one property,
+    composited, and it reveals rather than fading, which reads as intentional
+    rather than as a page that has not finished loading.
+  */
+  .reveal {
+    clip-path: inset(0 0 100% 0);
+    opacity: 0.001;
+    transition:
+      clip-path var(--duration-reveal) var(--ease-in-out-strong),
+      opacity 300ms var(--ease-out-strong);
+  }
+  .reveal[data-visible='true'] {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Keep the fade, drop the wipe: comprehension without movement. */
+    .reveal {
+      clip-path: none;
+      transition: opacity 200ms ease;
+    }
+  }
+
+  /* Stagger without a library. Reads on any list up to 12 items. */
+  .stagger > * {
+    animation: rise 340ms var(--ease-out-strong) both;
+  }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 45ms; }
+  .stagger > *:nth-child(3) { animation-delay: 90ms; }
+  .stagger > *:nth-child(4) { animation-delay: 135ms; }
+  .stagger > *:nth-child(5) { animation-delay: 180ms; }
+  .stagger > *:nth-child(6) { animation-delay: 225ms; }
+  .stagger > *:nth-child(7) { animation-delay: 270ms; }
+  .stagger > *:nth-child(8) { animation-delay: 315ms; }
+  .stagger > *:nth-child(9) { animation-delay: 360ms; }
+  .stagger > *:nth-child(10) { animation-delay: 405ms; }
+  .stagger > *:nth-child(11) { animation-delay: 450ms; }
+  .stagger > *:nth-child(12) { animation-delay: 495ms; }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stagger > * {
+      animation: none;
+    }
+  }
+
+  /*
+    Batch rows entering. Separate from `.stagger` because the delay comes from an
+    inline style — the batch is 1 to 12 rows chosen at runtime, so a fixed
+    nth-child ladder cannot express it.
+
+    `both` matters: without it the row would paint at its final position for one
+    frame before the delay elapsed, which is a visible flicker on the later rows.
+  */
+  .row-in {
+    animation: rise 300ms var(--ease-out-strong) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .row-in {
+      animation: none;
+    }
+  }
+
+  /*
+    ── MATERIALS ─────────────────────────────────────────────────────────────
+
+    Where the premium feel actually comes from, and it is deliberately NOT more
+    animation.
+
+    The frequency rule the rest of this file already follows says a surface seen
+    tens of times a day gets near-imperceptible motion or none. So the dashboard
+    cannot be made to feel expensive by moving more — a flourish on a screen you
+    open forty times a day becomes a wait. What it can do is look like it is made
+    of something. Three materials, and the WEIGHT of the material says what kind
+    of thing you are looking at:
+
+      .material-chrome  structural regions — the sidebar, the sticky bars. The
+                        darkest and heaviest, because it frames content rather
+                        than holding it, and content passes behind it.
+      .material-raised  things floating ABOVE the page — the dialog, the toasts.
+                        Lighter, blurred harder, shadowed deeper. That contrast
+                        is what makes a small surface read as being in front
+                        rather than merely being a different grey.
+      .surface-lift     cards. NOT translucent, on purpose: a card is dense text
+                        sitting ON the page, and stacking one translucent layer
+                        on another is the single thing that reliably destroys
+                        legibility. It gets the edge light and the shadow, which
+                        is the expensive-looking half, without the glass.
+
+    THE 1PX INNER TOP EDGE IS THE WHOLE TRICK. On a near-black interface a blur
+    has almost nothing to reveal, so translucency by itself reads as "slightly
+    wrong grey" rather than as glass. What the eye actually recognises is the
+    bright edge where light catches the lip of the material. Every one of these
+    carries one, and it is doing more work than the blur is.
+
+    TRANSLUCENCY IS AN ENHANCEMENT, NEVER THE BASE. Each rule states a solid
+    colour first and only becomes see-through inside `@supports`. Written the
+    other way round — declare the transparency, assume the blur — a browser
+    without `backdrop-filter` renders a sidebar you can read the page through.
+    That is not a degraded experience, it is an unusable one.
+  */
+  .material-chrome {
+    background-color: var(--color-ink-900);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+  }
+
+  .material-raised {
+    background-color: var(--color-ink-850);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+      0 1px 2px -1px rgb(0 0 0 / 0.6),
+      0 24px 56px -20px rgb(0 0 0 / 0.75);
+  }
+
+  /*
+    Cards. `background-image` rather than `background-color`, so the class layers
+    ON TOP of whatever `bg-ink-850` the component already sets instead of racing
+    it — these are both single class selectors, and which one wins would come
+    down to emit order, which this file has already been bitten by once (see the
+    note on `.drawer-safe-top`).
+
+    The gradient stops at 46%: a wash that runs the full height reads as a colour
+    change, and only a wash that clearly fades reads as light falling on a top
+    edge.
+  */
+  .surface-lift {
+    background-image: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.032),
+      rgb(255 255 255 / 0) 46%
+    );
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.045),
+      0 1px 2px -1px rgb(0 0 0 / 0.5),
+      0 10px 30px -18px rgb(0 0 0 / 0.55);
+  }
+
+  /*
+    ── THE BLUR BUDGET, and I overspent it first time round ────────────────────
+
+    These were 28px and 32px. The guidance they were written from says plainly to keep a
+    blur under 20px because it is expensive, "especially in Safari", and both numbers were
+    over it. On a phone that is not a small overspend: a backdrop filter makes the
+    compositor resample and blur the region behind the element every time anything in
+    front of it changes, and the cost scales with the radius AND the area.
+
+    `.material-chrome` was the worst of it, because of WHERE it sits. The sidebar is
+    `h-dvh` on desktop and a `fixed inset-y-0` drawer on mobile — a full-height surface,
+    the largest blurred region in the product, and on a phone it is off-screen almost all
+    of the time while still being composited.
+
+    So: radii inside the budget, and the full-height one is DESKTOP ONLY. Below `lg` the
+    sidebar is a solid panel. It is a drawer there, over content, appearing on a deliberate
+    tap and gone again — the material reads as barely different, and it stops every phone
+    paying for a viewport-height blur on every frame of every scroll.
+
+    1024px matches Tailwind's `lg`, which is the same breakpoint the sidebar's own layout
+    switches at. Written as a raw media query because these are plain CSS classes, not
+    utilities, so there is no `lg:` variant to reach for.
+  */
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    @media (min-width: 1024px) {
+      .material-chrome {
+        background-color: color-mix(in oklab, var(--color-ink-900) 62%, transparent);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        backdrop-filter: blur(16px) saturate(140%);
+      }
+    }
+    /* Still blurred a little harder than the chrome, because it is smaller and in front,
+       and that contrast is what stops the two layers reading as one pane of glass at two
+       brightnesses. This one keeps its blur at every width: a dialog and a toast are
+       small, short-lived, and the cost is bounded by their own size. */
+    .material-raised {
+      background-color: color-mix(in oklab, var(--color-ink-850) 76%, transparent);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      backdrop-filter: blur(18px) saturate(150%);
+    }
+
+  }
+
+  /*
+    The page itself. A flat near-black slab is the thing that makes a dark UI feel
+    cheap — there is no light in it, so nothing above it can catch any.
+
+    Two very low-contrast washes, from the palette already defined at the top of
+    this file rather than from new colours, and both anchored off the top edge so
+    the light has an implied direction. `fixed`, so it does not scroll and does
+    not repaint while the page moves.
+
+    It is also what gives the glass above it something to actually blur. Without
+    it `.material-chrome` is sampling flat #08090b and the blur is invisible.
+  */
+  /*
+    `isolation` and `z-index: -1` are a pair, and both are required.
+
+    CSS paints a positioned descendant at `z-index: 0` AFTER the backgrounds and
+    the inline content of non-positioned block descendants — so the obvious
+    version of this laid the wash over the page's own text. `z-index: -1` puts it
+    in the negative band, which paints immediately after the element's own
+    background and beneath everything else.
+
+    That only works if this element is itself a stacking context, otherwise the
+    pseudo escapes to the nearest one and hides behind `bg-ink-950`. `isolation`
+    is the cheap way to force one: unlike `transform`, `filter` or `contain`, it
+    does NOT establish a containing block for fixed positioning, so the fixed
+    sidebar and its scrim still resolve against the viewport.
+  */
+  .page-ambient {
+    isolation: isolate;
+  }
+
+  .page-ambient::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        70rem 44rem at 16% -10%,
+        color-mix(in oklab, var(--color-iris) 7%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        58rem 38rem at 94% 2%,
+        color-mix(in oklab, var(--color-sky) 5%, transparent),
+        transparent 60%
+      );
+  }
+
+  /*
+    ── the two settings that mean "stop doing that" ───────────────────────────
+
+    Reduced transparency is a legibility setting, not a taste one, and the answer
+    is a solid surface — NOT a slightly-less-transparent one. The blur goes too:
+    keeping it while the background is opaque costs a compositor pass to render
+    something nobody can see.
+
+    Reduced motion is not in here on purpose. None of these animate.
+  */
+  @media (prefers-reduced-transparency: reduce) {
+    .material-chrome,
+    .material-raised {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .material-chrome {
+      background-color: var(--color-ink-900);
+    }
+    .material-raised {
+      background-color: var(--color-ink-850);
+    }
+    .page-ambient::before {
+      display: none;
+    }
+  }
+
+  /* More contrast means the edge should be a border you can see, not a hint of
+     one, and the ambient wash is exactly the kind of low-contrast decoration
+     this setting is asking us to remove. */
+  @media (prefers-contrast: more) {
+    .material-chrome,
+    .material-raised {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      border-color: var(--color-ink-500);
+    }
+    .material-chrome {
+      background-color: var(--color-ink-900);
+    }
+    .material-raised {
+      background-color: var(--color-ink-850);
+    }
+    .surface-lift {
+      background-image: none;
+    }
+    .page-ambient::before {
+      display: none;
+    }
+  }
+
+  /*
+    The modal. Two classes because the backdrop and the panel move differently: the
+    backdrop only fades, the panel rises into place.
+
+    Written here rather than as arbitrary `animate-[...]` utilities because those
+    reference keyframes by name, and a name that does not exist fails SILENTLY — the
+    dialog simply appears with no transition and nothing says why. A dialog that takes
+    money is the last place to want an invisible failure.
+
+    The panel travel is small and the duration short: this is a confirmation step, not
+    a flourish, and it appears in response to a deliberate press.
+  */
+  /*
+    ONE SCROLLBAR, AND IT LOOKS INTENTIONAL.
+    
+    The payment form is embedded in this panel now, and on a short window the panel is what
+    scrolls rather than the provider's page scrolling itself in two directions. That makes
+    this bar something a customer sees during checkout, so it gets styled instead of being
+    left as the browser's default chunky grey one against a dark surface.
+
+    `scrollbar-width`/`scrollbar-color` covers Firefox; the WebKit pseudo-elements cover
+    Safari and Chrome. The transparent border with `background-clip: content-box` is what
+    insets the thumb so it reads as floating rather than filling a gutter.
+  */
+  .modal-panel {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+  .modal-panel::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  .modal-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .modal-panel::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-600);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .modal-panel::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-500);
+  }
+
+  .modal-veil {
+    animation: modal-veil-in 140ms var(--ease-out-strong) both;
+  }
+  .modal-panel {
+    animation: modal-panel-in 190ms var(--ease-out-strong) both;
+  }
+  @keyframes modal-veil-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes modal-panel-in {
+    from {
+      opacity: 0;
+      /* Rises further on a phone, where it is a bottom sheet and has further to come. */
+      transform: translateY(12px) scale(0.98);
+      /*
+        MATERIALIZE RATHER THAN FADE. The panel is a translucent material now, and
+        a material that arrives by ramping opacity looks like a picture of glass
+        being turned up. Moving the blur and the scale together instead reads as
+        the surface resolving into focus as it settles.
+
+        4px, and gone within 190ms. Blur is the expensive property in here — it is
+        the reason this stays small and short, and the reason it is on the enter
+        only. Safari in particular charges real money for a large one.
+      */
+      filter: blur(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modal-veil,
+    .modal-panel {
+      animation: none;
+    }
+  }
+
+  /*
+    ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+
+    None of this touches sonner's motion. Its timing is the reason the library is
+    liked — slightly slower than the generic UI budget and `ease` rather than
+    `ease-out`, tuned to the component's personality — and it is already better
+    than anything worth substituting. What needed fixing was the SURFACE, and one
+    outright bug:
+
+      1. THE FONT WAS WRONG, everywhere, always. Sonner sets `font-family:
+         ui-sans-serif, system-ui…` on the toaster element itself, and a declared
+         family on the element beats inheritance from `body`. So every
+         notification this product has ever shown has been in the operating
+         system's font while the page around it was in Century Gothic. Nobody
+         would report that; it is exactly the class of detail that reads as
+         "slightly cheap" without ever being consciously noticed.
+      2. The panel was flat, while the dialog it appears beside is now a material.
+      3. Title and description were nearly identical in weight and size. A
+         notification is scanned, not read, so the first line has to win.
+
+    HOW THIS BEATS SONNER'S OWN CSS — not obvious, and the part a later edit will
+    break by "simplifying" the selectors.
+
+    Sonner wraps almost every rule in `:where(…)`, which has ZERO specificity, so
+    a plain class beats it outright. Its stylesheet is also injected into <head>
+    at runtime, AFTER this file, so on an exact specificity tie sonner wins. Two
+    of its rules are not wrapped and have to be beaten on specificity alone:
+
+      [data-sonner-toast][data-styled='true'] [data-button]            → (0,3,0)
+      [data-sonner-toaster][data-theme='dark'] … [data-close-button]   → (0,4,0)
+
+    The selectors for those two are built one step above each, which is why they
+    look over-qualified: every attribute in them is load-bearing. The alternative
+    is `!important` on a dozen declarations, which is the point at which the
+    sonner guidance says to stop and go headless instead — and headless would mean
+    rewriting every `toast.*` call site in the product to gain nothing visible.
+
+    THE INLINE `style` ON THE TOASTER HAD TO GO for any of this to apply. A style
+    attribute beats every stylesheet rule regardless of specificity, so the old
+    `toastOptions.style` would have silently won against all of it.
+  */
+  .vs-toaster {
+    /* Wider than the 356px default: these carry a title AND a description, and at
+       356 the second line wrapped to three. */
+    --width: 380px;
+    /* (1) above. `inherit` rather than restating the stack, so this cannot drift
+       away from --font-sans when the font changes. */
+    font-family: inherit;
+  }
+
+  .vs-toast {
+    /* No box-shadow here — `.material-raised` is composed onto the same element
+       and owns the depth, so setting one here would fight it. */
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-ink-700);
+    border-radius: var(--radius-card);
+    color: var(--color-fg);
+  }
+
+  /* Sonner's own gap is 2px, which at this type size runs the two lines together. */
+  .vs-toast [data-content] {
+    gap: 0.1875rem;
+  }
+
+  .vs-toast-title {
+    font-size: var(--text-small);
+    line-height: 1.45;
+    /* Vibrancy: text over a translucent surface needs marginally more tracking
+       and more contrast than the same text on an opaque one, because the
+       background behind it is not constant. */
+    letter-spacing: 0.012em;
+    color: var(--color-fg);
+  }
+
+  .vs-toast-desc {
+    font-size: var(--text-tiny);
+    line-height: 1.5;
+    letter-spacing: 0.014em;
+    /* The hierarchy. Sonner's default is `color: inherit`, which is what made the
+       description compete with the title instead of supporting it. */
+    color: var(--color-fg-muted);
+  }
+
+  /*
+    The icon becomes a tinted disc rather than a bare glyph, which is what lets a
+    notification's TYPE register before any of it is read. The tone comes from the
+    semantic tokens at the top of this file, so a toast, a badge and a progress
+    bar describing the same outcome are the same colour.
+  */
+  .vs-toast-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    /* Cancels sonner's negative icon margins, which exist to optically centre a
+       bare glyph and are wrong for a disc. */
+    margin: 0.09375rem 0 0;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: color-mix(in oklab, var(--color-fg-subtle) 20%, transparent);
+    color: var(--color-fg-muted);
+  }
+
+  .vs-toast-icon > svg {
+    width: 0.6875rem;
+    height: 0.6875rem;
+    margin: 0;
+  }
+
+  .vs-toast[data-type='success'] .vs-toast-icon {
+    background-color: color-mix(in oklab, var(--color-good) 18%, transparent);
+    color: var(--color-good);
+  }
+  .vs-toast[data-type='error'] .vs-toast-icon {
+    background-color: color-mix(in oklab, var(--color-bad) 18%, transparent);
+    color: var(--color-bad);
+  }
+  .vs-toast[data-type='warning'] .vs-toast-icon {
+    background-color: color-mix(in oklab, var(--color-warn) 18%, transparent);
+    color: var(--color-warn);
+  }
+  .vs-toast[data-type='info'] .vs-toast-icon {
+    background-color: color-mix(in oklab, var(--color-sky) 18%, transparent);
+    color: var(--color-sky);
+  }
+  /* The spinner is not a glyph and a disc behind it reads as a second, stalled
+     ring. Sonner's own loader keeps its default box. */
+  .vs-toast[data-type='loading'] .vs-toast-icon {
+    background-color: transparent;
+  }
+
+  /* (0,5,0), one above sonner's (0,4,0) dark-theme close button rule. */
+  .vs-toaster[data-theme] .vs-toast[data-styled] .vs-toast-x {
+    background-color: var(--color-ink-800);
+    border: 1px solid var(--color-ink-700);
+    color: var(--color-fg-muted);
+    transition:
+      background-color 160ms var(--ease-out-strong),
+      border-color 160ms var(--ease-out-strong),
+      color 160ms var(--ease-out-strong);
+  }
+  .vs-toaster[data-theme] .vs-toast[data-styled] .vs-toast-x:hover {
+    background-color: var(--color-ink-750);
+    border-color: var(--color-ink-600);
+    color: var(--color-fg);
+  }
+
+  /* (0,4,0), one above sonner's (0,3,0) `[data-button]` rule. The action stays
+     monochrome-white per the palette note: buttons do not carry hues here. */
+  .vs-toaster .vs-toast[data-styled] .vs-toast-action {
+    height: 1.75rem;
+    padding: 0 0.625rem;
+    border-radius: 0.5rem;
+    font-size: var(--text-tiny);
+    letter-spacing: 0.014em;
+    background-color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  .vs-toaster .vs-toast[data-styled] .vs-toast-cancel {
+    height: 1.75rem;
+    padding: 0 0.625rem;
+    border-radius: 0.5rem;
+    font-size: var(--text-tiny);
+    letter-spacing: 0.014em;
+    background-color: var(--color-ink-750);
+    color: var(--color-fg-muted);
+  }
+
+  /*
+    ── THE SUBSCRIPTION MOMENT ────────────────────────────────────────────────
+
+    The one real flourish in the product, and the frequency table is precisely why
+    it is allowed to exist. Everything else here is rationed because it is seen
+    tens of times a day; somebody subscribes once. That is the rare tier, which is
+    where the delight budget lives and the only place spending it is not a tax on
+    the person using the software.
+
+    WHAT IT IS NOT: confetti. Delight is supposed to be the result of the rest of
+    the craft being right, not a particle effect stapled over the top. So this is
+    the iOS success mark — a halo that expands and dissipates, a check that draws
+    itself, then the two facts that matter, rising.
+
+    ONE CLOCK, 2600ms, and every element self-terminates on it. No state machine
+    and no cleanup timer deciding when things leave, because the failure mode of
+    that design is a full-screen overlay stuck on top of a paid account. The enter
+    is over by 260ms, the exit starts at 88%, and if React never re-renders again
+    the animation still finishes and the thing is gone.
+
+    It is `pointer-events: none` in the component, so at no point can it intercept
+    a click even while it is fully opaque.
+  */
+  .celebrate-wash {
+    animation: celebrate-wash 2600ms var(--ease-out-strong) both;
+  }
+
+  .celebrate-card {
+    animation: celebrate-card 2600ms var(--ease-out-strong) both;
+  }
+
+  .celebrate-ring {
+    animation: celebrate-ring 900ms var(--ease-out-strong) both;
+  }
+
+  /*
+    A static bloom behind the mark. Written as a class rather than an arbitrary
+    `bg-[radial-gradient(…)]` utility because that syntax needs every space
+    replaced by an underscore and silently produces nothing when it is escaped
+    wrongly — and a gradient that fails invisibly is indistinguishable from a
+    gradient nobody added.
+
+    It does not animate. The card it sits inside is already fading and scaling,
+    and the bloom moving on its own clock as well would read as two effects.
+  */
+  .celebrate-halo {
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--color-good) 26%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* The same bloom in the failure tone. A separate class rather than a variable swap
+     because the gradient is the only thing that differs, and a class is what the
+     component can switch on without inlining a gradient into the markup. */
+  .celebrate-halo-bad {
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--color-bad) 26%, transparent),
+      transparent 70%
+    );
+  }
+
+  /*
+    `stroke-dashoffset`, which is not `transform` or `opacity` — the deliberate
+    exception, on the same grounds `clip-path` is allowed. It costs a paint on a
+    22px path and no layout, and it is the only way to make a line look drawn
+    rather than revealed. `pathLength="1"` in the SVG normalises the geometry so
+    the dash maths does not depend on the path's real length.
+  */
+  .celebrate-mark {
+    stroke-dasharray: 1;
+    animation: celebrate-mark 460ms var(--ease-out-strong) 200ms both;
+  }
+
+  /* Reuses `rise` from the stagger block rather than declaring a third near-
+     identical keyframe. */
+  .celebrate-line {
+    animation: rise 320ms var(--ease-out-strong) both;
+  }
+  .celebrate-line:nth-child(1) { animation-delay: 240ms; }
+  .celebrate-line:nth-child(2) { animation-delay: 330ms; }
+
+  @keyframes celebrate-wash {
+    0%   { opacity: 0; }
+    6%   { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes celebrate-card {
+    0% {
+      opacity: 0;
+      transform: scale(0.94);
+      filter: blur(8px);
+    }
+    10% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+    88% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+    /* Leaves the way it arrived, smaller and softer, rather than sliding off in a
+       direction it never came from. */
+    100% {
+      opacity: 0;
+      transform: scale(0.98);
+      filter: blur(2px);
+    }
+  }
+
+  @keyframes celebrate-ring {
+    0%   { opacity: 0.5; transform: scale(0.55); }
+    100% { opacity: 0; transform: scale(2.1); }
+  }
+
+  @keyframes celebrate-mark {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+  }
+
+  /* Opacity-only twin of `celebrate-card`, for the reduced-motion case below. */
+  @keyframes celebrate-fade {
+    0%   { opacity: 0; }
+    6%   { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /*
+    Gentler, not absent. The moment still happens and still says the plan is
+    active — it just cross-fades instead of expanding, and the check is simply
+    there rather than drawing itself. The halo is the one piece that goes
+    entirely: an expanding ring is the vestibular trigger in the set.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .celebrate-card {
+      animation: celebrate-fade 2600ms linear both;
+    }
+    .celebrate-ring {
+      display: none;
+    }
+    .celebrate-mark {
+      animation: none;
+      stroke-dasharray: none;
+    }
+    .celebrate-line {
+      animation: none;
+    }
+  }
+
+  /* ── the self-driving dashboard demo ───────────────────────────────────────
+     ONE cycle length, shared by every element, with the choreography written as
+     percentages of it. No animation-delay anywhere: a delay would offset each
+     element's loop and they would drift apart, which for a cursor and the control
+     it appears to press is the whole ballgame.
+
+     THE CURSOR TARGETS ARE MEASURED, NOT WRITTEN DOWN. --t1x/--t1y through
+     --t7x/--t7y are set from getBoundingClientRect in DashboardDemo.tsx and
+     re-measured on resize. The first version hard-coded pixel coordinates and
+     missed every single target. Interpolating between measured variables means the
+     arrow cannot point at empty space, whatever the column width.
+
+       1 drop   2 field   3-5 list items   6 cta   7 download
+
+       0 – 22%   upload      cursor to the dropzone, click, file appears, bar fills
+      22 – 46%   languages   open the combobox, tick three items, close
+      46 – 56%   generate    press the CTA
+      56 – 76%   running     three rows fill, one after another
+      76 – 100%  download    buttons appear, cursor presses the first
+
+     Only transform and opacity are animated, so the whole thing is composited.
+     Base styles are the FINISHED state, so `animation: none` lands on the single
+     most informative frame instead of an empty box. */
+  .demo-stage {
+    --demo-cycle: 20s;
+  }
+  .demo-stage[data-running='false'] * {
+    animation-play-state: paused;
+  }
+
+  .demo-stage .demo-cursor {
+    animation: demo-cursor var(--demo-cycle) linear infinite;
+  }
+  /* Repeating a value across two stops is what creates a hold without needing a
+     second animation. */
+  @keyframes demo-cursor {
+    0%, 1%     { transform: translate(var(--idlex), var(--idley)); }
+    4%, 17%    { transform: translate(var(--t1x), var(--t1y)); }  /* dropzone */
+    21%, 23%   { transform: translate(var(--t2x), var(--t2y)); }  /* the field */
+    26%, 29%   { transform: translate(var(--t3x), var(--t3y)); }  /* Telugu */
+    32%, 35%   { transform: translate(var(--t4x), var(--t4y)); }  /* Hindi */
+    38%, 50%   { transform: translate(var(--t5x), var(--t5y)); }  /* Tamil, then hold */
+    57%, 76%   { transform: translate(var(--t6x), var(--t6y)); }  /* the CTA */
+    82%, 96%   { transform: translate(var(--t7x), var(--t7y)); }  /* Download */
+    100%       { transform: translate(var(--idlex), var(--idley)); }
+  }
+
+  /* The click ring. Expands and fades at each press; together with the cursor
+     arriving it reads as a press rather than a teleport. */
+  .demo-stage .demo-ring {
+    animation: demo-ring var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-ring {
+    0%, 4.4%   { opacity: 0; transform: scale(0.3); }
+    5%         { opacity: 0.9; transform: scale(0.5); }
+    8%         { opacity: 0; transform: scale(1.15); }
+    21.4%      { opacity: 0; transform: scale(0.3); }
+    22%        { opacity: 0.9; transform: scale(0.5); }
+    24%        { opacity: 0; transform: scale(1.15); }
+    26.4%      { opacity: 0; transform: scale(0.3); }
+    27%        { opacity: 0.9; transform: scale(0.5); }
+    29%        { opacity: 0; transform: scale(1.15); }
+    32.4%      { opacity: 0; transform: scale(0.3); }
+    33%        { opacity: 0.9; transform: scale(0.5); }
+    35%        { opacity: 0; transform: scale(1.15); }
+    38.4%      { opacity: 0; transform: scale(0.3); }
+    39%        { opacity: 0.9; transform: scale(0.5); }
+    41%        { opacity: 0; transform: scale(1.15); }
+    57.4%      { opacity: 0; transform: scale(0.3); }
+    58%        { opacity: 0.9; transform: scale(0.5); }
+    61%        { opacity: 0; transform: scale(1.15); }
+    82.4%      { opacity: 0; transform: scale(0.3); }
+    83%        { opacity: 0.9; transform: scale(0.5); }
+    86%, 100%  { opacity: 0; transform: scale(1.15); }
+  }
+
+  /* Step 1. The dropzone hands over to the file card. */
+  .demo-stage .demo-drop {
+    animation: demo-drop var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-drop {
+    0%, 4%    { opacity: 1; transform: scale(1); }
+    5%        { opacity: 1; transform: scale(1.015); } /* the drop lands */
+    7%, 99%   { opacity: 0; transform: scale(0.99); }
+    100%      { opacity: 1; transform: scale(1); }
+  }
+  .demo-stage .demo-file {
+    animation: demo-file var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-file {
+    0%, 6%    { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    9%, 99%   { opacity: 1; transform: none; }
+    100%      { opacity: 0; }
+  }
+  .demo-stage .demo-upload {
+    animation: demo-upload var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-upload {
+    0%, 8%     { transform: scaleX(0); }
+    14%, 100%  { transform: scaleX(1); }
+  }
+
+  /* Step 2. The picker panel, then the popup, then three ticks. */
+  .demo-stage .demo-picker {
+    animation: demo-picker var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-picker {
+    0%, 13%    { opacity: 0; transform: translateY(4px); }
+    17%, 60%   { opacity: 1; transform: none; }
+    64%, 100%  { opacity: 0; transform: translateY(-4px); }
+  }
+
+  /* The popup grows from the top edge, the way a real one anchored to the field
+     would, and is gone before the CTA is pressed. */
+  .demo-stage .demo-list {
+    animation: demo-list var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-list {
+    0%, 21%    { opacity: 0; transform: scaleY(0.9) translateY(-4px); }
+    23%, 50%   { opacity: 1; transform: none; }
+    53%, 100%  { opacity: 0; transform: scaleY(0.9) translateY(-4px); }
+  }
+
+  /* Row highlight as the cursor reaches each item. steps(1) because a highlight
+     appearing gradually reads as a fade, not as a pointer arriving. */
+  .demo-stage .demo-item-1,
+  .demo-stage .demo-item-2,
+  .demo-stage .demo-item-3 {
+    animation-duration: var(--demo-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .demo-stage .demo-item-1 { animation-name: demo-item-1; }
+  .demo-stage .demo-item-2 { animation-name: demo-item-2; }
+  .demo-stage .demo-item-3 { animation-name: demo-item-3; }
+  @keyframes demo-item-1 {
+    0%, 25%   { background: transparent; }
+    26%, 30%  { background: var(--color-ink-800); }
+    31%, 100% { background: transparent; }
+  }
+  @keyframes demo-item-2 {
+    0%, 31%   { background: transparent; }
+    32%, 36%  { background: var(--color-ink-800); }
+    37%, 100% { background: transparent; }
+  }
+  @keyframes demo-item-3 {
+    0%, 37%   { background: transparent; }
+    38%, 43%  { background: var(--color-ink-800); }
+    44%, 100% { background: transparent; }
+  }
+
+  /* Ticks land at the click, not before. */
+  .demo-stage .demo-tick-1,
+  .demo-stage .demo-tick-2,
+  .demo-stage .demo-tick-3 {
+    animation-duration: var(--demo-cycle);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .demo-stage .demo-tick-1 { animation-name: demo-tick-1; }
+  .demo-stage .demo-tick-2 { animation-name: demo-tick-2; }
+  .demo-stage .demo-tick-3 { animation-name: demo-tick-3; }
+  @keyframes demo-tick-1 {
+    0%, 26%   { opacity: 0; transform: scale(0.6); }
+    27.5%, 100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes demo-tick-2 {
+    0%, 32%   { opacity: 0; transform: scale(0.6); }
+    33.5%, 100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes demo-tick-3 {
+    0%, 38%   { opacity: 0; transform: scale(0.6); }
+    39.5%, 100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Chips appear in the field as each item is ticked, so the field and the list
+     agree at every instant. */
+  .demo-stage .demo-chip-1,
+  .demo-stage .demo-chip-2,
+  .demo-stage .demo-chip-3 {
+    animation-duration: var(--demo-cycle);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .demo-stage .demo-chip-1 { animation-name: demo-chip-1; }
+  .demo-stage .demo-chip-2 { animation-name: demo-chip-2; }
+  .demo-stage .demo-chip-3 { animation-name: demo-chip-3; }
+  @keyframes demo-chip-1 {
+    0%, 26%   { opacity: 0; transform: scale(0.8); }
+    28%, 100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes demo-chip-2 {
+    0%, 32%   { opacity: 0; transform: scale(0.8); }
+    34%, 100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes demo-chip-3 {
+    0%, 38%   { opacity: 0; transform: scale(0.8); }
+    40%, 100% { opacity: 1; transform: scale(1); }
+  }
+  /* The trigger's label swaps from the prompt to a count. Two elements stacked and
+     cross-faded, because a text node cannot be animated. */
+  .demo-stage .demo-ph {
+    animation: demo-placeholder var(--demo-cycle) steps(1, end) infinite;
+  }
+  @keyframes demo-placeholder {
+    0%, 26%   { opacity: 1; }
+    27%, 100% { opacity: 0; }
+  }
+  .demo-stage .demo-count {
+    animation: demo-count var(--demo-cycle) steps(1, end) infinite;
+  }
+  @keyframes demo-count {
+    0%, 26%   { opacity: 0; }
+    27%, 100% { opacity: 1; }
+  }
+  /* The chevron flips while the list is open, same as the real control. */
+  .demo-stage .demo-chev {
+    animation: demo-chev var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-chev {
+    0%, 21%    { transform: rotate(0deg); }
+    23%, 50%   { transform: rotate(180deg); }
+    53%, 100%  { transform: rotate(0deg); }
+  }
+
+  /* The checkbox fills as each row is ticked. */
+  .demo-stage .demo-box-1,
+  .demo-stage .demo-box-2,
+  .demo-stage .demo-box-3 {
+    border-color: var(--color-iris);
+    background: var(--color-iris);
+    animation-duration: var(--demo-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .demo-stage .demo-box-1 { animation-name: demo-box-1; }
+  .demo-stage .demo-box-2 { animation-name: demo-box-2; }
+  .demo-stage .demo-box-3 { animation-name: demo-box-3; }
+  @keyframes demo-box-1 {
+    0%, 26%   { border-color: var(--color-ink-600); background: transparent; }
+    27%, 100% { border-color: var(--color-iris); background: var(--color-iris); }
+  }
+  @keyframes demo-box-2 {
+    0%, 32%   { border-color: var(--color-ink-600); background: transparent; }
+    33%, 100% { border-color: var(--color-iris); background: var(--color-iris); }
+  }
+  @keyframes demo-box-3 {
+    0%, 38%   { border-color: var(--color-ink-600); background: transparent; }
+    39%, 100% { border-color: var(--color-iris); background: var(--color-iris); }
+  }
+
+  /* Step 3. A deeper press than the live UI uses: at this scale 0.97 is invisible. */
+  .demo-stage .demo-cta {
+    animation: demo-cta var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-cta {
+    0%, 39%   { opacity: 0.3; transform: scale(0.98); }
+    42%, 57%  { opacity: 1; transform: scale(1); }
+    58%       { transform: scale(0.94); }
+    60%       { transform: scale(1); }
+    100%      { opacity: 1; }
+  }
+
+  .demo-stage .demo-run {
+    animation: demo-run var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-run {
+    0%, 61%    { opacity: 0; transform: translateY(6px); }
+    64%, 99%   { opacity: 1; transform: none; }
+    100%       { opacity: 0; transform: translateY(6px); }
+  }
+  /* Staggered, because they really do run one after another on one GPU - the demo
+     should not imply otherwise. */
+  .demo-stage .demo-row-1,
+  .demo-stage .demo-row-2,
+  .demo-stage .demo-row-3 {
+    animation-duration: var(--demo-cycle);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  .demo-stage .demo-row-1 { animation-name: demo-row-1; }
+  .demo-stage .demo-row-2 { animation-name: demo-row-2; }
+  .demo-stage .demo-row-3 { animation-name: demo-row-3; }
+  @keyframes demo-row-1 {
+    0%, 64%   { transform: scaleX(0); }
+    69%, 100% { transform: scaleX(1); }
+  }
+  @keyframes demo-row-2 {
+    0%, 67%   { transform: scaleX(0); }
+    72%, 100% { transform: scaleX(1); }
+  }
+  @keyframes demo-row-3 {
+    0%, 70%   { transform: scaleX(0); }
+    76%, 100% { transform: scaleX(1); }
+  }
+
+  /* Step 4. Download appears only once its row has finished. */
+  .demo-stage .demo-dl {
+    animation: demo-dl var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-dl {
+    0%, 76%   { opacity: 0; transform: scale(0.9); }
+    79%, 100% { opacity: 1; transform: scale(1); }
+  }
+  .demo-stage .demo-dl-first {
+    animation: demo-dl-first var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-dl-first {
+    0%, 76%   { opacity: 0; transform: scale(0.9); }
+    79%, 82%  { opacity: 1; transform: scale(1); }
+    83%       { transform: scale(0.9); }
+    85%, 100% { opacity: 1; transform: scale(1); }
+  }
+
+  .demo-stage .demo-quota {
+    animation: demo-quota var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-quota {
+    0%, 61%   { transform: scaleX(0.18); }
+    75%, 100% { transform: scaleX(0.42); }
+  }
+
+  /* The seam. A fifth of a second of black at the loop point, so twenty elements
+     resetting at once is a blink rather than a glitch. */
+  .demo-stage .demo-veil {
+    opacity: 0;
+    animation: demo-veil var(--demo-cycle) linear infinite;
+  }
+  @keyframes demo-veil {
+    0%, 98%   { opacity: 0; }
+    99%       { opacity: 1; }
+    99.9%     { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Freeze on the base styles, which ARE the finished state: three dubs done,
+       downloads ready. One honest frame beats a loop nobody asked for. */
+    .demo-stage *,
+    .demo-stage {
+      animation: none !important;
+    }
+    .demo-stage .demo-drop,
+    .demo-stage .demo-list,
+    .demo-stage .demo-picker,
+    .demo-stage .demo-veil,
+    .demo-stage .demo-cursor {
+      display: none;
+    }
+    .demo-stage .demo-run {
+      opacity: 1;
+      transform: none;
+    }
+    /* Two stacked labels on the trigger; with motion off the prompt would sit on
+       top of the count. The finished state is the count. */
+    .demo-stage .demo-ph {
+      display: none;
+    }
+  }
+
+  /* ── the "every decision already made" explainer ───────────────────────────
+     Five scenes on ONE 25-second clock, five points of cycle each, beats written
+     as percentages of the whole. No animation-delay, for the same reason as the
+     dashboard demo: a delay offsets each element's loop and they drift apart.
+
+       scene 1   0 – 20%   speaker voices
+       scene 2  20 – 40%   timing
+       scene 3  40 – 60%   translation quality
+       scene 4  60 – 80%   background audio
+       scene 5  80 – 100%  the delivered file
+
+     Purpose is EXPLANATION, the one case the animate skill allows a loop and a
+     longer beat for, and only on a marketing surface. Transform and opacity only,
+     plus a few colour swaps, so nothing costs layout.
+
+     With motion off, scene one shows complete and the other four are hidden. A
+     carousel has no single finished frame, so the honest fallback is the first
+     scene rather than five stacked on top of each other. */
+  .dec-stage {
+    --dec-cycle: 25s;
+  }
+  .dec-stage[data-running='false'] * {
+    animation-play-state: paused;
+  }
+
+  /* Scene visibility. Scene 1 is the base state - visible with no animation - so
+     everything else is layered over it. */
+  .dec-stage .dec-scene-1,
+  .dec-stage .dec-scene-2,
+  .dec-stage .dec-scene-3,
+  .dec-stage .dec-scene-4,
+  .dec-stage .dec-scene-5 {
+    animation-duration: var(--dec-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+  }
+  .dec-stage .dec-scene-2,
+  .dec-stage .dec-scene-3,
+  .dec-stage .dec-scene-4,
+  .dec-stage .dec-scene-5 {
+    opacity: 0;
+  }
+  .dec-stage .dec-scene-1 { animation-name: dec-scene-1; }
+  .dec-stage .dec-scene-2 { animation-name: dec-scene-2; }
+  .dec-stage .dec-scene-3 { animation-name: dec-scene-3; }
+  .dec-stage .dec-scene-4 { animation-name: dec-scene-4; }
+  .dec-stage .dec-scene-5 { animation-name: dec-scene-5; }
+  @keyframes dec-scene-1 {
+    0%, 18%    { opacity: 1; transform: none; }
+    20%, 98%   { opacity: 0; transform: translateY(-6px); }
+    100%       { opacity: 1; transform: none; }
+  }
+  @keyframes dec-scene-2 {
+    0%, 19%    { opacity: 0; transform: translateY(6px); }
+    21%, 38%   { opacity: 1; transform: none; }
+    40%, 100%  { opacity: 0; transform: translateY(-6px); }
+  }
+  @keyframes dec-scene-3 {
+    0%, 39%    { opacity: 0; transform: translateY(6px); }
+    41%, 58%   { opacity: 1; transform: none; }
+    60%, 100%  { opacity: 0; transform: translateY(-6px); }
+  }
+  @keyframes dec-scene-4 {
+    0%, 59%    { opacity: 0; transform: translateY(6px); }
+    61%, 78%   { opacity: 1; transform: none; }
+    80%, 100%  { opacity: 0; transform: translateY(-6px); }
+  }
+  @keyframes dec-scene-5 {
+    0%, 79%    { opacity: 0; transform: translateY(6px); }
+    81%, 98%   { opacity: 1; transform: none; }
+    100%       { opacity: 0; transform: translateY(-6px); }
+  }
+
+  /* The header label, the claim it makes, and the progress dots, all cut with the
+     scenes. steps(1) because one line of text crossfading into another is mush. */
+  .dec-stage [class*='dec-label-'],
+  .dec-stage [class*='dec-claim-'] {
+    animation-duration: var(--dec-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .dec-stage .dec-label-1,
+  .dec-stage .dec-claim-1 { animation-name: dec-cut-1; }
+  .dec-stage .dec-label-2,
+  .dec-stage .dec-claim-2 { animation-name: dec-cut-2; }
+  .dec-stage .dec-label-3,
+  .dec-stage .dec-claim-3 { animation-name: dec-cut-3; }
+  .dec-stage .dec-label-4,
+  .dec-stage .dec-claim-4 { animation-name: dec-cut-4; }
+  .dec-stage .dec-label-5,
+  .dec-stage .dec-claim-5 { animation-name: dec-cut-5; }
+  .dec-stage .dec-label-2,
+  .dec-stage .dec-label-3,
+  .dec-stage .dec-label-4,
+  .dec-stage .dec-label-5,
+  .dec-stage .dec-claim-2,
+  .dec-stage .dec-claim-3,
+  .dec-stage .dec-claim-4,
+  .dec-stage .dec-claim-5 {
+    opacity: 0;
+  }
+  @keyframes dec-cut-1 { 0%, 19% { opacity: 1; } 20%, 99% { opacity: 0; } 100% { opacity: 1; } }
+  @keyframes dec-cut-2 { 0%, 19% { opacity: 0; } 20%, 39% { opacity: 1; } 40%, 100% { opacity: 0; } }
+  @keyframes dec-cut-3 { 0%, 39% { opacity: 0; } 40%, 59% { opacity: 1; } 60%, 100% { opacity: 0; } }
+  @keyframes dec-cut-4 { 0%, 59% { opacity: 0; } 60%, 79% { opacity: 1; } 80%, 100% { opacity: 0; } }
+  @keyframes dec-cut-5 { 0%, 79% { opacity: 0; } 80%, 99% { opacity: 1; } 100% { opacity: 0; } }
+
+  .dec-stage [class*='dec-dot-'] {
+    animation-duration: var(--dec-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .dec-stage .dec-dot-1 { animation-name: dec-dot-1; background: var(--color-fg); }
+  .dec-stage .dec-dot-2 { animation-name: dec-dot-2; }
+  .dec-stage .dec-dot-3 { animation-name: dec-dot-3; }
+  .dec-stage .dec-dot-4 { animation-name: dec-dot-4; }
+  .dec-stage .dec-dot-5 { animation-name: dec-dot-5; }
+  @keyframes dec-dot-1 { 0%, 19% { background: var(--color-fg); } 20%, 99% { background: var(--color-ink-600); } 100% { background: var(--color-fg); } }
+  @keyframes dec-dot-2 { 0%, 19% { background: var(--color-ink-600); } 20%, 39% { background: var(--color-fg); } 40%, 100% { background: var(--color-ink-600); } }
+  @keyframes dec-dot-3 { 0%, 39% { background: var(--color-ink-600); } 40%, 59% { background: var(--color-fg); } 60%, 100% { background: var(--color-ink-600); } }
+  @keyframes dec-dot-4 { 0%, 59% { background: var(--color-ink-600); } 60%, 79% { background: var(--color-fg); } 80%, 100% { background: var(--color-ink-600); } }
+  @keyframes dec-dot-5 { 0%, 79% { background: var(--color-ink-600); } 80%, 99% { background: var(--color-fg); } 100% { background: var(--color-ink-600); } }
+
+  /* ── scene 1: one voice, reused on every line ───────────────────────────── */
+  .dec-stage .dec1-src {
+    animation: dec1-src var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec1-src {
+    0%      { opacity: 0; transform: scale(0.96); }
+    2%, 18% { opacity: 1; transform: scale(1); }
+    20%, 100% { opacity: 1; }
+  }
+  /* The source bars keep moving while the lines fill, so it reads as a live sample
+     being taken rather than a static badge. */
+  .dec-stage .dec1-bar-1,
+  .dec-stage .dec1-bar-2,
+  .dec-stage .dec1-bar-3 {
+    animation-duration: 900ms;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+    transform-origin: bottom;
+  }
+  .dec-stage .dec1-bar-1 { animation-name: dec1-pulse-a; }
+  .dec-stage .dec1-bar-2 { animation-name: dec1-pulse-b; }
+  .dec-stage .dec1-bar-3 { animation-name: dec1-pulse-c; }
+  @keyframes dec1-pulse-a { from { transform: scaleY(0.55); } to { transform: scaleY(1); } }
+  @keyframes dec1-pulse-b { from { transform: scaleY(1); } to { transform: scaleY(0.5); } }
+  @keyframes dec1-pulse-c { from { transform: scaleY(0.75); } to { transform: scaleY(1); } }
+
+  .dec-stage .dec1-arrow {
+    animation: dec1-arrow var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec1-arrow {
+    0%       { opacity: 0; transform: translateX(-4px); }
+    4%, 18%  { opacity: 1; transform: none; }
+    20%, 100% { opacity: 1; }
+  }
+
+  /* Each line takes the same voice, one after another. Unfilled is the base. */
+  .dec-stage [class*='dec1-line-'] {
+    border-color: var(--color-ink-600);
+    color: var(--color-fg-subtle);
+    animation-duration: var(--dec-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+  }
+  .dec-stage .dec1-line-1 { animation-name: dec1-line-1; }
+  .dec-stage .dec1-line-2 { animation-name: dec1-line-2; }
+  .dec-stage .dec1-line-3 { animation-name: dec1-line-3; }
+  .dec-stage .dec1-line-4 { animation-name: dec1-line-4; }
+  @keyframes dec1-line-1 {
+    0%, 5%    { border-color: var(--color-ink-600); color: var(--color-fg-subtle); }
+    7%, 100%  { border-color: color-mix(in srgb, var(--color-good) 50%, transparent); color: var(--color-good); }
+  }
+  @keyframes dec1-line-2 {
+    0%, 7%    { border-color: var(--color-ink-600); color: var(--color-fg-subtle); }
+    9%, 100%  { border-color: color-mix(in srgb, var(--color-good) 50%, transparent); color: var(--color-good); }
+  }
+  @keyframes dec1-line-3 {
+    0%, 9%    { border-color: var(--color-ink-600); color: var(--color-fg-subtle); }
+    11%, 100% { border-color: color-mix(in srgb, var(--color-good) 50%, transparent); color: var(--color-good); }
+  }
+  @keyframes dec1-line-4 {
+    0%, 11%   { border-color: var(--color-ink-600); color: var(--color-fg-subtle); }
+    13%, 100% { border-color: color-mix(in srgb, var(--color-good) 50%, transparent); color: var(--color-good); }
+  }
+
+  .dec-stage .dec1-stock {
+    animation: dec1-stock var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec1-stock {
+    0%, 13%   { opacity: 0; }
+    15%, 100% { opacity: 0.55; }
+  }
+  .dec-stage .dec1-strike {
+    animation: dec1-strike var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec1-strike {
+    0%, 15%   { transform: scaleX(0); }
+    17%, 100% { transform: scaleX(1); }
+  }
+
+  /* ── scene 2: dubbed audio fitted into the original slots ───────────────── */
+  .dec-stage .dec2-fit-1,
+  .dec-stage .dec2-fit-2,
+  .dec-stage .dec2-fit-3 {
+    animation-duration: var(--dec-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+  }
+  .dec-stage .dec2-fit-1 { animation-name: dec2-fit-1; }
+  .dec-stage .dec2-fit-2 { animation-name: dec2-fit-2; }
+  .dec-stage .dec2-fit-3 { animation-name: dec2-fit-3; }
+  /* Overshoots past the slot then settles exactly into it - that is the fitting
+     being done, and it is the one beat in this component that earns a bounce. */
+  @keyframes dec2-fit-1 {
+    0%, 24%    { transform: scaleX(0); }
+    27%        { transform: scaleX(1.06); }
+    29%, 100%  { transform: scaleX(1); }
+  }
+  @keyframes dec2-fit-2 {
+    0%, 27%    { transform: scaleX(0); }
+    30%        { transform: scaleX(1.06); }
+    32%, 100%  { transform: scaleX(1); }
+  }
+  @keyframes dec2-fit-3 {
+    0%, 30%    { transform: scaleX(0); }
+    33%        { transform: scaleX(1.06); }
+    35%, 100%  { transform: scaleX(1); }
+  }
+  .dec-stage .dec2-keep {
+    animation: dec2-keep var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec2-keep {
+    0%, 35%    { opacity: 0; transform: scale(0.9); }
+    37%, 100%  { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── scene 3: a long line caught and shortened ──────────────────────────── */
+  .dec-stage .dec3-bar {
+    right: 3px;
+    background: var(--color-good);
+    animation: dec3-bar var(--dec-cycle) var(--ease-out-strong) infinite;
+    transform-origin: left;
+  }
+  @keyframes dec3-bar {
+    0%, 43%    { transform: scaleX(0.001); background: var(--color-warn); }
+    46%, 51%   { transform: scaleX(1.32); background: var(--color-warn); }
+    54%, 100%  { transform: scaleX(1); background: var(--color-good); }
+  }
+  .dec-stage .dec3-over {
+    animation: dec3-over var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec3-over {
+    0%, 46%    { opacity: 0; transform: scale(0.9); }
+    48%, 52%   { opacity: 1; transform: scale(1); }
+    54%, 100%  { opacity: 0; transform: scale(0.9); }
+  }
+  .dec-stage .dec3-pass1 {
+    animation: dec3-pass1 var(--dec-cycle) steps(1, end) infinite;
+  }
+  @keyframes dec3-pass1 {
+    0%, 44%   { opacity: 0; }
+    45%, 100% { opacity: 1; }
+  }
+  .dec-stage .dec3-pass2 {
+    animation: dec3-pass2 var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec3-pass2 {
+    0%, 52%    { opacity: 0; transform: translateY(3px); }
+    55%, 100%  { opacity: 1; transform: none; }
+  }
+
+  /* ── scene 4: speech replaced, music untouched ──────────────────────────── */
+  .dec-stage .dec4-old {
+    animation: dec4-old var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec4-old {
+    0%, 63%    { opacity: 1; }
+    67%, 100%  { opacity: 0; }
+  }
+  .dec-stage .dec4-new {
+    animation: dec4-new var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec4-new {
+    0%, 64%    { opacity: 0; }
+    68%, 100%  { opacity: 1; }
+  }
+  .dec-stage .dec4-swap {
+    animation: dec4-swap var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec4-swap {
+    0%, 66%    { opacity: 0; transform: scale(0.9); }
+    69%, 100%  { opacity: 1; transform: scale(1); }
+  }
+  /* The music lane breathes on its own short loop, unaffected by the scene clock -
+     which is exactly the claim: it is not touched by any of this. */
+  .dec-stage .dec4-music {
+    animation: dec4-music 2.4s ease-in-out infinite alternate;
+    transform-origin: bottom;
+  }
+  @keyframes dec4-music {
+    from { transform: scaleY(0.85); }
+    to   { transform: scaleY(1.05); }
+  }
+  .dec-stage .dec4-kept {
+    animation: dec4-kept var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec4-kept {
+    0%, 71%    { opacity: 0; transform: scale(0.9); }
+    74%, 100%  { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── scene 5: one track, tagged, default ────────────────────────────────── */
+  .dec-stage .dec5-card {
+    animation: dec5-card var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec5-card {
+    0%, 81%    { opacity: 0; transform: scale(0.97); }
+    84%, 100%  { opacity: 1; transform: scale(1); }
+  }
+  .dec-stage .dec5-track {
+    animation: dec5-track var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec5-track {
+    0%, 84%    { opacity: 0; transform: translateY(4px); }
+    87%, 100%  { opacity: 1; transform: none; }
+  }
+  .dec-stage .dec5-tag {
+    animation: dec5-tag var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec5-tag {
+    0%, 87%    { opacity: 0; transform: scale(0.8); }
+    89%, 100%  { opacity: 1; transform: scale(1); }
+  }
+  .dec-stage .dec5-default {
+    animation: dec5-default var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec5-default {
+    0%, 89%    { opacity: 0; transform: scale(0.8); }
+    92%, 100%  { opacity: 1; transform: scale(1); }
+  }
+  .dec-stage .dec5-absent {
+    animation: dec5-absent var(--dec-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes dec5-absent {
+    0%, 91%    { opacity: 0; }
+    94%, 100%  { opacity: 0.6; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Freeze on scene one, complete. A carousel has no single finished frame, and
+       five scenes stacked at full opacity would be unreadable. */
+    .dec-stage *,
+    .dec-stage {
+      animation: none !important;
+    }
+    .dec-stage .dec-scene-2,
+    .dec-stage .dec-scene-3,
+    .dec-stage .dec-scene-4,
+    .dec-stage .dec-scene-5,
+    .dec-stage .dec-label-2,
+    .dec-stage .dec-label-3,
+    .dec-stage .dec-label-4,
+    .dec-stage .dec-label-5,
+    .dec-stage .dec-claim-2,
+    .dec-stage .dec-claim-3,
+    .dec-stage .dec-claim-4,
+    .dec-stage .dec-claim-5 {
+      display: none;
+    }
+    .dec-stage .dec1-line-1,
+    .dec-stage .dec1-line-2,
+    .dec-stage .dec1-line-3,
+    .dec-stage .dec1-line-4 {
+      border-color: color-mix(in srgb, var(--color-good) 50%, transparent);
+      color: var(--color-good);
+    }
+    .dec-stage .dec1-stock { opacity: 0.55; }
+    .dec-stage .dec1-strike { transform: scaleX(1); }
+  }
+
+  /* Marquee. `linear`, because constant motion should not ease. */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .marquee {
+    /*
+      THE DURATION IS TIED TO THE LENGTH OF THE CATALOGUE, so it moved when the
+      catalogue did.
+
+      The track renders the language list twice and travels -50%, i.e. exactly one
+      copy, which is what makes the loop seamless. That means the duration buys a
+      whole catalogue rather than a fixed distance: at 34s it was 12 pills in 34s,
+      and leaving it there while the list grew to 43 would have shown the same
+      pills crawling past at under a third of the speed — close enough to still
+      that it reads as a rendering bug, not as motion.
+
+      120s keeps roughly the original pixels-per-second (34 x 43/12 = 122). If the
+      catalogue changes again, scale this the same way.
+    */
+    animation: marquee 120s linear infinite;
+  }
+  .marquee-host:hover .marquee {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee {
+      animation: none;
+    }
+  }
+
+  /* ── page transitions ──────────────────────────────────────────────────────
+
+     A route change used to be a hard cut: the old page vanished and the new one
+     appeared fully formed in the same frame. That reads as a page LOAD rather than
+     as navigation inside an app, which is the one impression a single-page app
+     exists to avoid.
+
+     8px and 260ms. Deliberately smaller and faster than the scroll reveals (600ms,
+     and a clip-path wipe): this fires on every navigation, which puts it in the
+     frequency tier where the animate skill says near-imperceptible or nothing. A
+     flourish you see forty times a session becomes a wait.
+
+     ── OPACITY ONLY, AND NOT FOR AESTHETIC REASONS ─────────────────────────────
+
+     The obvious version of this is a fade PLUS an 8px rise. It was written that way
+     first and it broke both of the app's fixed layers.
+
+     A `transform` other than `none` makes an element the containing block for every
+     `position: fixed` descendant. This class wraps the whole route tree, and two
+     things inside it are fixed: the marketing header (Nav.tsx) and the dashboard
+     sidebar drawer (AppShell.tsx). With a transform on the wrapper those stop being
+     fixed to the VIEWPORT and become fixed to the wrapper — so the header scrolls
+     away with the page, which is the one thing it exists not to do.
+
+     `animation-fill-mode: both` makes it worse rather than better: the final keyframe's
+     transform is retained after the animation ends, so the breakage is permanent
+     rather than lasting 260ms.
+
+     `opacity` has no such effect. It creates a stacking context, which is harmless
+     here, and it is NOT in the list of properties that establish a containing block
+     for fixed positioning. So the transition is a fade, and the rise it would have
+     had is already provided by the `.stagger` class the pages themselves use on their
+     own content — where there is nothing fixed to break.
+
+     Filed under things that look like a downgrade and are not: this is the version
+     that works. */
+  @keyframes page-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .page-in {
+    animation: page-in 260ms var(--ease-out-strong) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-in {
+      animation: none;
+    }
+  }
+
+  /* ── card lift ─────────────────────────────────────────────────────────────
+
+     2px up and a brighter edge when the pointer is over a card that leads
+     somewhere. Purpose is AFFORDANCE — it says the whole card is the target, not
+     just the link inside it — which is the tier that earns motion.
+
+     Gated on `pointer-fine` for the reason the file has hit twice already: a
+     touchscreen laptop reports `hover: hover`, so on a tap the card would rise and
+     STAY risen with no pointer to leave. On a phone the class does nothing at all,
+     which is correct — there is no hover to afford anything with.
+
+     `transform` and `border-color` only. A `box-shadow` transition here was the
+     first attempt and it was visibly cheaper to drop: shadow is painted, not
+     composited, so it repaints the card and everything under it every frame. */
+  .lift {
+    transition:
+      transform 200ms var(--ease-out-strong),
+      border-color 200ms var(--ease-out-strong);
+  }
+  .lift:hover {
+    /* translate3d again: promotes the layer rather than animating on the main
+       thread. */
+    transform: translate3d(0, -2px, 0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lift {
+      transition: border-color 120ms ease;
+    }
+    .lift:hover {
+      transform: none;
+    }
+  }
+  /* No hover on a finger, so nothing should move. Without this a tap on a
+     touchscreen laptop leaves the card floating. */
+  @media not all and (hover: hover) and (pointer: fine) {
+    .lift:hover {
+      transform: none;
+    }
+  }
+
+  /* Indeterminate shimmer for a stage that is working but cannot report percent. */
+  @keyframes sheen {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+  }
+  .sheen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.12),
+      transparent
+    );
+    animation: sheen 1.5s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sheen::after {
+      animation: none;
+      opacity: 0.5;
+    }
+  }
+}
+
+@layer components {
+  /* ── the creator play: one video, every language, the same URL ──────────────
+     Four scenes on ONE 28-second clock, beats written as percentages of the whole.
+     No `animation-delay` anywhere, for the same reason as the other two explainers:
+     a delay offsets an element's entire loop, so after the first pass the elements
+     drift apart and the sequence stops telling a story.
+
+       scene 1   0 – 25%   one video, one language, one audience
+       scene 2  25 – 50%   the dubs, cut as audio files
+       scene 3  50 – 76%   attaching them in YouTube Studio
+       scene 4  76 – 100%  the same URL, reaching everyone
+
+     Purpose is EXPLANATION, the one case the animate skill allows a loop and a long
+     beat for, and only on a marketing surface. Transform and opacity only, plus a
+     few colour swaps, so nothing here costs a layout pass.
+
+     Scene 3 gets the longest slice: five rows have to flip one at a time and be
+     followed by a cursor, and rushing it is what makes a mockup look like noise
+     rather than a demonstration.
+
+     With motion off, scene one shows complete and the other three are hidden. */
+  .reach-stage {
+    --reach-cycle: 28s;
+  }
+  .reach-stage[data-running='false'] * {
+    animation-play-state: paused;
+  }
+
+  /* Scene visibility. Scene 1 is the base state — visible with no transform — and
+     everything else is layered over it. */
+  .reach-stage .reach-scene-1,
+  .reach-stage .reach-scene-2,
+  .reach-stage .reach-scene-3,
+  .reach-stage .reach-scene-4 {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+  }
+  .reach-stage .reach-scene-2,
+  .reach-stage .reach-scene-3,
+  .reach-stage .reach-scene-4 {
+    opacity: 0;
+  }
+  .reach-stage .reach-scene-1 { animation-name: reach-scene-1; }
+  .reach-stage .reach-scene-2 { animation-name: reach-scene-2; }
+  .reach-stage .reach-scene-3 { animation-name: reach-scene-3; }
+  .reach-stage .reach-scene-4 { animation-name: reach-scene-4; }
+  @keyframes reach-scene-1 {
+    0%, 23%    { opacity: 1; transform: none; }
+    25%, 98%   { opacity: 0; transform: translateY(-8px); }
+    100%       { opacity: 1; transform: none; }
+  }
+  @keyframes reach-scene-2 {
+    0%, 24%    { opacity: 0; transform: translateY(8px); }
+    26%, 48%   { opacity: 1; transform: none; }
+    50%, 100%  { opacity: 0; transform: translateY(-8px); }
+  }
+  @keyframes reach-scene-3 {
+    0%, 49%    { opacity: 0; transform: translateY(8px); }
+    51%, 74%   { opacity: 1; transform: none; }
+    76%, 100%  { opacity: 0; transform: translateY(-8px); }
+  }
+  @keyframes reach-scene-4 {
+    0%, 75%    { opacity: 0; transform: translateY(8px); }
+    77%, 98%   { opacity: 1; transform: none; }
+    100%       { opacity: 0; transform: translateY(-8px); }
+  }
+
+  /* The header label, the claim, and the progress dots, cut with the scenes.
+     steps(1) because one line of text crossfading into another is mush. */
+  .reach-stage [class*='reach-label-'],
+  .reach-stage [class*='reach-claim-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .reach-stage .reach-label-1,
+  .reach-stage .reach-claim-1 { animation-name: reach-cut-1; }
+  .reach-stage .reach-label-2,
+  .reach-stage .reach-claim-2 { animation-name: reach-cut-2; }
+  .reach-stage .reach-label-3,
+  .reach-stage .reach-claim-3 { animation-name: reach-cut-3; }
+  .reach-stage .reach-label-4,
+  .reach-stage .reach-claim-4 { animation-name: reach-cut-4; }
+  .reach-stage .reach-label-2,
+  .reach-stage .reach-label-3,
+  .reach-stage .reach-label-4,
+  .reach-stage .reach-claim-2,
+  .reach-stage .reach-claim-3,
+  .reach-stage .reach-claim-4 {
+    opacity: 0;
+  }
+  @keyframes reach-cut-1 {
+    0%, 24%    { opacity: 1; }
+    25%, 99%   { opacity: 0; }
+    100%       { opacity: 1; }
+  }
+  @keyframes reach-cut-2 {
+    0%, 24%    { opacity: 0; }
+    25%, 49%   { opacity: 1; }
+    50%, 100%  { opacity: 0; }
+  }
+  @keyframes reach-cut-3 {
+    0%, 49%    { opacity: 0; }
+    50%, 75%   { opacity: 1; }
+    76%, 100%  { opacity: 0; }
+  }
+  @keyframes reach-cut-4 {
+    0%, 75%    { opacity: 0; }
+    76%, 100%  { opacity: 1; }
+  }
+
+  /* The dots. Colour only — a scaling dot in a four-dot row is fidgety. */
+  .reach-stage [class*='reach-dot-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .reach-stage .reach-dot-1 { animation-name: reach-dot-1; }
+  .reach-stage .reach-dot-2 { animation-name: reach-dot-2; }
+  .reach-stage .reach-dot-3 { animation-name: reach-dot-3; }
+  .reach-stage .reach-dot-4 { animation-name: reach-dot-4; }
+  @keyframes reach-dot-1 {
+    0%, 24%   { background-color: var(--color-fg); }
+    25%, 99%  { background-color: var(--color-ink-600); }
+    100%      { background-color: var(--color-fg); }
+  }
+  @keyframes reach-dot-2 {
+    0%, 24%   { background-color: var(--color-ink-600); }
+    25%, 49%  { background-color: var(--color-fg); }
+    50%, 100% { background-color: var(--color-ink-600); }
+  }
+  @keyframes reach-dot-3 {
+    0%, 49%   { background-color: var(--color-ink-600); }
+    50%, 75%  { background-color: var(--color-fg); }
+    76%, 100% { background-color: var(--color-ink-600); }
+  }
+  @keyframes reach-dot-4 {
+    0%, 75%   { background-color: var(--color-ink-600); }
+    76%, 100% { background-color: var(--color-fg); }
+  }
+
+  /* ── scene 2: six dubs, one row at a time ─────────────────────────────────
+     The rows arrive staggered and each one's `.m4a` tick lands a beat after its
+     row does, so it reads as "the row appeared, then the file finished" rather
+     than six finished files fading in together.
+
+     The stagger is baked into each keyframe's percentages. Six near-identical
+     blocks is more CSS than a delay would be, and it is the price of them never
+     drifting apart. Scene 2 owns 25–50%; the rows land across 27–38%. */
+  .reach-stage [class*='reach2-row-'],
+  .reach-stage [class*='reach2-file-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+    opacity: 0;
+  }
+  .reach-stage .reach2-row-1 { animation-name: reach2-row-1; }
+  .reach-stage .reach2-row-2 { animation-name: reach2-row-2; }
+  .reach-stage .reach2-row-3 { animation-name: reach2-row-3; }
+  .reach-stage .reach2-row-4 { animation-name: reach2-row-4; }
+  .reach-stage .reach2-row-5 { animation-name: reach2-row-5; }
+  .reach-stage .reach2-row-6 { animation-name: reach2-row-6; }
+  @keyframes reach2-row-1 {
+    0%, 26%   { opacity: 0; transform: translateY(6px); }
+    28%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-row-2 {
+    0%, 27%   { opacity: 0; transform: translateY(6px); }
+    29%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-row-3 {
+    0%, 28%   { opacity: 0; transform: translateY(6px); }
+    30%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-row-4 {
+    0%, 29%   { opacity: 0; transform: translateY(6px); }
+    31%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-row-5 {
+    0%, 30%   { opacity: 0; transform: translateY(6px); }
+    32%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-row-6 {
+    0%, 31%   { opacity: 0; transform: translateY(6px); }
+    33%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+
+  /* The file chips, each one landing after its own row. */
+  .reach-stage .reach2-file-1 { animation-name: reach2-file-1; }
+  .reach-stage .reach2-file-2 { animation-name: reach2-file-2; }
+  .reach-stage .reach2-file-3 { animation-name: reach2-file-3; }
+  .reach-stage .reach2-file-4 { animation-name: reach2-file-4; }
+  .reach-stage .reach2-file-5 { animation-name: reach2-file-5; }
+  .reach-stage .reach2-file-6 { animation-name: reach2-file-6; }
+  @keyframes reach2-file-1 {
+    0%, 31%   { opacity: 0; transform: scale(0.85); }
+    33%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-file-2 {
+    0%, 32%   { opacity: 0; transform: scale(0.85); }
+    34%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-file-3 {
+    0%, 33%   { opacity: 0; transform: scale(0.85); }
+    35%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-file-4 {
+    0%, 34%   { opacity: 0; transform: scale(0.85); }
+    36%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-file-5 {
+    0%, 35%   { opacity: 0; transform: scale(0.85); }
+    37%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+  @keyframes reach2-file-6 {
+    0%, 36%   { opacity: 0; transform: scale(0.85); }
+    38%, 49%  { opacity: 1; transform: none; }
+    50%, 100% { opacity: 0; transform: none; }
+  }
+
+  /* The source chip pulses once as the dubs start, so the eye knows where the six
+     files came from. `scale`, not a colour flash. */
+  .reach-stage .reach-src {
+    animation: reach-src var(--reach-cycle) var(--ease-out-strong) infinite;
+  }
+  @keyframes reach-src {
+    0%, 25%   { transform: none; }
+    27%       { transform: scale(1.04); }
+    29%, 100% { transform: none; }
+  }
+
+  /* ── scene 3: the cursor walks the panel, rows flip to Published ──────────
+     Scene 3 owns 50–76%. The cursor steps down five rows between 54% and 70%,
+     and each row flips one beat behind the cursor reaching it — cause, then
+     effect. Row height is 30px, and the cursor starts on the second row because
+     the first is the untouched original.
+
+     `translateY` only. Animating `top` would cost a layout pass per frame. */
+  .reach-stage .reach-panel {
+    position: relative;
+  }
+  .reach-stage .reach-cursor {
+    animation: reach-cursor var(--reach-cycle) var(--ease-out-strong) infinite;
+    opacity: 0;
+  }
+  @keyframes reach-cursor {
+    0%, 52%   { opacity: 0; transform: translateY(30px); }
+    54%       { opacity: 1; transform: translateY(30px); }
+    58%       { opacity: 1; transform: translateY(60px); }
+    62%       { opacity: 1; transform: translateY(90px); }
+    66%       { opacity: 1; transform: translateY(120px); }
+    70%       { opacity: 1; transform: translateY(150px); }
+    72%, 100% { opacity: 0; transform: translateY(150px); }
+  }
+
+  .reach-stage [class*='reach3-add-'],
+  .reach-stage [class*='reach3-done-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+  }
+  .reach-stage [class*='reach3-done-'] { opacity: 0; }
+  .reach-stage .reach3-add-1 { animation-name: reach3-add-1; }
+  .reach-stage .reach3-add-2 { animation-name: reach3-add-2; }
+  .reach-stage .reach3-add-3 { animation-name: reach3-add-3; }
+  .reach-stage .reach3-add-4 { animation-name: reach3-add-4; }
+  .reach-stage .reach3-add-5 { animation-name: reach3-add-5; }
+  .reach-stage .reach3-done-1 { animation-name: reach3-done-1; }
+  .reach-stage .reach3-done-2 { animation-name: reach3-done-2; }
+  .reach-stage .reach3-done-3 { animation-name: reach3-done-3; }
+  .reach-stage .reach3-done-4 { animation-name: reach3-done-4; }
+  .reach-stage .reach3-done-5 { animation-name: reach3-done-5; }
+  @keyframes reach3-add-1  { 0%, 55%  { opacity: 1; } 56%, 100% { opacity: 0; } }
+  @keyframes reach3-done-1 { 0%, 55%  { opacity: 0; } 56%, 100% { opacity: 1; } }
+  @keyframes reach3-add-2  { 0%, 59%  { opacity: 1; } 60%, 100% { opacity: 0; } }
+  @keyframes reach3-done-2 { 0%, 59%  { opacity: 0; } 60%, 100% { opacity: 1; } }
+  @keyframes reach3-add-3  { 0%, 63%  { opacity: 1; } 64%, 100% { opacity: 0; } }
+  @keyframes reach3-done-3 { 0%, 63%  { opacity: 0; } 64%, 100% { opacity: 1; } }
+  @keyframes reach3-add-4  { 0%, 67%  { opacity: 1; } 68%, 100% { opacity: 0; } }
+  @keyframes reach3-done-4 { 0%, 67%  { opacity: 0; } 68%, 100% { opacity: 1; } }
+  @keyframes reach3-add-5  { 0%, 71%  { opacity: 1; } 72%, 100% { opacity: 0; } }
+  @keyframes reach3-done-5 { 0%, 71%  { opacity: 0; } 72%, 100% { opacity: 1; } }
+
+  /* ── scene 4: the counter, the markets, the chain ─────────────────────────
+     Scene 4 owns 76–100%. The counter cuts through four figures rather than
+     interpolating, because there is no way to tween a number in CSS honestly and
+     a cut reads as a counter ticking anyway. */
+  .reach-stage [class*='reach-count-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: steps(1, end);
+    animation-iteration-count: infinite;
+    opacity: 0;
+  }
+  .reach-stage .reach-count-1 { animation-name: reach-count-1; }
+  .reach-stage .reach-count-2 { animation-name: reach-count-2; }
+  .reach-stage .reach-count-3 { animation-name: reach-count-3; }
+  .reach-stage .reach-count-4 { animation-name: reach-count-4; }
+  @keyframes reach-count-1 { 0%, 77%  { opacity: 1; } 79%, 100% { opacity: 0; } }
+  @keyframes reach-count-2 { 0%, 78%  { opacity: 0; } 79%, 82%  { opacity: 1; } 83%, 100% { opacity: 0; } }
+  @keyframes reach-count-3 { 0%, 82%  { opacity: 0; } 83%, 86%  { opacity: 1; } 87%, 100% { opacity: 0; } }
+  @keyframes reach-count-4 { 0%, 86%  { opacity: 0; } 87%, 100% { opacity: 1; } }
+
+  /* Market bars. `scaleX` from the left edge — composited, where animating width
+     would relayout every frame. Illustrative widths, largest for the original. */
+  .reach-stage [class*='reach4-bar-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+    transform: scaleX(0);
+  }
+  .reach-stage .reach-en { background-color: var(--color-good); }
+  .reach-stage .reach-hi { background-color: var(--color-stage-speak); }
+  .reach-stage .reach-te { background-color: var(--color-stage-translate); }
+  .reach-stage .reach-ta { background-color: var(--color-cyan); }
+  .reach-stage .reach-kn { background-color: var(--color-sky); }
+  .reach-stage .reach-es { background-color: var(--color-warn); }
+  .reach-stage .reach4-bar-1 { animation-name: reach4-bar-1; }
+  .reach-stage .reach4-bar-2 { animation-name: reach4-bar-2; }
+  .reach-stage .reach4-bar-3 { animation-name: reach4-bar-3; }
+  .reach-stage .reach4-bar-4 { animation-name: reach4-bar-4; }
+  .reach-stage .reach4-bar-5 { animation-name: reach4-bar-5; }
+  .reach-stage .reach4-bar-6 { animation-name: reach4-bar-6; }
+  @keyframes reach4-bar-1 {
+    0%, 76%   { transform: scaleX(0); }
+    80%, 100% { transform: scaleX(1); }
+  }
+  @keyframes reach4-bar-2 {
+    0%, 78%   { transform: scaleX(0); }
+    82%, 100% { transform: scaleX(0.78); }
+  }
+  @keyframes reach4-bar-3 {
+    0%, 80%   { transform: scaleX(0); }
+    84%, 100% { transform: scaleX(0.62); }
+  }
+  @keyframes reach4-bar-4 {
+    0%, 82%   { transform: scaleX(0); }
+    86%, 100% { transform: scaleX(0.55); }
+  }
+  @keyframes reach4-bar-5 {
+    0%, 84%   { transform: scaleX(0); }
+    88%, 100% { transform: scaleX(0.41); }
+  }
+  @keyframes reach4-bar-6 {
+    0%, 86%   { transform: scaleX(0); }
+    90%, 100% { transform: scaleX(0.7); }
+  }
+
+  /* The language chips on the grown card, and the chain underneath. Both arrive in
+     order, so the sentence assembles itself left to right. */
+  .reach-stage [class*='reach4-chip-'],
+  .reach-stage [class*='reach4-chain-'] {
+    animation-duration: var(--reach-cycle);
+    animation-timing-function: var(--ease-out-strong);
+    animation-iteration-count: infinite;
+    opacity: 0;
+  }
+  .reach-stage .reach4-chip-1 { animation-name: reach4-in-77; }
+  .reach-stage .reach4-chip-2 { animation-name: reach4-in-79; }
+  .reach-stage .reach4-chip-3 { animation-name: reach4-in-81; }
+  .reach-stage .reach4-chip-4 { animation-name: reach4-in-83; }
+  .reach-stage .reach4-chip-5 { animation-name: reach4-in-85; }
+  .reach-stage .reach4-chip-6 { animation-name: reach4-in-87; }
+  .reach-stage .reach4-chain-1 { animation-name: reach4-in-88; }
+  .reach-stage .reach4-chain-2 { animation-name: reach4-in-90; }
+  .reach-stage .reach4-chain-3 { animation-name: reach4-in-92; }
+  .reach-stage .reach4-chain-4 { animation-name: reach4-in-94; }
+  @keyframes reach4-in-77 { 0%, 76% { opacity: 0; transform: scale(0.9); } 78%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-79 { 0%, 78% { opacity: 0; transform: scale(0.9); } 80%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-81 { 0%, 80% { opacity: 0; transform: scale(0.9); } 82%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-83 { 0%, 82% { opacity: 0; transform: scale(0.9); } 84%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-85 { 0%, 84% { opacity: 0; transform: scale(0.9); } 86%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-87 { 0%, 86% { opacity: 0; transform: scale(0.9); } 88%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-88 { 0%, 87% { opacity: 0; transform: translateY(4px); } 89%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-90 { 0%, 89% { opacity: 0; transform: translateY(4px); } 91%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-92 { 0%, 91% { opacity: 0; transform: translateY(4px); } 93%, 100% { opacity: 1; transform: none; } }
+  @keyframes reach4-in-94 { 0%, 93% { opacity: 0; transform: translateY(4px); } 95%, 100% { opacity: 1; transform: none; } }
+
+  /* Motion off: scene one, complete, and nothing else. A four-scene sequence has
+     no single finished frame, so the honest fallback is the first scene rather
+     than four stacked on top of each other. */
+  @media (prefers-reduced-motion: reduce) {
+    .reach-stage *,
+    .reach-stage {
+      animation: none !important;
+    }
+    .reach-stage .reach-scene-2,
+    .reach-stage .reach-scene-3,
+    .reach-stage .reach-scene-4,
+    .reach-stage .reach-label-2,
+    .reach-stage .reach-label-3,
+    .reach-stage .reach-label-4,
+    .reach-stage .reach-claim-2,
+    .reach-stage .reach-claim-3,
+    .reach-stage .reach-claim-4 {
+      display: none;
+    }
+    .reach-stage .reach-dot-1 {
+      background-color: var(--color-fg);
+    }
+  }
+}
+
+/*
+  ── OUTSIDE EVERY LAYER, ON PURPOSE ─────────────────────────────────────────────
+
+  Sonner injects its stylesheet with NO cascade layer, and an unlayered rule beats every
+  layered rule whatever its specificity. So nothing inside the Tailwind layers above can
+  change a toast's opacity (or its background: that is why toasts are sonner's own solid
+  black, whatever `.material-raised` says). This block has to sit out here to apply.
+
+  A TOAST ARRIVES OPAQUE. Sonner fades a new toast in over 400ms while it slides up, and
+  for that whole time the page underneath read through it - on a phone, "Recent dubs"
+  and "Refresh" printed across "2 dubs are running", which is exactly the moment somebody
+  looks at it, having just pressed the button. It still slides in; it just does not fade.
+  Leaving is untouched (a toast on its way out is no longer being read).
+
+  The two :not()s keep sonner's own hiding intact: a toast beyond the visible stack, or
+  one already removed, stays invisible.
+*/
+.vs-toaster [data-sonner-toast][data-mounted='false']:not([data-visible='false']):not([data-removed='true']) {
+  opacity: 1;
+}

@@ -1,0 +1,29 @@
+# dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# local settings and secrets - never committed
+.env
+.env.*
+*.pem
+*.key
+secret.key
+
+# data a running copy creates
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# test output
+*.log
+backend-node/scripts/ui_check/shots*/
+backend-node/scripts/ui_check/_artifacts/
+backend-node/scripts/ui_check/*.json
+
+# tooling
+__pycache__/
+.vscode/
+.DS_Store

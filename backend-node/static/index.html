@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoiceStudio backend - test console</title>
+<style>
+  :root { --line:#d5dbe2; --ink:#14171a; --muted:#5b6670; --blue:#1a5fa8;
+          --green:#0a7a3d; --red:#a8321a; --bg:#f6f8fa; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.55 "Segoe UI",system-ui,Arial,sans-serif;
+         color:var(--ink); background:var(--bg); }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:14px 20px;
+           display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; }
+  .pill { font-size:12px; padding:2px 9px; border-radius:11px; border:1px solid var(--line);
+          background:#fff; color:var(--muted); }
+  .pill.ok { border-color:#a9d6bb; color:var(--green); background:#f1faf4; }
+  .pill.bad { border-color:#e2b6aa; color:var(--red); background:#fdf3f1; }
+  main { max-width:1000px; margin:0 auto; padding:20px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:8px;
+          padding:16px 18px; margin-bottom:16px; }
+  .card h2 { font-size:14px; margin:0 0 12px; text-transform:uppercase;
+             letter-spacing:.04em; color:var(--muted); }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  input, select, button, textarea {
+      font:14px "Segoe UI",system-ui,Arial,sans-serif; padding:8px 10px;
+      border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); }
+  input, select { width:100%; }
+  button { background:var(--blue); color:#fff; border-color:var(--blue); cursor:pointer; }
+  button:hover { filter:brightness(1.08); }
+  button.ghost { background:#fff; color:var(--ink); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .row > div { flex:1 1 180px; }
+  .bar { height:20px; background:#eef1f4; border-radius:10px; overflow:hidden;
+         border:1px solid var(--line); }
+  .bar > i { display:block; height:100%; width:0; background:var(--green);
+             transition:width .4s; }
+  pre { background:#0f1216; color:#d7dee6; padding:11px 13px; border-radius:6px;
+        overflow:auto; font:12px Consolas,monospace; max-height:260px; margin:8px 0 0; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left;
+          vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; }
+  .msg { padding:9px 12px; border-radius:5px; margin:10px 0; font-size:13px; }
+  .msg.err { background:#fdf3f1; border:1px solid #e2b6aa; color:#7a2718; }
+  .msg.ok  { background:#f1faf4; border:1px solid #a9d6bb; color:#0a5c2e; }
+  .hide { display:none; }
+  .small { font-size:12px; color:var(--muted); }
+  code { background:#eef1f4; padding:1px 5px; border-radius:3px; font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VoiceStudio backend</h1>
+  <span class="pill" id="p-engine">engine ?</span>
+  <span class="pill" id="p-preset">preset ?</span>
+  <span class="pill" id="p-user">signed out</span>
+  <span style="flex:1"></span>
+  <button class="ghost" onclick="logout()" id="btn-logout" style="display:none">Sign out</button>
+  <a class="small" href="/db" target="_blank" id="link-db" style="display:none">Database</a>
+  <a class="small" href="/docs" target="_blank">API docs</a>
+</header>
+
+<main>
+  <div id="msg"></div>
+
+  <!-- auth -->
+  <div class="card" id="card-auth">
+    <h2>1 &middot; Account</h2>
+    <p class="small">The first account created becomes the admin.</p>
+    <div class="row">
+      <div><label>Email</label><input id="email" type="email" value="admin@test.local"></div>
+      <div><label>Password (min 8)</label><input id="password" type="password" value="testpass123"></div>
+      <div style="flex:0 0 auto">
+        <button onclick="register()">Register</button>
+        <button class="ghost" onclick="login()">Sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- dub -->
+  <div class="card hide" id="card-dub">
+    <h2>2 &middot; Dub a video</h2>
+    <div id="ent" class="small"></div>
+    <div class="row" style="margin-top:10px">
+      <div><label>Video file</label><input id="file" type="file" accept="video/*"></div>
+      <div style="flex:0 0 150px"><label>Target language</label>
+        <select id="lang">
+          <option value="te">Telugu (te)</option>
+          <option value="hi">Hindi (hi)</option>
+          <option value="ta">Tamil (ta)</option>
+          <option value="kn">Kannada (kn)</option>
+          <option value="ml">Malayalam (ml)</option>
+          <option value="bn">Bengali (bn)</option>
+          <option value="en">English (en)</option>
+          <option value="es">Spanish (es)</option>
+        </select>
+      </div>
+      <div style="flex:0 0 auto"><button onclick="startDub()" id="btn-dub">Upload &amp; dub</button></div>
+    </div>
+    <p class="small">Language is the only thing sent. Everything else comes from the
+      server-side preset &mdash; the API refuses any request that tries to set a
+      pipeline value.</p>
+  </div>
+
+  <!-- progress -->
+  <div class="card hide" id="card-prog">
+    <h2>3 &middot; Progress <span class="small" id="jobid"></span></h2>
+    <div class="bar"><i id="bar"></i></div>
+    <p class="small" id="stage" style="margin:8px 0 0"></p>
+    <p class="small" id="refresh-note" style="margin:4px 0 0">
+      Press F5 now if you like &mdash; the job keeps running and this page picks it
+      back up from the database.</p>
+    <pre id="log"></pre>
+    <div id="done-box" class="hide">
+      <button onclick="download()">Download the dub</button>
+      <button class="ghost" onclick="delVideo()">Delete it now</button>
+      <span class="small" id="expiry"></span>
+    </div>
+  </div>
+
+  <!-- history -->
+  <div class="card hide" id="card-hist">
+    <h2>4 &middot; Your dubs</h2>
+    <button class="ghost" onclick="loadJobs()">Refresh</button>
+    <table id="jobs"><thead><tr><th>Job</th><th>Lang</th><th>State</th>
+      <th>Minutes</th><th>Deleted in</th><th></th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <!-- transcript -->
+  <div class="card hide" id="card-segs">
+    <h2>5 &middot; Transcript and translation <span class="small">(from our database, not the box)</span></h2>
+    <table id="segs"><thead><tr><th>#</th><th>Time</th><th>Speaker</th>
+      <th>Source</th><th>Translated</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <!-- billing -->
+  <div class="card hide" id="card-bill">
+    <h2>6 &middot; Plans and billing</h2>
+    <div id="bill-warn"></div>
+    <table id="plans"><thead><tr><th>Plan</th><th>Price</th><th>Minutes</th>
+      <th>Max video</th><th>Renews?</th><th></th></tr></thead><tbody></tbody></table>
+    <p class="small" style="margin-top:10px">
+      Buying creates an order at the payment provider and nothing else. The plan
+      only changes when the provider's own signed webhook arrives &mdash; this page
+      is never believed about payment.</p>
+    <div style="margin-top:10px">
+      <button class="ghost" onclick="loadBilling()">My subscription and payments</button>
+      <button class="ghost" onclick="cancelSub()">Cancel auto-renew</button>
+    </div>
+    <pre id="bill-out" class="hide"></pre>
+  </div>
+
+  <!-- admin -->
+  <div class="card hide" id="card-admin">
+    <h2>7 &middot; Admin</h2>
+    <div class="row" style="gap:6px">
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('overview')">Overview</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('gpu')">GPU box</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('storage')">Storage</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('billing')">Billing</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('mail')">Outbox</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('limits')">Rate limits</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('preset')">Preset</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('audit')">Audit log</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" onclick="adminShow('all')">Everything</button></div>
+    </div>
+
+    <!-- the GPU box gets its own panel because it is the only thing here that
+         spends money by the minute -->
+    <div id="gpu-panel" class="hide" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+      <div class="row">
+        <div><span class="pill" id="gpu-actual">state ?</span>
+             <span class="pill" id="gpu-hold">hold ?</span></div>
+        <div style="flex:0 0 auto">
+          <button class="ghost" onclick="gpuAct('start')">Warm it up now</button>
+          <button class="ghost" onclick="gpuAct('stop')">Stop if idle</button>
+          <button onclick="gpuAct('stop?force=true')"
+                  style="background:var(--red);border-color:var(--red)">Force stop</button>
+        </div>
+      </div>
+      <p class="small" style="margin:8px 0 0">
+        The box starts by itself when a video is uploaded and stops
+        <b id="gpu-idle">10</b> minutes after the last job finishes. "Stop if idle"
+        obeys every condition the watchdog obeys, so it cannot kill a render in
+        flight. Force stop ignores them and is written to the audit log.</p>
+    </div>
+
+    <p class="small" style="margin-top:12px">
+      Browse every table directly at <a href="/db" target="_blank"><code>/db</code></a>
+      &mdash; read-only, enforced by opening the database file in read-only mode
+      rather than by trusting a keyword check.</p>
+    <pre id="admin-out"></pre>
+  </div>
+</main>
+
+<script>
+let CSRF = null, ME = null, JOB = null, LASTID = 0, TIMER = null;
+
+const $ = id => document.getElementById(id);
+function msg(t, kind) {
+  $('msg').innerHTML = t ? `<div class="msg ${kind || 'ok'}">${t}</div>` : '';
+}
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers || {});
+  if (CSRF) opts.headers['X-CSRF-Token'] = CSRF;
+  if (opts.json !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.json);
+    delete opts.json;
+  }
+  const r = await fetch(path, opts);
+  const txt = await r.text();
+  let data; try { data = txt ? JSON.parse(txt) : {}; } catch (e) { data = { raw: txt }; }
+  if (!r.ok) throw new Error(data.detail || data.raw || ('HTTP ' + r.status));
+  return data;
+}
+
+let REAL = false;
+async function health() {
+  try {
+    const h = await api('/api/health');
+    REAL = h.engine_mode === 'real';
+    const ok = h.engine_reachable;
+    $('p-engine').textContent = (REAL ? 'REAL GPU engine' : 'fake engine') +
+      (ok ? ' - connected' : ' - NOT REACHABLE');
+    $('p-engine').className = 'pill ' + (ok ? 'ok' : 'bad');
+    $('p-preset').textContent = 'preset ' + h.preset_version;
+    // A dropped SSH tunnel is the most likely thing to go wrong during a long
+    // render, and it is silent otherwise. Say so loudly.
+    if (REAL && !ok) {
+      msg('The GPU engine is not reachable. The SSH tunnel has probably dropped ' +
+          '- a render in progress will fail. Reopen the tunnel and retry.', 'err');
+    }
+  } catch (e) { $('p-engine').textContent = 'backend down'; $('p-engine').className = 'pill bad'; }
+}
+// keep checking, so a tunnel that dies mid-render is visible immediately
+setInterval(health, 20000);
+
+function afterAuth(d) {
+  CSRF = d.csrf; ME = d;
+  $('p-user').textContent = d.email + (d.role === 'admin' ? ' (admin)' : '');
+  $('p-user').className = 'pill ok';
+  $('card-auth').classList.add('hide');
+  $('card-dub').classList.remove('hide');
+  $('card-hist').classList.remove('hide');
+  $('card-bill').classList.remove('hide');
+  $('btn-logout').style.display = '';
+  if (d.role === 'admin') {
+    $('card-admin').classList.remove('hide');
+    $('link-db').style.display = '';
+  }
+  showEnt(d.entitlement);
+  loadJobs();
+  loadPlans();
+}
+function showEnt(e) {
+  if (!e) return;
+  $('ent').innerHTML = `Plan <b>${e.plan_name}</b> &middot; ` +
+    `${e.minutes_left} of ${e.minutes_allowance} minutes left &middot; ` +
+    `max video ${e.max_video_seconds}s &middot; kept ${e.retention_days} day(s)` +
+    (e.is_free ? ' &middot; <b>lifetime free trial</b>' : '');
+}
+
+async function register() {
+  try {
+    const d = await api('/api/auth/register', { method: 'POST',
+      json: { email: $('email').value, password: $('password').value } });
+    msg('Registered' + (d.note ? ' &mdash; ' + d.note : ''), 'ok');
+    const me = await api('/api/auth/me'); afterAuth(me);
+  } catch (e) { msg(e.message, 'err'); }
+}
+async function login() {
+  try {
+    await api('/api/auth/login', { method: 'POST',
+      json: { email: $('email').value, password: $('password').value } });
+    const me = await api('/api/auth/me'); afterAuth(me); msg('Signed in', 'ok');
+  } catch (e) { msg(e.message, 'err'); }
+}
+async function logout() {
+  await api('/api/auth/logout', { method: 'POST' }); location.reload();
+}
+
+async function startDub() {
+  const f = $('file').files[0];
+  if (!f) { msg('Choose a video file first', 'err'); return; }
+  $('btn-dub').disabled = true;
+  try {
+    msg('Uploading and probing with ffprobe...', 'ok');
+    const fd = new FormData(); fd.append('file', f);
+    const up = await api('/api/uploads', { method: 'POST', body: fd });
+    showEnt(up.entitlement);
+    // Honest estimate. Measured on this pipeline: a 28-second clip took 2m21s
+    // end to end (about 5x its length); a 3-minute video took closer to an hour
+    // (about 18x). The spread is per-line overhead, so a range is the truthful
+    // answer rather than a single number.
+    const lo = Math.max(2, Math.round(up.duration_s * 5 / 60));
+    const hi = Math.max(4, Math.round(up.duration_s * 18 / 60));
+    msg(`Uploaded: ${up.duration_s}s, ${up.minutes} minutes charged. ` +
+        (REAL ? `Expect roughly <b>${lo}-${hi} minutes</b> on the real pipeline &mdash; ` +
+                `transcribe, translate and render all run on the GPU box. ` +
+                `You can close this tab; the job keeps going.`
+              : 'Fake engine, so this will finish in seconds.'), 'ok');
+    const job = await api('/api/jobs', { method: 'POST',
+      json: { upload_id: up.upload_id, target_lang: $('lang').value } });
+    JOB = job.job_id; LASTID = 0;
+    $('jobid').textContent = JOB;
+    $('card-prog').classList.remove('hide');
+    $('done-box').classList.add('hide');
+    $('log').textContent = '';
+    poll();
+  } catch (e) { msg(e.message, 'err'); }
+  $('btn-dub').disabled = false;
+}
+
+async function poll() {
+  if (TIMER) clearTimeout(TIMER);
+  if (!JOB) return;
+  try {
+    const d = await api(`/api/jobs/${JOB}/events?after_id=${LASTID}`);
+    $('bar').style.width = d.percent + '%';
+    $('stage').textContent = d.state + ' - ' + d.percent + '%';
+    for (const ev of d.events) {
+      LASTID = Math.max(LASTID, ev.id);
+      if (ev.detail) $('log').textContent += `[${ev.at}] ${ev.state || ''} ${ev.detail}\n`;
+    }
+    $('log').scrollTop = $('log').scrollHeight;
+    if (d.state === 'done') { await finished(); return; }
+    if (d.state === 'failed') {
+      const j = await api('/api/jobs/' + JOB);
+      msg('Job failed: ' + (j.error_code || '') + ' ' + (j.error_detail || ''), 'err');
+      loadJobs(); return;
+    }
+    TIMER = setTimeout(poll, 1200);
+  } catch (e) { msg(e.message, 'err'); }
+}
+
+async function finished() {
+  const j = await api('/api/jobs/' + JOB);
+  msg('Dub finished', 'ok');
+  $('done-box').classList.remove('hide');
+  $('expiry').textContent = j.expires_at ? ' deleted after ' + j.expires_at : '';
+  const tb = $('segs').querySelector('tbody'); tb.innerHTML = '';
+  for (const s of j.segments) {
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td>${s.ordinal}</td><td>${(s.start ?? '').toFixed ? s.start.toFixed(2) : s.start}
+       - ${(s.end ?? '').toFixed ? s.end.toFixed(2) : s.end}</td>
+       <td>${s.speaker || ''}</td><td>${esc(s.source_text)}</td>
+       <td>${esc(s.translated_text)}</td></tr>`);
+  }
+  if (j.segments.length) $('card-segs').classList.remove('hide');
+  loadJobs();
+}
+function esc(s) { return (s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+function download() { window.location = `/api/jobs/${JOB}/download`; }
+async function delVideo() {
+  if (!confirm('Delete this video now? This cannot be undone, and it does not give minutes back.')) return;
+  await api(`/api/jobs/${JOB}/video`, { method: 'DELETE' });
+  msg('Video deleted', 'ok'); loadJobs();
+}
+
+async function loadJobs() {
+  try {
+    const d = await api('/api/jobs');
+    showEnt(d.entitlement);
+    const tb = $('jobs').querySelector('tbody'); tb.innerHTML = '';
+    for (const j of d.jobs) {
+      const left = j.expires_at ? countdown(j.expires_at) : '';
+      tb.insertAdjacentHTML('beforeend',
+        `<tr><td><code>${j.job_id}</code></td><td>${j.target_lang}</td>
+         <td>${j.state}${j.error_code ? ' (' + j.error_code + ')' : ''}</td>
+         <td>${(j.minutes_quoted || 0).toFixed(2)}</td>
+         <td>${j.deleted_at ? 'deleted' : left}</td>
+         <td>${j.can_download
+              ? `<button class="ghost" onclick="JOB='${j.job_id}';download()">get</button>` : ''}
+             <button class="ghost" onclick="watch('${j.job_id}')">open</button></td></tr>`);
+    }
+  } catch (e) { /* not signed in yet */ }
+}
+function countdown(iso) {
+  const ms = new Date(iso.replace('Z', '+00:00')) - new Date();
+  if (ms <= 0) return 'expired';
+  const h = Math.floor(ms / 3600000), d = Math.floor(h / 24);
+  return d >= 1 ? `${d}d ${h % 24}h` : `${h}h ${Math.floor(ms / 60000) % 60}m`;
+}
+async function watch(id) {
+  JOB = id; LASTID = 0; $('jobid').textContent = id;
+  $('log').textContent = ''; $('card-prog').classList.remove('hide'); poll();
+}
+
+// ── billing ──────────────────────────────────────────────────────────────────
+async function loadPlans() {
+  try {
+    const d = await api('/api/billing/plans');
+    $('bill-warn').innerHTML = d.warning
+      ? `<div class="msg err">${d.warning}</div>` : '';
+    const tb = $('plans').querySelector('tbody'); tb.innerHTML = '';
+    for (const p of d.plans) {
+      const buy = p.purchasable
+        ? `<button class="ghost" onclick="buy('${p.code}')">Buy</button>` : '';
+      tb.insertAdjacentHTML('beforeend',
+        `<tr><td><b>${p.name}</b><div class="small">${esc(p.renewal_note)}</div></td>
+         <td>${p.price_rupees ? '&#8377;' + p.price_rupees : 'free'}</td>
+         <td>${p.minutes_per_period}</td>
+         <td>${Math.round(p.max_video_seconds / 60)} min</td>
+         <td>${p.auto_renews ? 'yes' : 'no'}</td><td>${buy}</td></tr>`);
+    }
+  } catch (e) { /* not signed in */ }
+}
+async function buy(code) {
+  try {
+    const d = await api('/api/billing/checkout', { method: 'POST',
+      json: { plan_code: code } });
+    const what = d.mode === 'order'
+      ? `one-time order <code>${d.order_id}</code>`
+      : `subscription mandate <code>${d.subscription_id}</code>`;
+    msg(`Created ${what} for &#8377;${d.amount_rupees}. ` +
+        (d.live
+          ? 'Open the provider checkout to pay. Your plan changes when their webhook lands.'
+          : '<b>Test mode</b> &mdash; no real checkout exists, so nothing will be ' +
+            'charged and nothing is granted. Post a signed webhook to complete it.'),
+        d.live ? 'ok' : 'err');
+    $('bill-out').classList.remove('hide');
+    $('bill-out').textContent = JSON.stringify(d, null, 2);
+  } catch (e) { msg(e.message, 'err'); }
+}
+async function loadBilling() {
+  try {
+    const d = await api('/api/billing/me');
+    showEnt(d.entitlement);
+    $('bill-out').classList.remove('hide');
+    $('bill-out').textContent = JSON.stringify(d, null, 2);
+    if (d.what_happens_next) msg(d.what_happens_next, 'ok');
+  } catch (e) { msg(e.message, 'err'); }
+}
+async function cancelSub() {
+  if (!confirm('Stop this plan renewing? You keep access, and the minutes you ' +
+               'already paid for, until the end of the current period.')) return;
+  try {
+    const d = await api('/api/billing/cancel', { method: 'POST',
+      json: { confirm: true } });
+    msg('Auto-renew is off. Access continues until ' +
+        (d.keeps_access_until || d.ends || 'the period ends'), 'ok');
+    loadBilling();
+  } catch (e) { msg(e.message, 'err'); }
+}
+
+// ── admin ────────────────────────────────────────────────────────────────────
+const ADMIN_VIEWS = {
+  overview: '/api/admin/overview',
+  gpu:      '/api/admin/gpu',
+  storage:  '/api/admin/storage',
+  billing:  '/api/admin/billing',
+  mail:     '/api/admin/mail',
+  limits:   '/api/admin/limits',
+  preset:   '/api/admin/preset',
+  audit:    '/api/admin/audit',
+};
+
+async function adminShow(which) {
+  $('gpu-panel').classList.toggle('hide', which !== 'gpu' && which !== 'all');
+  try {
+    if (which === 'all') {
+      const out = {};
+      for (const [k, url] of Object.entries(ADMIN_VIEWS)) out[k] = await api(url);
+      out.users = (await api('/api/admin/users')).users;
+      out.sessions = (await api('/api/admin/sessions')).sessions;
+      $('admin-out').textContent = JSON.stringify(out, null, 2);
+      paintGpu(out.gpu);
+      return;
+    }
+    const d = await api(ADMIN_VIEWS[which]);
+    $('admin-out').textContent = JSON.stringify(d, null, 2);
+    if (which === 'gpu') paintGpu(d);
+  } catch (e) { msg(e.message, 'err'); }
+}
+
+function paintGpu(g) {
+  if (!g) return;
+  const st = g.actual_state || 'unknown';
+  $('gpu-actual').textContent = 'AWS says: ' + st;
+  $('gpu-actual').className = 'pill ' + (st === 'running' ? 'bad'
+                                       : st === 'stopped' ? 'ok' : '');
+  $('gpu-hold').textContent = g.hold_reason ? 'held: ' + g.hold_reason
+                                            : 'nothing is holding it';
+  $('gpu-hold').className = 'pill ' + (g.hold_reason ? '' : 'ok');
+  if (g.idle_minutes) $('gpu-idle').textContent = g.idle_minutes;
+  // A running box with nothing holding it is the state that quietly bills.
+  if (st === 'running' && !g.hold_reason) {
+    msg('The GPU box is running with no work holding it. The watchdog will stop ' +
+        'it within a minute; if it does not, use Force stop.', 'err');
+  }
+  if (g.diverged) {
+    msg('AWS and our own record disagree about the instance state. Trust AWS: ' +
+        st + '.', 'err');
+  }
+}
+
+async function gpuAct(what) {
+  if (what.startsWith('stop?force') &&
+      !confirm('Force stop ignores every safety condition and will kill a render ' +
+               'in progress. Continue?')) return;
+  try {
+    const d = await api('/api/admin/gpu/' + what, { method: 'POST' });
+    msg('GPU: ' + JSON.stringify(d), 'ok');
+    setTimeout(() => adminShow('gpu'), 1500);
+  } catch (e) { msg(e.message, 'err'); }
+}
+
+health();
+api('/api/auth/me').then(d => {
+  afterAuth(d);
+  // The "your dub is ready" email links here with ?job=<id>, so the link lands on
+  // the job rather than on a dashboard the customer then has to search.
+  const want = new URLSearchParams(location.search).get('job');
+  if (want) watch(want);
+}).catch(() => {});
+</script>
+</body>
+</html>

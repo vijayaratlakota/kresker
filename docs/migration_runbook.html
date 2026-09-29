@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceStudio - Cross-Account Migration Runbook</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 9.4pt; line-height: 1.45; color: #14171a; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 2mm 0; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm 0; padding-bottom: 1.2mm;
+       border-bottom: 1.6pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm 0; page-break-after: avoid; color: #0b3d6b; }
+  h4 { font-size: 9.6pt; margin: 3.5mm 0 1mm 0; page-break-after: avoid; }
+  p  { margin: 0 0 2mm 0; }
+  ul, ol { margin: 0 0 2mm 0; padding-left: 5mm; }
+  li { margin: 0 0 1mm 0; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt;
+              background: #f2f4f6; padding: 0.3mm 1mm; border-radius: 1mm; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8pt;
+        background: #f6f8fa; border: 0.4pt solid #d5dbe0; border-left: 2.4pt solid #6b7d8f;
+        padding: 2mm 2.5mm; margin: 1.5mm 0 2.5mm 0; white-space: pre-wrap;
+        overflow-wrap: break-word; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm 0; font-size: 8.3pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.3mm 1.6mm;
+       font-weight: 600; font-size: 8.1pt; }
+  td { border-bottom: 0.4pt solid #dfe4e8; padding: 1.2mm 1.6mm; vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.m, th.m { font-family: Consolas, monospace; font-size: 7.9pt; }
+  .box { border: 0.5pt solid #c8ced4; border-left: 3pt solid #14171a;
+         background: #f7f9fa; padding: 2.5mm 3mm; margin: 2.5mm 0; page-break-inside: avoid; }
+  .warn { border-left-color: #a8321a; background: #fdf4f2; }
+  .good { border-left-color: #0a7a3d; background: #f2faf5; }
+  .note { border-left-color: #1a5fa8; background: #f2f7fd; }
+  .cover { text-align: left; padding-top: 26mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #4a5560; margin-top: 1mm; }
+  .cover .meta { margin-top: 12mm; font-family: Consolas, monospace; font-size: 9pt;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 4mm; }
+  .cover .meta div { margin-bottom: 1.4mm; }
+  .newpage { page-break-before: always; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; font-size: 9.2pt; }
+  .toc td.n { width: 9mm; font-family: Consolas, monospace; color: #4a5560; }
+  .small { font-size: 8pt; color: #4a5560; }
+  .tag { display: inline-block; font-family: Consolas, monospace; font-size: 7.4pt;
+         padding: 0.3mm 1.4mm; border-radius: 1mm; background: #e3e8ec; }
+  .tag.ok { background: #0a7a3d; color: #fff; }
+  .tag.no { background: #a8321a; color: #fff; }
+  .tag.hand { background: #7a5a1a; color: #fff; }
+  .flow { font-family: Consolas, monospace; font-size: 7.8pt; line-height: 1.5; }
+  .step { border-left: 3pt solid #1a5fa8; padding-left: 3mm; margin: 3mm 0; page-break-inside: avoid; }
+  .step h4 { color: #0b3d6b; margin-top: 0; }
+  .chk { font-family: Consolas, monospace; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>VoiceStudio &mdash; Cross-Account Migration Runbook</h1>
+  <div class="sub">Moving the whole 115&nbsp;GB GPU pipeline to a different AWS account,
+  bit-for-bit, with every connection intact</div>
+
+  <div class="box good" style="margin-top:9mm">
+    <strong>The short answer: yes, and it is the easy kind of migration.</strong>
+    You do not rebuild anything. You take one disk image of the machine as it stands today,
+    hand it to the new account, and boot it. Because the image is a byte-level copy of the
+    150&nbsp;GiB root volume, the patched backend, the tuned settings, the 20&nbsp;GB of models,
+    the Docker container with its baked-in environment, the Google credentials and the
+    Gemini proxy service all arrive already configured. Nothing is reinstalled, so nothing can
+    drift. Expect <strong>2&ndash;3 hours of work</strong> and one long unattended copy.
+  </div>
+
+  <div class="box warn">
+    <strong>One thing has a lead time of days, not hours.</strong> A new AWS account usually
+    cannot launch a GPU instance at all &mdash; the quota starts at zero and only a support
+    ticket raises it. Read section 4 and raise that ticket <em>now</em>, while the current
+    account still has credits. Everything else in this document can be done in an afternoon.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written</strong>&nbsp;&nbsp;2026-08-23</div>
+    <div><strong>Source account</strong>&nbsp;&nbsp;959689755912 &middot; ap-south-1 &middot; instance i-041b48c591cb86e19</div>
+    <div><strong>Method</strong>&nbsp;&nbsp;AMI share and copy (primary) &middot; container export (fallback)</div>
+    <div><strong>Basis</strong>&nbsp;&nbsp;Every fact below was read off the live box and the AWS API on 2026-08-23, not from memory</div>
+    <div><strong>Companion</strong>&nbsp;&nbsp;VoiceStudio_Pipeline_Handbook.pdf holds the fingerprints this runbook verifies against</div>
+  </div>
+</div>
+
+<h2>Contents</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>What has to survive the move, and where each piece actually lives</td></tr>
+<tr><td class="n">2</td><td>Verified inventory of the machine as it stands today</td></tr>
+<tr><td class="n">3</td><td>Why a disk image, and what the alternatives silently lose</td></tr>
+<tr><td class="n">4</td><td>Do these three things now, before credits run out</td></tr>
+<tr><td class="n">5</td><td>The runbook, step by step</td></tr>
+<tr><td class="n">6</td><td>Rebuilding the account-specific wrapper</td></tr>
+<tr><td class="n">7</td><td>Post-migration verification: proving nothing changed</td></tr>
+<tr><td class="n">8</td><td>The non-AWS dependencies people forget</td></tr>
+<tr><td class="n">9</td><td>The machine-identity trap in the settings store</td></tr>
+<tr><td class="n">10</td><td>Fallback method: container export instead of a disk image</td></tr>
+<tr><td class="n">11</td><td>Rehearsal: prove it works before you need it</td></tr>
+<tr><td class="n">12</td><td>What the migration costs</td></tr>
+<tr><td class="n">13</td><td>If it goes wrong: rollback and troubleshooting</td></tr>
+<tr><td class="n">14</td><td>Slimming down on the way across (optional)</td></tr>
+<tr><td class="n">15</td><td>What I have not verified</td></tr>
+</table>
+
+<div class="box note">
+<strong>How to read this.</strong> Sections 1&ndash;4 are the understanding and the one urgent
+action. Section 5 is the thing you actually execute, command by command. Sections 6&ndash;9 are
+the details that decide whether "it booted" also means "it works". Sections 10&ndash;15 are
+insurance. If you only ever read two pages, read section 4 and section 7.
+</div>
+
+<h2 class="newpage">1. What has to survive the move, and where each piece actually lives</h2>
+
+<p>The reason this migration is straightforward is that almost everything that matters lives on
+one disk. The reason it can still go wrong is that a few pieces do not, and they are invisible
+until something fails quietly. Here is the honest map, verified on the box today.</p>
+
+<table>
+<tr><th style="width:31%">What it is</th><th style="width:31%">Where it physically lives</th><th style="width:14%">Carried by a disk image?</th><th>If it were lost</th></tr>
+<tr><td>The patched Python backend (aligner, chirp_timing, fa_timing, head_language, chirp_wire, speech_rate, dub_generate)</td><td class="m">Container writable layer, under <code>/var/lib/docker</code> on the root volume</td><td><span class="tag ok">YES</span></td><td>Days of tuning gone. This is the irreplaceable part.</td></tr>
+<tr><td>Docker image <code>palashdeb/omnivoice-studio:latest</code>, 15.2&nbsp;GB</td><td class="m">/var/lib/docker</td><td><span class="tag ok">YES</span></td><td>Re-pullable from Docker Hub, but the tag may have moved on since 12 Aug.</td></tr>
+<tr><td>Model cache, 20&nbsp;GB (whisper variants, MMS_FA, NLLB, XTTS, OmniVoice)</td><td class="m">Docker named volume <code>omnivoice-data</code> at <code>/var/lib/docker/volumes/omnivoice-data/_data</code>, mounted to <code>/app/omnivoice_data</code></td><td><span class="tag ok">YES</span></td><td>Hours of re-downloading, and an <code>HF_TOKEN</code> that must still be valid.</td></tr>
+<tr><td>Provider settings: LLM and ASR base URL, model names, encrypted keys</td><td class="m">SQLite at <code>/root/.omnivoice/omnivoice.db</code> in the container writable layer</td><td><span class="tag ok">YES</span></td><td>Translation and ASR stop resolving a backend. See section 9 &mdash; this one has a subtlety.</td></tr>
+<tr><td>Gemini proxy: the script, its systemd unit and its drop-in</td><td class="m">Host: <code>/home/ubuntu/gemini_proxy.py</code>, <code>/etc/systemd/system/gemini-proxy.service</code> and <code>.d/50-project.conf</code></td><td><span class="tag ok">YES</span></td><td>Transcription and translation fail. The unit is <code>enabled</code>, so it restarts itself on boot.</td></tr>
+<tr><td>Google credentials (OAuth refresh token)</td><td class="m"><code>/home/ubuntu/gcp_adc.json</code> on the host and <code>/root/gcp_adc.json</code> in the container, 415&nbsp;bytes each</td><td><span class="tag ok">YES</span></td><td>Chirp&nbsp;3 timing and all Gemini calls fail. Not an AWS credential, so it is unaffected by the account change.</td></tr>
+<tr><td><code>HF_TOKEN</code> / <code>HUGGING_FACE_HUB_TOKEN</code></td><td class="m">Baked into the container's environment at create time</td><td><span class="tag ok">YES</span></td><td>Gated model downloads fail. Only matters if the cache is ever rebuilt.</td></tr>
+<tr><td>cuDNN 8 libraries, 1.1&nbsp;GB</td><td class="m">Host <code>/home/ubuntu/cudnn8/lib</code>, bind-mounted read-only to <code>/opt/cudnn8/lib</code></td><td><span class="tag ok">YES</span></td><td>The container fails to load CUDA kernels. Easy to forget in a container-only export.</td></tr>
+<tr><td>NVIDIA driver 580.126.09 and nvidia-container-toolkit 1.19.0</td><td class="m">Host OS on the root volume</td><td><span class="tag ok">YES</span></td><td>No GPU inside the container.</td></tr>
+<tr><td>Finished jobs, 5.8&nbsp;GB across 13 job directories</td><td class="m"><code>/root/.omnivoice/dub_jobs/</code> in the container</td><td><span class="tag ok">YES</span></td><td>Old renders and reference clips lost. Not needed for correctness.</td></tr>
+<tr><td>Swapfile, 24&nbsp;GB</td><td class="m"><code>/swapfile</code>, wired in <code>/etc/fstab</code></td><td><span class="tag ok">YES</span></td><td>Nothing, and it wastes 24&nbsp;GB of image. See section 14.</td></tr>
+<tr><td>IAM role and instance profile <code>OmniVoiceTranslateRole</code></td><td class="m">AWS IAM, account 959689755912</td><td><span class="tag no">NO</span></td><td>Nothing today &mdash; verified that no code on the box calls an AWS API. Recreate anyway for future use.</td></tr>
+<tr><td>Security group <code>videotrans-sg</code></td><td class="m">AWS EC2, account 959689755912</td><td><span class="tag no">NO</span></td><td>You cannot reach the box. Two minutes to recreate.</td></tr>
+<tr><td>SSH key pair <code>videotrans-key</code></td><td class="m">AWS EC2 registry, plus your private key on this laptop</td><td><span class="tag hand">PARTLY</span></td><td>Nothing, as long as you keep the <code>.pem</code>. The matching public key is already inside the image's <code>authorized_keys</code>, so it keeps working without registering anything.</td></tr>
+<tr><td>The public IP</td><td class="m">Assigned fresh on every launch</td><td><span class="tag no">NO</span></td><td>Expected. It already changes on every stop/start; <code>_vs_ip.txt</code> and <code>aws_lock_ip.ps1</code> handle it.</td></tr>
+</table>
+
+<div class="box good">
+<strong>Read the right-hand column again.</strong> Of the thirteen things that matter, twelve
+ride along inside the disk image for free. Only four small AWS wrappers have to be recreated by
+hand, and one of them (the key pair) is optional. That is why this is a copy job, not a
+rebuild job.
+</div>
+
+<h2 class="newpage">2. Verified inventory of the machine as it stands today</h2>
+
+<p>Every value here was read from the live instance or the AWS API on 2026-08-23. Nothing is
+recalled. Use this as the specification for the new instance.</p>
+
+<h3>2.1 The AWS shape</h3>
+<table>
+<tr><th style="width:30%">Property</th><th style="width:38%">Value</th><th>Why it matters for the move</th></tr>
+<tr><td>Instance</td><td class="m">i-041b48c591cb86e19, g4dn.xlarge</td><td>4 vCPU, 16&nbsp;GB RAM, one Tesla T4. The new instance must be the same type.</td></tr>
+<tr><td>Region / AZ</td><td class="m">ap-south-1 / ap-south-1c</td><td>Stay in ap-south-1 if you can; a same-region share is simpler and the copy is faster.</td></tr>
+<tr><td>Base AMI</td><td class="m">ami-0eb5a4f0d81f671e3<br>Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.7 (Ubuntu 22.04) 20260427</td><td>Owned by <code>amazon</code>, public, <strong>no product codes</strong>. This is the single most important compatibility fact &mdash; see the note below.</td></tr>
+<tr><td>Root volume</td><td class="m">vol-044f2531a5977abaa &middot; 150&nbsp;GiB gp3 &middot; 3000&nbsp;IOPS &middot; 125&nbsp;MB/s<br><strong>Encrypted = false</strong></td><td>Unencrypted means no KMS key to share. The second most important fact.</td></tr>
+<tr><td>Root device / boot mode</td><td class="m">/dev/sda1 &middot; uefi-preferred &middot; ENA enabled &middot; hvm &middot; x86_64</td><td>An AMI copy preserves all of these automatically.</td></tr>
+<tr><td>Network</td><td class="m">vpc-0d417b3be3e768618, subnet-000800b711ed64b1a</td><td>Not migrated. The new account's default VPC is fine.</td></tr>
+<tr><td>Security group</td><td class="m">sg-0dfc3932e7d0896a4 "videotrans-sg"<br>inbound tcp 22, 3000, 3900 from <ip-address>/32 only<br>outbound all</td><td>Recreate in the new account. Note what is <em>not</em> there: port 8900.</td></tr>
+<tr><td>IAM</td><td class="m">instance-profile OmniVoiceTranslateRole, one inline policy OmniVoiceTranslateFit, no managed policies</td><td>Recreate. Currently unused by any code on the box.</td></tr>
+<tr><td>Key pair</td><td class="m">videotrans-key</td><td>The public half is already in the image. Keep the <code>.pem</code> on this laptop.</td></tr>
+<tr><td>IMDS</td><td class="m">HttpTokens = optional (IMDSv1 allowed)</td><td>Harmless. Consider <code>required</code> on the new box.</td></tr>
+<tr><td>Existing backups</td><td class="m"><strong>0 AMIs, 0 snapshots</strong></td><td>There is currently no copy of this machine anywhere. See section 4.2.</td></tr>
+<tr><td>G/VT quota, source account</td><td class="m">4 vCPUs (adjustable)</td><td>Exactly one g4dn.xlarge. The target account needs at least the same.</td></tr>
+</table>
+
+<div class="box good">
+<strong>Two facts that make this whole plan safe, and both were worth checking.</strong><br>
+<strong>(a) The base AMI carries no Marketplace product code.</strong> It is an AWS-published
+Deep Learning AMI. If it had been a paid Marketplace image, AWS would refuse to let you share
+any AMI derived from it across accounts, and this entire plan would have had to be rewritten
+around the fallback method.<br>
+<strong>(b) The root volume is not encrypted.</strong> Sharing an encrypted snapshot also
+requires sharing a customer-managed KMS key and granting the other account use of it, which is
+the step most people get wrong. You do not have to do any of that.
+</div>
+
+<h3>2.2 The host software stack</h3>
+<table>
+<tr><th style="width:34%">Component</th><th>Value as measured</th></tr>
+<tr><td>OS / kernel</td><td class="m">Ubuntu 22.04.5 LTS, kernel 6.8.0-1052-aws</td></tr>
+<tr><td>GPU / driver</td><td class="m">Tesla T4, 15360&nbsp;MiB, driver 580.126.09</td></tr>
+<tr><td>Docker</td><td class="m">29.4.1 (build 055a478), default runtime <code>runc</code>, root dir <code>/var/lib/docker</code></td></tr>
+<tr><td>NVIDIA container stack</td><td class="m">nvidia-container-toolkit 1.19.0-1, libnvidia-container1 1.19.0-1</td></tr>
+<tr><td>Extra systemd unit</td><td class="m">gemini-proxy.service &mdash; <code>enabled</code> and <code>active</code></td></tr>
+<tr><td>Listening ports</td><td class="m">22 (sshd), 3900 (docker-proxy to the container), 8900 (the proxy, on 0.0.0.0), 53 (systemd-resolved, loopback)</td></tr>
+<tr><td>Swap</td><td class="m">/swapfile, 24&nbsp;GB, 0&nbsp;B in use, declared in /etc/fstab</td></tr>
+<tr><td>SSM agent</td><td class="m">amazon-ssm-agent 3.3.4793.0 (snap), running</td></tr>
+<tr><td>CloudWatch agent</td><td class="m">present but <code>disabled</code></td></tr>
+</table>
+
+<h3>2.3 The container, exactly as it runs</h3>
+<p>This is the reproduction specification. If you ever have to recreate the container by hand
+&mdash; which section 10 explains you should avoid &mdash; every one of these must match.</p>
+<pre>name        omnivoice
+image       palashdeb/omnivoice-studio:latest   (sha256:d3b95c19e728..., 15.2 GB, created 2026-08-12)
+entrypoint  python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 3900
+workdir     /app          user (default, root)     cmd (none)
+restart     unless-stopped            network bridge            ipc private
+gpus        DeviceRequest driver="" count=-1 capabilities=[[gpu]]      (i.e. --gpus all)
+shm         67108864 (64 MB, the Docker default)   privileged false   runtime runc
+ports       0.0.0.0:3900 -> 3900/tcp
+mounts      volume omnivoice-data          -> /app/omnivoice_data      rw
+            bind /home/ubuntu/cudnn8/lib   -> /opt/cudnn8/lib          ro
+            bind /home/ubuntu/.cache/huggingface -> /root/.cache/huggingface  rw
+env         HF_TOKEN=&lt;secret&gt;              HUGGING_FACE_HUB_TOKEN=&lt;secret&gt;
+            HF_HOME=/app/omnivoice_data/huggingface
+            LD_LIBRARY_PATH=/opt/cudnn8/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64
+            PYTHONPATH=/app/backend        OMNIVOICE_SERVER_MODE=1
+            NVIDIA_VISIBLE_DEVICES=all     NVIDIA_DRIVER_CAPABILITIES=compute,utility
+            PYTORCH_VERSION=2.8.0          PYTHONDONTWRITEBYTECODE=1  PYTHONUNBUFFERED=1
+            PIP_BREAK_SYSTEM_PACKAGES=1    UV_BREAK_SYSTEM_PACKAGES=1
+hostname    9276383fe31e     &lt;-- see section 9, this one is load-bearing</pre>
+
+<div class="box note">
+<strong>The container has drifted a long way from its image, on purpose.</strong>
+<code>docker diff</code> reports <strong>124,604 changed paths</strong>: 124,556 added and 48
+modified. That is the patched backend, the model downloads, the job directories, the settings
+database and every <code>.py.pre&hellip;</code> backup from weeks of work. The number is worth
+remembering, because it is the measure of how much a plain <code>docker pull</code> of the same
+tag would <em>not</em> give you.
+</div>
+
+<h3>2.4 The service wiring, end to end</h3>
+<pre class="flow">browser  --3900-->  container omnivoice  --172.17.0.1:8900-->  gemini-proxy.service (host)
+                          |                                              |
+                          |                                     google.auth.default()
+                          |                                     /home/ubuntu/gcp_adc.json
+                          |                                              |
+                          |                                     Vertex AI aiplatform.googleapis.com
+                          |                                     locations/global, project
+                          |                                     project-35cd3678-bfdd-451b-bcc
+                          |
+                          +--> Speech-to-Text v2 (chirp_3) directly, us / eu multi-region,
+                               credentials read from /root/gcp_adc.json by chirp_timing.py
+                          +--> local GPU models from /app/omnivoice_data (MMS_FA, XTTS, whisper)</pre>
+
+<p>Three things follow from that diagram, and all three were confirmed live today:</p>
+<ul>
+<li><strong>The proxy address is host-independent.</strong> <code>172.17.0.1</code> is the Docker
+bridge gateway, which is the same on every Docker host with a default bridge. It contains no
+public IP, no hostname and no account ID, so it needs no edit after migration. Verified
+answering HTTP&nbsp;200 from inside the container.</li>
+<li><strong>The proxy does no authentication of its own.</strong> Its source says the
+<code>api_key</code> VoiceStudio sends is ignored, because authentication to Google happens with
+an OAuth bearer token minted from the ADC file. Tested: a request with no
+<code>Authorization</code> header returns 200, and so does one with a deliberately wrong key.
+That is why the encrypted key in the settings database turns out to be a 6-character
+placeholder, and why section 9's trap is survivable.</li>
+<li><strong>The Google credential is a user refresh token, not a service account.</strong>
+<code>type: authorized_user</code>, with <code>quota_project_id =
+project-35cd3678-bfdd-451b-bcc</code>. It minted a fresh access token during this audit
+(expiry 18:44 UTC) and Speech-to-Text v2 answered 200 in <code>us</code>, <code>eu</code> and
+<code>us-central1</code>. The proxy listed eight Gemini models. Everything on the Google side is
+alive right now.</li>
+</ul>
+
+<h3>2.5 Disk, and therefore image size</h3>
+<table>
+<tr><th style="width:46%">Measurement</th><th>Value</th></tr>
+<tr><td>Root filesystem</td><td class="m">146&nbsp;GB usable of a 150&nbsp;GiB volume</td></tr>
+<tr><td>Used</td><td class="m">115&nbsp;GB (79%), 32&nbsp;GB free</td></tr>
+<tr><td>/var/lib/docker</td><td class="m">57&nbsp;GB (image 15.2 + writable layer + volumes)</td></tr>
+<tr><td>omnivoice-data volume</td><td class="m">20&nbsp;GB (Hugging Face cache only &mdash; no config lives here)</td></tr>
+<tr><td>/home/ubuntu/cudnn8</td><td class="m">1.1&nbsp;GB</td></tr>
+<tr><td>Container /root/.omnivoice</td><td class="m">5.8&nbsp;GB, of which the largest job is znv2ve2l at 1.3&nbsp;GB</td></tr>
+<tr><td>/swapfile</td><td class="m">24&nbsp;GB, entirely unused</td></tr>
+<tr><td>Settings database</td><td class="m">/root/.omnivoice/omnivoice.db, 8,916,992 bytes</td></tr>
+</table>
+<p class="small">A snapshot only stores written blocks, not the declared volume size, and it is
+compressed. Expect the first snapshot to bill for well under 115&nbsp;GB, but plan the copy
+time as if it were 115&nbsp;GB.</p>
+
+<h2 class="newpage">3. Why a disk image, and what the alternatives silently lose</h2>
+
+<p>There are three ways to move this workload. They are not equally safe, and the difference is
+not effort &mdash; it is how many chances there are for something to end up subtly different.</p>
+
+<table>
+<tr><th style="width:20%">Method</th><th style="width:29%">What it copies</th><th style="width:26%">What it does not copy</th><th>Verdict</th></tr>
+<tr><td><strong>A. AMI share + copy</strong><br><span class="tag ok">RECOMMENDED</span></td><td>Every written block of the 150&nbsp;GiB root volume: OS, driver, Docker, the image, the container's writable layer, the named volume, the systemd unit, the credentials, the jobs</td><td>Only the four AWS wrappers in section 6, and the public IP</td><td><strong>Use this.</strong> There is no reinstall step, so there is no opportunity for a version to drift. The pipeline arrives byte-identical and section 7 proves it.</td></tr>
+<tr><td>B. Container export + host files</td><td>The container as a flattened image, plus the volume and the host bind directories as tar files</td><td>The container's identity (see section 9), the driver, the toolkit, the systemd unit unless you copy it by hand, the exact Docker version</td><td>Workable, documented in section 10, but every item in the middle column is a thing you must remember. Keep as insurance only.</td></tr>
+<tr><td>C. Rebuild from Docker Hub + re-apply patches</td><td>The stock 0.4.2 application</td><td><strong>All of it.</strong> The 124,556 added and 48 modified paths, the tuned module defaults, the model cache, the settings database</td><td><strong>Do not.</strong> This is not a migration, it is redoing the work. The tag <code>:latest</code> may also no longer be the 12 Aug build.</td></tr>
+</table>
+
+<div class="box warn">
+<strong>The trap in method A that costs people their data.</strong> A shared AMI stays
+<em>owned by the source account</em>. The target account can launch from it, but it does not own
+it. On the day the old account is closed or its resources are deleted, that AMI and its backing
+snapshot disappear &mdash; and any instance launched from it can no longer be re-launched from
+scratch. <strong>The target account must copy the AMI into itself</strong>
+(<code>aws ec2 copy-image</code>), which creates a brand-new AMI and a brand-new snapshot that
+the target account owns outright. Step 5.7 does this, and step 5.11 is where you confirm the
+copy exists before you let go of the old account. Do not skip either.
+</div>
+
+<div class="box note">
+<strong>A detail about permissions that is easy to get wrong.</strong> To merely <em>launch</em>
+from a shared AMI, sharing the AMI's launch permission is enough &mdash; AWS grants the launch
+access to the backing snapshot on your behalf. But to <em>copy</em> the AMI, the target account
+also needs read access to the backing snapshot itself. Since copying is exactly what you must
+do, step 5.5 shares both the AMI and its snapshot. Sharing both is the safe superset and costs
+one extra command.
+<span class="small">(Sources: <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html">AWS &mdash; Share an AMI with specific AWS accounts</a>,
+<a href="https://oneuptime.com/blog/post/2026-02-12-share-ami-across-aws-accounts/view">How to share an AMI across AWS accounts</a>. Content was rephrased for compliance with licensing restrictions.)</span>
+</div>
+
+<h2 class="newpage">4. Do these three things now, before credits run out</h2>
+
+<p>The migration itself is an afternoon. These three items are not, and two of them get harder
+the longer you leave them.</p>
+
+<h3>4.1 Raise the GPU quota in the target account &mdash; this has a lead time of days <span class="tag no">URGENT</span></h3>
+
+<p>The source account's quota for <em>Running On-Demand G and VT instances</em> is
+<strong>4 vCPUs</strong> &mdash; exactly one g4dn.xlarge, which is 4 vCPUs. A newly created AWS
+account very often has this quota set to <strong>0</strong>, which means
+<code>run-instances</code> fails outright with <code>VcpuLimitExceeded</code> no matter how
+correct everything else is. Raising it requires a Service Quotas request that a human at AWS
+reviews. That review has historically taken anywhere from a few hours to several business days,
+and brand-new accounts with no billing history are the slowest cases.</p>
+
+<p>In the target account, check and request:</p>
+<pre># the quota code for "Running On-Demand G and VT instances" is L-DB2E81BA
+aws service-quotas get-service-quota --service-code ec2 \
+    --quota-code L-DB2E81BA --region ap-south-1 --profile NEWACCT
+
+# if the Value is below 4, request 8 (headroom for one instance plus a rehearsal)
+aws service-quotas request-service-quota-increase --service-code ec2 \
+    --quota-code L-DB2E81BA --desired-value 8 --region ap-south-1 --profile NEWACCT</pre>
+
+<p>Ask for <strong>8</strong>, not 4. Eight vCPUs lets you run the new instance while the old one
+is still up, which is what makes the rehearsal in section 11 and the side-by-side comparison in
+section 7 possible. Requesting exactly 4 forces you to shut down the working machine before you
+have proved the new one, which is the opposite of how you want to do this.</p>
+
+<div class="box warn">
+<strong>Raise this ticket while the source account still works.</strong> If credits run out first
+you will be trying to get a GPU quota approved in a new account while your only working copy of
+the pipeline is on an account you can no longer start. There is no technical reason to wait.
+</div>
+
+<h3>4.2 Take the first AMI &mdash; <span class="tag ok">DONE 2026-08-23</span></h3>
+
+<div class="box good">
+<strong>This is no longer a recommendation; it has been done.</strong>
+<table style="margin-top:2mm">
+<tr><th style="width:26%">Backup AMI</th><td class="m">ami-09583800297a6f720 &nbsp;&mdash;&nbsp; <code>voicestudio-golden-20260823</code></td></tr>
+<tr><th>Backing snapshot</th><td class="m">snap-0c003e3c8bf8dab1f &middot; 150&nbsp;GiB declared &middot; <strong>unencrypted</strong></td></tr>
+<tr><th>Taken</th><td class="m">2026-08-23 18:52&nbsp;UTC from i-041b48c591cb86e19</td></tr>
+<tr><th>Method</th><td class="m"><code>create-image --no-reboot</code>, with the box verified idle first</td></tr>
+<tr><th>Downtime</th><td class="m"><strong>none</strong> &mdash; the instance stayed running, the IP did not change, and all five MD5s were verified golden afterwards</td></tr>
+</table>
+Track it with <code>.\backup_status.ps1 -Watch</code>.
+</div>
+
+<p>Before that, the account held <strong>zero AMIs and zero snapshots</strong> &mdash; exactly one
+copy of the pipeline existed, on one EBS volume marked
+<code>DeleteOnTermination = true</code>. A mistaken <code>terminate-instances</code> or an EBS
+failure would have destroyed weeks of work with nothing to restore from. It costs roughly
+<strong>$4&ndash;6 per month</strong> in snapshot storage, and the AMI taken for the backup
+<em>is</em> the AMI the migration copies, so it was never extra work &mdash; just the first step
+done early.</p>
+
+<h3>4.3 Confirm the Google side has its own runway</h3>
+
+<p>The pipeline's dependency on Google is separate from AWS and will not be fixed by moving AWS
+accounts. Verified alive today, but check all three before you rely on them:</p>
+<ul>
+<li><strong>Vertex AI credits/billing</strong> on project <code>project-35cd3678-bfdd-451b-bcc</code>.
+The proxy's own header comment notes this project is the one with working credits. If those
+credits expire, transcription and translation stop &mdash; on any AWS account.</li>
+<li><strong>The refresh token.</strong> It is a user OAuth credential
+(<code>type: authorized_user</code>), not a service account. Google can invalidate a refresh
+token if it goes unused for an extended period, if the owning account's password changes, or if
+access is revoked. It works today. If you want to remove that whole class of risk before
+migrating, replace it with a service-account key: create one in the same project, grant it
+<em>Vertex AI User</em> and <em>Cloud Speech Client</em>, and drop the JSON in at both
+<code>/home/ubuntu/gcp_adc.json</code> and the container's <code>/root/gcp_adc.json</code>.
+Both consumers use <code>google.auth.default()</code>, which accepts either type without a code
+change. Do it on the <em>old</em> box first and confirm a render still works, then migrate.</li>
+<li><strong>Speech-to-Text v2 access</strong> in the <code>us</code> and <code>eu</code>
+multi-regions, which is where <code>chirp_3</code> is served from. Confirmed 200 today.</li>
+</ul>
+
+<h2 class="newpage">5. The runbook, step by step</h2>
+
+<p>Throughout: <code>OLD</code> means the current account 959689755912 with CLI profile
+<code>videotrans</code>, and <code>NEW</code> means the target account with a profile you will
+call <code>NEWACCT</code>. Replace <code>NEW_ACCOUNT_ID</code> with the 12-digit target account
+number. Every command that changes something is marked.</p>
+
+<h3>Part A &mdash; on the OLD account</h3>
+
+<div class="step">
+<h4>5.1 Confirm the box is genuinely idle <span class="tag">SAFE</span></h4>
+<p>An image taken mid-render captures half-written WAV files and a SQLite database
+mid-transaction. Not fatal for the pipeline code, but it makes the section&nbsp;7 verification
+ambiguous, and ambiguity is what you are trying to avoid.</p>
+<div class="box warn">
+<strong>Do not trust a process count alone.</strong> The render runs <em>inside</em> the uvicorn
+process, so <code>ps | grep speaker_clone</code> reports zero while a job is very much in flight.
+This nearly caused a mid-render image on 2026-08-23. The reliable signals are
+<strong>GPU utilisation</strong> and whether <strong><code>job_events</code> is still
+growing</strong>:
+<pre>.\rsh.ps1 -Script _bk_watch.sh    # 5 samples over 40s: gpu, job_events count, log size</pre>
+Idle means GPU at 0% and both counters frozen across all five samples. If you see
+<code>seg_&lt;lang&gt;_cNNN.wav</code> filenames climbing, a render is running &mdash; wait for
+<code>bench[generate] total=&hellip;</code> in the log, which is the completion marker.
+</div>
+</div>
+
+<div class="step">
+<h4>5.2 Create the AMI, without stopping the instance <span class="tag hand">CHANGES THINGS</span></h4>
+<p>Because an EBS snapshot is point-in-time, an idle box does not need to be stopped. This is the
+better trade: no downtime, no IP change, and nothing lost from a browser tab holding a
+translation.</p>
+<pre>aws ec2 create-image \
+  --instance-id i-041b48c591cb86e19 --no-reboot \
+  --name "voicestudio-golden-20260823" \
+  --description "VoiceStudio 0.4.2 verified-good pipeline. chirp_3 + fa_then_chirp + MMS stars + band gate; bridge OFF, head-lang OFF. Full 150GiB disk. Taken while idle." \
+  --tag-specifications 'ResourceType=image,Tags=[{Key=Name,Value=voicestudio-golden-20260823},{Key=Purpose,Value=backup-and-migration}]' \
+  --profile videotrans --region ap-south-1</pre>
+<p>Then verify the instance really was untouched &mdash; <code>--no-reboot</code> should leave
+<code>RestartCount</code> at 0 and the container's <code>StartedAt</code> unchanged:</p>
+<pre>.\rsh.ps1 -Script _mig_nochange.sh    # five MD5s, byte counts, marker count, restart count
+.\backup_status.ps1 -Watch            # poll the snapshot to completion</pre>
+
+<div class="box note">
+<strong>Measured timing, replacing an earlier estimate.</strong> This document originally guessed
+20&ndash;60 minutes. The real first snapshot of this 115&nbsp;GB volume ran at a steady
+<strong>1.25% per minute</strong> (5% at 7.8&nbsp;min, 14% at 15&nbsp;min), which is about
+<strong>80 minutes</strong> end to end. Budget an hour and a half. Subsequent snapshots are
+incremental and far quicker. The instance is fully usable throughout &mdash; you can dub while it
+copies.
+</div>
+<p class="small">Stopping the instance first is still the textbook approach and gives an
+application-consistent image rather than a crash-consistent one. It costs a stop/start cycle and
+a new public IP. With the box verified idle by the signals in 5.1 there is nothing in flight to be
+inconsistent about, so <code>--no-reboot</code> is the better choice. If you ever image mid-render,
+stop the instance instead.</p>
+</div>
+
+<div class="step">
+<h4>5.3 Nothing to restart <span class="tag">SAFE</span></h4>
+<p>With <code>--no-reboot</code> the box never went down, so there is no restart, no new IP and no
+<code>aws_lock_ip.ps1</code> re-run. Confirmed on 2026-08-23: instance still
+<code>running</code> at the same address, container <code>RestartCount 0</code>, uvicorn still the
+process started at 17:16:05, and all five module MD5s golden after imaging.</p>
+<p>If you did stop the instance in 5.2, this is where you bring it back:</p>
+<pre>.\start_box.ps1                    # writes the new IP into _vs_ip.txt
+.\aws_lock_ip.ps1 -Apply           # re-lock the security group to this laptop's IP
+.\rsh.ps1 -Script _ready_check.sh  # markers 5, speech_rate 13073, chirp_3, fa_then_chirp</pre>
+</div>
+
+<div class="step">
+<h4>5.4 Record the fingerprints you will verify against <span class="tag">SAFE</span></h4>
+<p>These are already in the handbook, but capture them again from the live box so you are
+comparing against the state you actually imaged, not a remembered one:</p>
+<pre>.\rsh.ps1 -Script _mig_facts.sh &gt; _mig_facts_before.txt</pre>
+<p>The values as of 2026-08-23 are in section 7. All five MD5s matched the frozen set during
+this audit.</p>
+</div>
+
+<div class="step">
+<h4>5.5 Share the AMI <em>and its snapshot</em> with the new account <span class="tag hand">CHANGES THINGS</span></h4>
+<pre># the AMI itself - lets NEW launch from it
+aws ec2 modify-image-attribute --image-id ami-NEWID \
+  --launch-permission "Add=[{UserId=NEW_ACCOUNT_ID}]" \
+  --profile videotrans --region ap-south-1
+
+# the backing snapshot - lets NEW *copy* it, which is the part that matters
+aws ec2 modify-snapshot-attribute --snapshot-id snap-XXXX \
+  --attribute createVolumePermission --operation-type add --user-ids NEW_ACCOUNT_ID \
+  --profile videotrans --region ap-south-1</pre>
+<p>Confirm both took:</p>
+<pre>aws ec2 describe-image-attribute --image-id ami-NEWID --attribute launchPermission \
+  --profile videotrans --region ap-south-1
+aws ec2 describe-snapshot-attribute --snapshot-id snap-XXXX --attribute createVolumePermission \
+  --profile videotrans --region ap-south-1</pre>
+<p>There is no KMS step, because the volume is unencrypted. If you ever repeat this with an
+encrypted volume, you would also have to share the customer-managed key and add the target
+account to its key policy.</p>
+</div>
+
+<h3>Part B &mdash; on the NEW account</h3>
+
+<div class="step">
+<h4>5.6 Confirm the share arrived and the quota is in place <span class="tag">SAFE</span></h4>
+<pre>aws ec2 describe-images --image-ids ami-NEWID --profile NEWACCT --region ap-south-1 \
+  --query "Images[0].{Name:Name,Owner:OwnerId,State:State}"
+aws service-quotas get-service-quota --service-code ec2 --quota-code L-DB2E81BA \
+  --profile NEWACCT --region ap-south-1 --query "Quota.Value"</pre>
+<p>The <code>Owner</code> will still read 959689755912. That is expected and is exactly why the
+next step exists. The quota value must be at least 4.</p>
+</div>
+
+<div class="step">
+<h4>5.7 Copy the AMI so the new account owns it <span class="tag hand">CHANGES THINGS &middot; DO NOT SKIP</span></h4>
+<pre>aws ec2 copy-image \
+  --source-image-id ami-NEWID --source-region ap-south-1 --region ap-south-1 \
+  --name "voicestudio-golden-20260823-owned" \
+  --description "Owned copy. Survives closure of account 959689755912." \
+  --profile NEWACCT
+
+aws ec2 wait image-available --image-ids ami-OWNEDID --profile NEWACCT --region ap-south-1</pre>
+<p>This is another 20&ndash;60 minute wait; it creates a fresh snapshot in the new account. When
+it finishes, <code>describe-images --owners self</code> in the new account must list it. That
+listing is your proof that the pipeline no longer depends on the old account existing.</p>
+<p class="small">Copying to a different region works identically &mdash; set
+<code>--region</code> to the destination and <code>--source-region</code> to ap-south-1. Only do
+that if you actually want to move region; it makes the copy slower and changes your latency to
+Google's <code>us</code>/<code>eu</code> Speech endpoints.</p>
+</div>
+
+<div class="step">
+<h4>5.8 Create the security group <span class="tag hand">CHANGES THINGS</span></h4>
+<pre>MYIP=$(curl -s https://checkip.amazonaws.com)   # your laptop's current public address
+
+aws ec2 create-security-group --group-name videotrans-sg \
+  --description "Video translator GPU access" --profile NEWACCT --region ap-south-1
+
+for P in 22 3000 3900; do
+  aws ec2 authorize-security-group-ingress --group-id sg-NEW \
+    --ip-permissions "IpProtocol=tcp,FromPort=$P,ToPort=$P,IpRanges=[{CidrIp=$MYIP/32,Description=locked}]" \
+    --profile NEWACCT --region ap-south-1
+done</pre>
+<div class="box warn">
+<strong>Do not open port 8900.</strong> The Gemini proxy listens on <code>0.0.0.0:8900</code>, not
+on loopback, and it performs no authentication of its own. The only thing keeping it private is
+that the security group has no rule for that port. Anyone who could reach 8900 could spend your
+Vertex AI credits. The same applies to 3900: the app accepts no credentials and returns 200 to
+anyone who can reach it, which is why <code>aws_lock_ip.ps1</code> exists. Keep both restricted
+to a single <code>/32</code>.
+</div>
+</div>
+
+<div class="step">
+<h4>5.9 Create the IAM role and instance profile <span class="tag hand">CHANGES THINGS</span></h4>
+<p>Nothing on the box calls an AWS API today &mdash; verified: no module under
+<code>/app/backend</code> imports <code>boto3</code>, even though the library is installed. So
+this role is currently decoration. Recreate it anyway, with the same name, so that
+<code>aws_lock_ip.ps1</code> and the sibling grant scripts keep working unchanged, and so the
+option of using Amazon Translate or Bedrock later is still there.</p>
+<pre># trust policy
+cat &gt; trust.json &lt;&lt;'EOF'
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow",
+ "Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+EOF
+
+aws iam create-role --role-name OmniVoiceTranslateRole \
+  --assume-role-policy-document file://trust.json --profile NEWACCT
+aws iam create-instance-profile --instance-profile-name OmniVoiceTranslateRole --profile NEWACCT
+aws iam add-role-to-instance-profile --instance-profile-name OmniVoiceTranslateRole \
+  --role-name OmniVoiceTranslateRole --profile NEWACCT</pre>
+<p>To carry the inline policy across, export it from the old account first and re-apply it,
+editing the <code>aws:SourceIp</code> condition to the new box's public IP once you have one:</p>
+<pre>aws iam get-role-policy --role-name OmniVoiceTranslateRole \
+  --policy-name OmniVoiceTranslateFit --profile videotrans \
+  --query PolicyDocument &gt; fit.json
+# then, after the new instance has an IP, replace the old /32 inside fit.json and:
+aws iam put-role-policy --role-name OmniVoiceTranslateRole \
+  --policy-name OmniVoiceTranslateFit --policy-document file://fit.json --profile NEWACCT</pre>
+<div class="box note">
+<strong>Known wart, worth fixing here.</strong> <code>aws_lock_ip.ps1</code> reports
+<code>policy update FAILED</code> on its IAM step, and separately reported "policy has no
+aws:SourceIp condition to update" on today's run. It has been harmless because nothing on the
+box makes AWS calls. If you ever wire in Amazon Translate or Bedrock, fix that step first &mdash;
+otherwise the IP pinning you think you have will not be there.
+</div>
+</div>
+
+<div class="step">
+<h4>5.10 Launch the instance <span class="tag hand">CHANGES THINGS</span></h4>
+<p>Key pair: you do <strong>not</strong> need to import one. The public half of
+<code>videotrans-key</code> is already inside the image's
+<code>/home/ubuntu/.ssh/authorized_keys</code>, so your existing <code>.pem</code> works
+immediately. Passing <code>--key-name</code> would only add a second key. If you would rather
+have a registered key pair in the new account as well, import the public half; do not create a
+new pair and expect it to work, because cloud-init will not re-run key injection on a cloned
+root volume in the way you might assume.</p>
+<pre>aws ec2 run-instances \
+  --image-id ami-OWNEDID \
+  --instance-type g4dn.xlarge \
+  --security-group-ids sg-NEW \
+  --iam-instance-profile Name=OmniVoiceTranslateRole \
+  --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":150,"VolumeType":"gp3","Iops":3000,"Throughput":125,"DeleteOnTermination":true}}]' \
+  --metadata-options 'HttpTokens=required,HttpEndpoint=enabled' \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=voicestudio-gpu}]' \
+  --profile NEWACCT --region ap-south-1</pre>
+<p>Notes on the choices above:</p>
+<ul>
+<li><code>/dev/sda1</code> is the root device name recorded on both the base AMI and the
+instance. Use it exactly.</li>
+<li>Boot mode <code>uefi-preferred</code>, ENA and the virtualization type are inherited from the
+AMI &mdash; you do not specify them and you must not try to.</li>
+<li>Any AZ in the region is fine. The old box happened to be in <code>ap-south-1c</code>; nothing
+depends on that.</li>
+<li><code>HttpTokens=required</code> is a small hardening improvement over the old box's
+<code>optional</code>. Safe: nothing on the box reads IMDS except the AWS SDK, which speaks
+IMDSv2.</li>
+<li>Keep 150&nbsp;GiB unless you have first done the cleanup in section 14. A smaller root volume
+than the snapshot is rejected outright.</li>
+</ul>
+</div>
+
+<div class="step">
+<h4>5.11 Point the local tooling at the new box <span class="tag hand">CHANGES THINGS</span></h4>
+<pre>aws ec2 describe-instances --instance-ids i-NEW --profile NEWACCT --region ap-south-1 \
+  --query "Reservations[0].Instances[0].PublicIpAddress" --output text  &gt; _vs_ip.txt</pre>
+<p>Then update the account-specific defaults in the local scripts. These are the places that
+hardcode the old account:</p>
+<table>
+<tr><th style="width:30%">File</th><th>What to change</th></tr>
+<tr><td class="m">_vs_ip.txt</td><td>The new public IP (the command above does it)</td></tr>
+<tr><td class="m">aws_lock_ip.ps1</td><td><code>$InstanceId</code> default and <code>$Profile</code> default</td></tr>
+<tr><td class="m">start_box.ps1 / start_instance.ps1</td><td>Instance id and profile</td></tr>
+<tr><td class="m">aws_grant_box.ps1, aws_grant_transcribe.ps1, aws_widen_bedrock.ps1, aws_fix_bedrock_cond.ps1</td><td>Instance id, profile, and any hardcoded account number 959689755912</td></tr>
+<tr><td class="m">rsh.ps1</td><td>Nothing &mdash; it reads <code>_vs_ip.txt</code> and the key path only</td></tr>
+</table>
+<p>Grep for the old account id before you declare this done:
+<code>Select-String -Path *.ps1,*.sh -Pattern "959689755912|i-041b48c591cb86e19"</code>.</p>
+</div>
+
+<div class="step">
+<h4>5.12 First boot: wait, then check the three services in order <span class="tag">SAFE</span></h4>
+<p>Give it four or five minutes. The Deep Learning AMI's first boot is not fast, the container
+has to start, and the proxy waits on <code>network-online.target</code> and
+<code>docker.service</code>.</p>
+<pre>.\aws_lock_ip.ps1 -Apply          # after editing the defaults in 5.11
+.\rsh.ps1 -Script _mig_facts.sh &gt; _mig_facts_after.txt
+.\rsh.ps1 -Script _ready_check.sh</pre>
+<p>Check in this order, because each one depends on the previous:</p>
+<ol>
+<li><strong>GPU visible to the host:</strong> <code>nvidia-smi</code> reports Tesla T4, driver
+580.126.09.</li>
+<li><strong>Container running:</strong> <code>docker ps</code> shows <code>omnivoice</code> as
+<code>Up ... (healthy)</code> with <code>0.0.0.0:3900-&gt;3900/tcp</code>. It should have started
+by itself from <code>restart=unless-stopped</code>.</li>
+<li><strong>Proxy running:</strong> <code>systemctl is-active gemini-proxy</code> returns
+<code>active</code>. It is <code>enabled</code>, so this should need no intervention. If it is
+not active, <code>journalctl -u gemini-proxy -n 50</code> and check the ADC file is still at
+<code>/home/ubuntu/gcp_adc.json</code>.</li>
+<li><strong>App answering:</strong> <code>curl -s -o /dev/null -w "%{http_code}"
+http://127.0.0.1:3900/sysinfo</code> inside the container returns 200.</li>
+<li><strong>Container reaches the proxy:</strong> from inside the container,
+<code>curl http://172.17.0.1:8900/health</code> returns
+<code>{"status": "ok", "project": "project-35cd3678-bfdd-451b-bcc"}</code>.</li>
+<li><strong>Google still authorises us:</strong> the token-mint and Speech checks in
+<code>_mig_token.sh</code> pass. Run it: <code>.\rsh.ps1 -Script _mig_token.sh</code>.</li>
+</ol>
+</div>
+
+<h2 class="newpage">6. Rebuilding the account-specific wrapper</h2>
+
+<p>Consolidated checklist of everything that does <em>not</em> ride inside the image, so you can
+tick it off without rereading section 5.</p>
+
+<table>
+<tr><th style="width:22%">Item</th><th style="width:38%">Old value</th><th>Action in the new account</th></tr>
+<tr><td>Security group</td><td class="m">sg-0dfc3932e7d0896a4 "videotrans-sg"<br>tcp 22/3000/3900 from one /32<br>egress all</td><td>Recreate with the same three ports and your current /32. <strong>Never</strong> add 8900. Step 5.8.</td></tr>
+<tr><td>IAM role</td><td class="m">OmniVoiceTranslateRole + instance profile of the same name, inline policy OmniVoiceTranslateFit</td><td>Recreate with the same names so the local scripts keep working. Export and re-apply the inline policy. Step 5.9.</td></tr>
+<tr><td>Key pair</td><td class="m">videotrans-key</td><td>Nothing required &mdash; the public key is inside the image. Optionally import the public half for tidiness. Keep the <code>.pem</code> safe; it is now the only way in.</td></tr>
+<tr><td>Public IP</td><td class="m"><ip-address> (changes on every start)</td><td>Write to <code>_vs_ip.txt</code>, re-run <code>aws_lock_ip.ps1 -Apply</code>. Consider an Elastic IP (~$3.6/mo) to stop the churn.</td></tr>
+<tr><td>VPC / subnet</td><td class="m">vpc-0d417b3be3e768618 / subnet-000800b711ed64b1a</td><td>Use the new account's default VPC. Nothing depends on the old ids.</td></tr>
+<tr><td>Local script defaults</td><td class="m">Account 959689755912, instance i-041b48c591cb86e19, profile <code>videotrans</code></td><td>Edit and grep, per the table in step 5.11.</td></tr>
+<tr><td>Billing alarm</td><td class="m">not checked</td><td>Set one up in the new account before you start rendering. A g4dn.xlarge left running is about $270/month.</td></tr>
+</table>
+
+<h2>7. Post-migration verification: proving nothing changed</h2>
+
+<p>"It booted" is not the same as "the pipeline is intact". These are the checks that
+distinguish the two. Run every one. The habit that has repeatedly paid off on this project is
+that <strong>a number moving in a good direction is not proof of improvement</strong> &mdash;
+Hindi's score once rose because a stage had silently stopped running. The same logic applies
+here: an output that looks fine is not proof the migration was clean. Compare fingerprints.</p>
+
+<h3>7.1 Tier 1 &mdash; the file fingerprints. These must match exactly.</h3>
+<table>
+<tr><th style="width:38%">File</th><th class="m" style="width:34%">Expected MD5</th><th>Also check</th></tr>
+<tr><td class="m">services/aligner.py</td><td class="m">9b8ceef388a7ef73d5f32d93f93a7348</td><td></td></tr>
+<tr><td class="m">services/chirp_timing.py</td><td class="m">666b37ae06e0dfef60e9ef3e66144933</td><td></td></tr>
+<tr><td class="m">services/fa_timing.py</td><td class="m">7f299ff33429339396788535f2447e28</td><td></td></tr>
+<tr><td class="m">services/head_language.py</td><td class="m">40f251f42504febce4b7b43cafdfbc1a</td><td></td></tr>
+<tr><td class="m">services/chirp_wire.py</td><td class="m">15df408cc9771e4876c1220618050712</td><td>84,906 bytes</td></tr>
+<tr><td class="m">services/speech_rate.py</td><td class="m">(size is the invariant)</td><td><strong>13,073 bytes</strong></td></tr>
+<tr><td class="m">api/routers/dub_generate.py</td><td class="m">(count is the invariant)</td><td><strong>exactly 5</strong> matches of <code>lead_in|leadin|sibilant|_LEAD_IN</code></td></tr>
+<tr><td class="m">/root/.omnivoice/omnivoice.db</td><td class="m">2285f035afe72c205b19556fb3b5ca9e</td><td>8,916,992 bytes</td></tr>
+<tr><td class="m">/home/ubuntu/gemini_proxy.py</td><td class="m">8d345980ca6df492096849945cb26945</td><td>52,753 bytes</td></tr>
+</table>
+<p><code>_mig_facts.sh</code> prints the first seven and <code>_mig_store.sh</code> the database.
+Diff the before and after captures:</p>
+<pre>fc _mig_facts_before.txt _mig_facts_after.txt</pre>
+<p>Only the timestamp, the IP-derived hostname, the container id in the logs and the disk-free
+figure should differ. Any MD5 difference means the image is not what you think it is &mdash; stop
+and investigate rather than proceeding.</p>
+
+<h3>7.2 Tier 2 &mdash; the live settings, as the modules will actually read them</h3>
+<p><code>_ready_check.sh</code> imports the modules and prints their effective values. Expected:</p>
+<table>
+<tr><th style="width:34%">Setting</th><th>Expected value</th></tr>
+<tr><td>Recogniser</td><td class="m">chirp_3, in its own MODEL_LOCATION, with a chirp_2 fallback</td></tr>
+<tr><td>Timing source</td><td class="m">fa_then_chirp (forced alignment primary)</td></tr>
+<tr><td>Back mode</td><td class="m">the end-based veto, not <code>start</code></td></tr>
+<tr><td>MMS star tokens</td><td class="m">on (<code>STARS</code> truthy)</td></tr>
+<tr><td>Onset band gate</td><td class="m">on (<code>SNAP_BAND</code> truthy, 300&ndash;3400&nbsp;Hz)</td></tr>
+<tr><td>Snap bridge</td><td class="m"><strong>off</strong> &mdash; it costs the six Indic languages 7.7 points</td></tr>
+<tr><td>Head-language check</td><td class="m"><strong>off</strong> (<code>OMNIVOICE_HEAD_LANG</code> defaults to "0"), which is the 5.65&times; render speed-up</td></tr>
+<tr><td>Provider</td><td class="m">active <code>custom</code>, base_url <code>http://172.17.0.1:8900/v1</code>, model <code>gemini-3.1-pro-preview</code>; ASR base_url the same, model <code>gemini-3.7-flash</code></td></tr>
+</table>
+
+<h3>7.3 Tier 3 &mdash; the end-to-end control. This is the check that actually catches things.</h3>
+<div class="box warn">
+<strong>The offline bench cannot catch wiring faults, and that has already bitten this project
+once.</strong> The English snap-bridge patch passed a 14-condition bench perfectly &mdash; 0 of
+480 non-English line starts moved &mdash; while in reality it had silently disabled the onset snap
+for every language, because it called a variable that did not exist at that call site and an
+existing <code>try/except</code> swallowed the <code>NameError</code>. The bench missed it
+because it calls functions directly instead of going through the pipeline. What caught it was
+re-rendering a real Hindi video and noticing 35 of 139 start times had moved.
+<br><br>
+<strong>So: re-render a known job on the new box and compare per-line timings, not just the
+audio.</strong>
+</div>
+<p>The strongest available control is <code>faprim01</code>, the reference job, which is in the
+image at <code>/root/.omnivoice/dub_jobs/faprim01</code> (434&nbsp;MB). It has been reproduced
+bit-identically twice and its scores are known:</p>
+<table>
+<tr><th style="width:40%">Measure on faprim01</th><th>Expected</th></tr>
+<tr><td>Well-placed lines</td><td class="m">75.5%</td></tr>
+<tr><td>Badly placed lines</td><td class="m">12.2%</td></tr>
+<tr><td>Line starts and ends</td><td class="m">139 of 139 bit-identical to the pre-migration run</td></tr>
+</table>
+<p>Two cautions when re-rendering, both learned the hard way:</p>
+<ul>
+<li><strong>The render reuses existing <code>seg_&lt;lang&gt;_*.wav</code> clips</strong>, so a
+re-render can ship stale audio and tell you nothing. Park those clips first. Keep
+<code>seg_ref_*</code> and <code>voice_speaker_*</code> &mdash; those are the per-line voice
+reference clips the cloning depends on.</li>
+<li><strong>One GPU arm at a time.</strong> Contention has silently corrupted a measurement
+before. Do not run the new box's verification render while the old box is also rendering.</li>
+</ul>
+<p>Finally, the check that needs no tooling: dub one short video and listen. The three things the
+verified-good state was signed off on by ear were <em>timing is correct</em>, <em>voice cloning
+is correct</em>, and <em>no Hindi audio in front of Telugu lines</em>. If all three hold, the
+migration is done.</p>
+
+<h3 class="newpage">7.4 Will the pipeline change? Will the output video change?</h3>
+
+<p>These are two different questions with two different answers, and conflating them causes
+needless worry. Both were checked on the box rather than reasoned about.</p>
+
+<h4>The pipeline does not change. This is provable, not a hope.</h4>
+<p>An AMI is a block-level copy of the volume. The bytes that arrive are the bytes that left, and
+section 7.1 measures exactly that. Every input to the pipeline's behaviour is carried:</p>
+<table>
+<tr><th style="width:32%">Determinant of behaviour</th><th style="width:32%">Value, carried in the image</th><th>Could it differ after migration?</th></tr>
+<tr><td>The seven tuned modules</td><td class="m">five MD5s + two byte counts + marker count 5</td><td><span class="tag ok">No</span> &mdash; byte-identical, and 7.1 proves it</td></tr>
+<tr><td>Module defaults (the settings)</td><td class="m">chirp_3, fa_then_chirp, stars on, band gate on, bridge off, head-lang off</td><td><span class="tag ok">No</span> &mdash; they are literals in the files above</td></tr>
+<tr><td>Provider routing</td><td class="m">base_url <code>http://172.17.0.1:8900/v1</code>, stored in plaintext</td><td><span class="tag ok">No</span> &mdash; the address is the Docker bridge gateway, identical on any host</td></tr>
+<tr><td>GPU</td><td class="m">Tesla T4, compute capability 7.5</td><td><span class="tag ok">No</span>, provided you launch <code>g4dn.xlarge</code>. See the warning below.</td></tr>
+<tr><td>Driver / CUDA / cuDNN / torch</td><td class="m">580.126.09 &middot; cu128 &middot; cudnn 91002 &middot; torch 2.8.0</td><td><span class="tag ok">No</span> &mdash; all four live on the imaged disk, none are installed at boot</td></tr>
+<tr><td>Numerics flags</td><td class="m">TF32 matmul <strong>off</strong>, cudnn.benchmark <strong>off</strong></td><td><span class="tag ok">No</span> &mdash; and both being off is what makes local stages reproducible run to run</td></tr>
+<tr><td>Model weights</td><td class="m">15 cached repos, each pinned to a specific revision hash in <code>refs/main</code></td><td><span class="tag ok">No</span>, because the cache is carried rather than re-downloaded. This is why section 14 says do not delete models you have not proven unused.</td></tr>
+</table>
+
+<div class="box warn">
+<strong>The one way you could change the numerics: launching a different instance type.</strong>
+A <code>g5.xlarge</code> has an A10G at compute capability 8.6, not a T4 at 7.5. Different kernels,
+different accumulation order, subtly different local model output. It would probably sound fine,
+but it would no longer be the state that was signed off. <strong>Launch
+<code>g4dn.xlarge</code>.</strong> The second way is letting a model re-download: if the cache
+were rebuilt, Hugging Face could serve a newer revision than the pinned hashes above.
+</div>
+
+<h4>The output video: as reproducible as it is today, and no less</h4>
+<p>Three stages of the pipeline are remote, and remote generation is not bit-exact. Verified from
+the code:</p>
+<ul>
+<li><strong>Translation</strong> runs through Gemini with <code>temperature=0.2</code> pinned by
+<code>dub_translate.py</code> (the proxy's own default is 0.3, and the reflect pass uses 0.1 or
+0.4). Any temperature above zero means sampling, which means the wording of a line can differ
+between two runs.</li>
+<li><strong>Transcription</strong> uses <code>gemini-3.7-flash</code> through the shim. Google can
+change what sits behind that label at any time.</li>
+<li><strong>Chirp&nbsp;3 word timings</strong> come from Speech-to-Text v2. <code>chirp_3</code> is
+a label, not a pinned version.</li>
+</ul>
+<p>The local stages, by contrast, are deterministic: MMS forced alignment runs a fixed model in
+<code>.eval()</code> mode, the TTS path calls <code>torch.manual_seed(used_seed)</code> when the
+voice profile carries a seed, and the ffmpeg mux is deterministic.</p>
+
+<div class="box good">
+<strong>The point that resolves the worry: none of that variability is caused by migration.</strong>
+Two fresh renders of the same video on the <em>current</em> box, today, can differ in translation
+wording for exactly the same reason. Moving AWS accounts does not touch Google, the models, the
+temperatures or the code. It changes who pays the EC2 bill. <strong>What governs quality &mdash;
+timing placement, voice cloning, and no source-language audio in front of a line &mdash; lives
+entirely in the seven files whose fingerprints you verified.</strong> Those are byte-identical,
+so quality is unchanged.
+</div>
+
+<h4>And a caching detail that makes the verification in 7.3 genuinely fair</h4>
+<p>Each job directory caches its remote results, which is why the reference job reproduced
+bit-identically twice:</p>
+<table>
+<tr><th style="width:34%">Cached artefact</th><th>What it means for a re-render</th></tr>
+<tr><td class="m">chirp_words_cache.json</td><td>The Chirp word timings for that job, stored on disk (<code>CACHE_NAME</code> in <code>chirp_wire.py</code>). Present in 10 of the 17 job directories, including <code>faprim01</code>. A re-render does <strong>not</strong> re-ask Google.</td></tr>
+<tr><td class="m">pre_retime_segments.json</td><td>The segments before retiming.</td></tr>
+<tr><td class="m">dub_history.tracks</td><td>The translated lines, one entry per recent job. A re-render reuses them rather than re-translating.</td></tr>
+<tr><td class="m">seg_&lt;lang&gt;_*.wav</td><td>The rendered per-line audio &mdash; <strong>also reused</strong>, which is the trap: park these before re-rendering or you will be shipping and measuring stale audio.</td></tr>
+</table>
+<p>So re-rendering <code>faprim01</code> on the migrated box exercises the <em>local</em> pipeline
+against frozen remote inputs. If 139 of 139 line starts match, that is a clean measurement of the
+part that migration could conceivably have affected. A brand-new video is a weaker test, because
+you cannot separate a migration fault from ordinary sampling variation.</p>
+
+<h2 class="newpage">8. The non-AWS dependencies people forget</h2>
+
+<p>Moving AWS accounts does not touch any of these, which is good news &mdash; but it also means
+none of them get fixed by the move, and if one is already close to expiry you will blame the
+migration for a failure it did not cause. Check them before, and again after.</p>
+
+<table>
+<tr><th style="width:20%">Dependency</th><th style="width:31%">Where it is configured</th><th style="width:16%">Status today</th><th>What breaks if it lapses</th></tr>
+<tr><td>Google OAuth refresh token</td><td class="m">/home/ubuntu/gcp_adc.json (host, 415 B)<br>/root/gcp_adc.json (container, 415 B)<br>type authorized_user</td><td><span class="tag ok">minted OK</span></td><td>Everything remote: Chirp&nbsp;3 timing, Gemini transcription, Gemini translation. The whole pipeline degrades to local models at best.</td></tr>
+<tr><td>Vertex AI project</td><td class="m">project-35cd3678-bfdd-451b-bcc, set both in the unit's <code>Environment=</code> and its <code>--project</code> flag, and again in the <code>50-project.conf</code> drop-in</td><td><span class="tag ok">8 models listed</span></td><td>Translation and the ASR shim. Note the drop-in overrides the base unit's <code>video-template-convertor</code> &mdash; if you ever edit the unit, edit the drop-in.</td></tr>
+<tr><td>Speech-to-Text v2</td><td class="m">Called directly by chirp_timing.py, which reads GOOGLE_APPLICATION_CREDENTIALS or falls back to /root/gcp_adc.json then /home/ubuntu/gcp_adc.json</td><td><span class="tag ok">200 in us, eu, us-central1</span></td><td>chirp_3 word timings. The pipeline falls back to forced alignment alone, which is measurably worse.</td></tr>
+<tr><td>Hugging Face token</td><td class="m">Container env HF_TOKEN and HUGGING_FACE_HUB_TOKEN, baked in at create time</td><td><span class="tag ok">set</span></td><td>Nothing while the 20&nbsp;GB cache is intact. Everything if the cache is ever rebuilt.</td></tr>
+<tr><td>Docker Hub image</td><td class="m">palashdeb/omnivoice-studio:latest</td><td><span class="tag">not needed</span></td><td>Nothing for method A. Only matters if you ever rebuild from scratch, and by then <code>:latest</code> may have moved.</td></tr>
+</table>
+
+<div class="box note">
+<strong>The credential lookup order is worth knowing.</strong> <code>chirp_timing.py</code> tries
+<code>GOOGLE_APPLICATION_CREDENTIALS</code> first, then <code>/root/gcp_adc.json</code>, then
+<code>/home/ubuntu/gcp_adc.json</code>, and calls <code>os.environ.setdefault</code> to install
+the path at runtime. The container's <code>GOOGLE_APPLICATION_CREDENTIALS</code> is
+<em>empty</em> in the environment &mdash; which means a naive "can we authenticate?" test run
+inside the container fails with <code>DefaultCredentialsError</code> even though the pipeline
+works perfectly. If you see that error during verification, set the variable explicitly before
+concluding anything is broken. This exact false alarm occurred during today's audit.
+</div>
+
+<h2>9. The machine-identity trap in the settings store</h2>
+
+<p>This is the subtlest thing in the migration, and it is worth a page because it is the kind of
+fault that produces a confusing symptom rather than a clean error.</p>
+
+<h3>9.1 What the code does</h3>
+<p>The provider settings live in the <code>settings</code> table of
+<code>/root/.omnivoice/omnivoice.db</code>. Eight rows, of which three are plaintext and readable,
+and two are Fernet ciphertext:</p>
+<pre>_secret_key_salt              &lt;16 random bytes, base64&gt;
+llm.active_provider           custom
+llm.base_url.custom           http://172.17.0.1:8900/v1
+llm.model.custom              gemini-3.1-pro-preview
+asr.openai_compat.base_url    http://172.17.0.1:8900/v1
+asr.openai_compat.model       gemini-3.7-flash
+secret.llm_key.custom         &lt;Fernet ciphertext&gt;
+secret.asr_openai_compat_key  &lt;Fernet ciphertext&gt;</pre>
+<p>The Fernet key is not stored anywhere. It is derived on demand by
+<code>services/_secret_key.derive_fernet_key()</code>, which runs scrypt (n=2^14, r=8, p=1) over
+<strong>the OS machine identifier</strong>, salted with that <code>_secret_key_salt</code> row.
+The module's own docstring is explicit about the consequence: copying the database to another
+machine produces a key that cannot decrypt the existing rows, and the caller logs a warning and
+falls back to environment variables.</p>
+
+<h3>9.2 What that resolves to on this box, specifically</h3>
+<p>Here is the part you would not guess. Inside the container, <code>/etc/machine-id</code>
+exists but is <strong>empty</strong>. So the Linux branch of <code>_read_machine_id()</code> finds
+nothing usable and drops through to the documented last resort:
+<code>hostname + "::" + user</code>. The container's hostname is
+<code>9276383fe31e</code> &mdash; which is Docker's short container id &mdash; and the user is
+<code>root</code>. The audit log confirms it, verbatim: <em>"Could not read OS machine-id; falling
+back to hostname+user."</em></p>
+
+<p><strong>The encryption key for the settings store is therefore a function of the container's
+id.</strong> Which gives a clean rule:</p>
+
+<table>
+<tr><th style="width:34%">Scenario</th><th style="width:20%">Container hostname</th><th>Result</th></tr>
+<tr><td>Method A: AMI copy. The same container object is carried inside <code>/var/lib/docker</code> and simply restarts.</td><td class="m">9276383fe31e (unchanged)</td><td><span class="tag ok">decrypts fine</span> &mdash; nothing to do</td></tr>
+<tr><td>Restarting or stopping the container, or rebooting the host</td><td class="m">9276383fe31e (unchanged)</td><td><span class="tag ok">decrypts fine</span> &mdash; this is why it has survived every stop/start so far</td></tr>
+<tr><td>Method B, or any <code>docker run</code> that creates a <em>new</em> container</td><td class="m">a new random id</td><td><span class="tag no">decryption fails</span> &mdash; the two keys fall back to env, which is unset</td></tr>
+</table>
+
+<h3>9.3 Why this is survivable, and the one-word fix if it bites</h3>
+<p>Two mitigations, and it is worth knowing both:</p>
+<ul>
+<li><strong>The secrets barely matter.</strong> Both decrypt to a <strong>6-character
+placeholder</strong>, and the proxy ignores the API key entirely &mdash; its source says so, and a
+request with a deliberately wrong key returns 200. The base URL, which is the setting that
+actually routes the traffic, is stored in <strong>plaintext</strong> and migrates regardless.</li>
+<li><strong>If you ever do recreate the container, pin its hostname.</strong> Add
+<code>--hostname 9276383fe31e</code> to the <code>docker run</code>, and the derived key comes
+out identical, and the existing ciphertext decrypts. This is the single most useful line in
+section 10.</li>
+</ul>
+<p>And if it does fail, the symptom and the repair are both mild: the app logs an
+<code>InvalidToken</code> warning, and you re-enter the two keys once in the Settings page (any
+value will do, since the proxy ignores them). It is a five-minute annoyance, not a data loss
+&mdash; but only if you know to look for it, which is why it has a section.</p>
+
+<h2 class="newpage">10. Fallback method: container export instead of a disk image</h2>
+
+<p>Use this only if AMI sharing is impossible &mdash; for example if the target is not an AWS
+account at all, or if the source account is already suspended and you can only reach the box over
+SSH. It is slimmer (roughly 40&nbsp;GB of tarballs instead of a 115&nbsp;GB image) but it has more
+steps, and every step is a chance to end up with something subtly different.</p>
+
+<h3>10.1 Export, on the old box</h3>
+<pre># 1. The container INCLUDING its writable layer. `docker save` of the IMAGE is NOT enough --
+#    the image lacks all 124,556 added paths, i.e. the patched backend and the settings DB.
+docker commit omnivoice omnivoice-golden:20260823
+docker save omnivoice-golden:20260823 | gzip -1 &gt; /mnt/out/omnivoice-golden.tar.gz     # ~15-20 GB
+
+# 2. The named volume (the 20 GB model cache)
+sudo tar -C /var/lib/docker/volumes/omnivoice-data/_data -czf /mnt/out/omnivoice-data.tar.gz .
+
+# 3. The host bind sources
+sudo tar -C /home/ubuntu -czf /mnt/out/cudnn8.tar.gz cudnn8
+sudo tar -C /home/ubuntu -czf /mnt/out/hfcache.tar.gz .cache/huggingface
+
+# 4. The proxy, its unit, its drop-in and the credential
+sudo tar -czf /mnt/out/proxy.tar.gz \
+     /home/ubuntu/gemini_proxy.py \
+     /home/ubuntu/gcp_adc.json \
+     /etc/systemd/system/gemini-proxy.service \
+     /etc/systemd/system/gemini-proxy.service.d/50-project.conf
+
+# 5. Record what you must reproduce
+docker inspect omnivoice &gt; /mnt/out/inspect.json
+md5sum /mnt/out/*.tar.gz &gt; /mnt/out/MD5SUMS</pre>
+<p>There is not enough free space on the root volume for all of this (32&nbsp;GB free, ~40&nbsp;GB
+of output), so attach a second EBS volume as <code>/mnt/out</code> or stream straight to S3 with
+<code>aws s3 cp -</code>.</p>
+
+<h3>10.2 Import, on the new box</h3>
+<p>Start from the <em>same</em> base AMI &mdash; <code>Deep Learning OSS Nvidia Driver AMI GPU
+PyTorch 2.7 (Ubuntu 22.04)</code> &mdash; so you inherit a matching driver and toolkit rather than
+trying to install them. Then:</p>
+<pre>gunzip -c omnivoice-golden.tar.gz | docker load
+sudo mkdir -p /home/ubuntu/cudnn8 && sudo tar -C /home/ubuntu -xzf cudnn8.tar.gz
+sudo tar -C /home/ubuntu -xzf hfcache.tar.gz
+docker volume create omnivoice-data
+sudo tar -C /var/lib/docker/volumes/omnivoice-data/_data -xzf omnivoice-data.tar.gz
+sudo tar -C / -xzf proxy.tar.gz
+sudo systemctl daemon-reload && sudo systemctl enable --now gemini-proxy
+
+docker run -d --name omnivoice \
+  --hostname 9276383fe31e \
+  --gpus all --restart unless-stopped \
+  -p 3900:3900 \
+  -v omnivoice-data:/app/omnivoice_data \
+  -v /home/ubuntu/cudnn8/lib:/opt/cudnn8/lib:ro \
+  -v /home/ubuntu/.cache/huggingface:/root/.cache/huggingface \
+  -e HF_TOKEN="&lt;the token&gt;" -e HUGGING_FACE_HUB_TOKEN="&lt;the token&gt;" \
+  -e HF_HOME=/app/omnivoice_data/huggingface \
+  -e LD_LIBRARY_PATH=/opt/cudnn8/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64 \
+  -e PYTHONPATH=/app/backend -e OMNIVOICE_SERVER_MODE=1 \
+  -e PYTHONDONTWRITEBYTECODE=1 -e PYTHONUNBUFFERED=1 \
+  -e PIP_BREAK_SYSTEM_PACKAGES=1 -e UV_BREAK_SYSTEM_PACKAGES=1 \
+  -w /app \
+  omnivoice-golden:20260823 \
+  python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 3900</pre>
+
+<div class="box warn">
+<strong>The five things this method loses if you are not careful</strong>, all of which method A
+gets for free:
+<ol>
+<li><strong>The container's identity.</strong> Hence <code>--hostname 9276383fe31e</code> above.
+Omit it and the settings store cannot decrypt its own keys (section 9).</li>
+<li><strong>The <code>HF_TOKEN</code> value.</strong> It is baked into the container environment,
+not stored in a file. <code>docker commit</code> preserves image-level env, but you must supply
+it again on <code>docker run</code> if you re-declare env at all. Read it off the old box first:
+<code>docker inspect omnivoice --format '{{range .Config.Env}}{{println .}}{{end}}'</code>.</li>
+<li><strong>The job directories.</strong> <code>docker commit</code> does capture
+<code>/root/.omnivoice</code> since it is in the writable layer &mdash; which also means your
+"slim" export carries 5.8&nbsp;GB of old renders. Delete the job dirs first if you do not want
+them, but keep <code>faprim01</code>: it is your verification control.</li>
+<li><strong>The exact Docker and driver versions.</strong> 29.4.1 and 580.126.09 today. A newer
+base AMI will differ. Usually fine, occasionally not.</li>
+<li><strong>The swapfile and fstab entry.</strong> Recreate if you want it, though 24&nbsp;GB of
+unused swap is not worth carrying.</li>
+</ol>
+</div>
+
+<h2>11. Rehearsal: prove it works before you need it</h2>
+
+<p>The whole point of doing this early is that you get to find out what is wrong while the
+original still works. With the quota raised to 8 vCPUs you can run both machines at once, so a
+rehearsal costs one afternoon and about <strong>$0.40 per hour</strong> of instance time.</p>
+
+<ol>
+<li>Do steps 5.1 to 5.10 fully, ending with a running instance in the new account.</li>
+<li>Run the tier-1 fingerprint check (7.1). This alone proves the disk arrived intact.</li>
+<li>Run the tier-2 settings check (7.2), and the proxy and Google checks from 5.12.</li>
+<li>Dub one short video end to end on the new box and listen to it. Not the reference job &mdash;
+something small, so it is quick.</li>
+<li><strong>Stop</strong> the new instance. Do not terminate it: stopping preserves the volume and
+costs only EBS (~$12/month for 150&nbsp;GiB gp3), so on the day you actually cut over there is
+nothing left to do but start it.</li>
+<li>Keep using the old box as normal until then.</li>
+</ol>
+
+<p>If the rehearsal succeeds, the real cutover is: stop the old box, start the new one, re-run
+<code>aws_lock_ip.ps1</code>, done. If it fails, you have found out at zero risk, with the working
+machine still sitting there.</p>
+
+<h2>12. What the migration costs</h2>
+
+<table>
+<tr><th style="width:44%">Item</th><th style="width:20%">Cost</th><th>Notes</th></tr>
+<tr><td>AMI snapshot in the old account</td><td class="m">~$4&ndash;6 / month</td><td>Roughly 115&nbsp;GB of written blocks at about $0.05/GB-month in ap-south-1, less compression. Keep it as your only backup.</td></tr>
+<tr><td>Copied AMI snapshot in the new account</td><td class="m">~$4&ndash;6 / month</td><td>An independent copy. Both exist during the transition.</td></tr>
+<tr><td>Cross-account copy within one region</td><td class="m">$0</td><td>No data-transfer charge for a same-region copy. A cross-<em>region</em> copy is billed per GB transferred.</td></tr>
+<tr><td>New root volume, 150&nbsp;GiB gp3</td><td class="m">~$12 / month</td><td>Billed whether the instance runs or not. Section 14 shows how to cut this roughly in half.</td></tr>
+<tr><td>g4dn.xlarge while running</td><td class="m">~$0.40 / hour</td><td>About $270/month if left on. Stop it when idle, as you already do.</td></tr>
+<tr><td>Rehearsal</td><td class="m">a few dollars</td><td>Two or three hours of a second instance plus the copy.</td></tr>
+<tr><td>Elastic IP, optional</td><td class="m">~$3.6 / month</td><td>Only worth it if the IP churn is annoying you. Charged when not attached to a running instance too.</td></tr>
+</table>
+
+<h2 class="newpage">13. If it goes wrong: rollback and troubleshooting</h2>
+
+<h3>13.1 Rollback is trivial, by design</h3>
+<p>Nothing in section 5 modifies the old instance except stopping and starting it, which has been
+done repeatedly with all fingerprints verified identical afterwards. If anything about the new
+box is wrong: leave it alone, start the old box, and carry on. The old machine is not degraded by
+the migration in any way.</p>
+<div class="box warn">
+<strong>The one genuinely dangerous command in this whole area is
+<code>terminate-instances</code>.</strong> The root volume has
+<code>DeleteOnTermination = true</code>, so terminating destroys 150&nbsp;GiB containing the
+patched backend, the models and every job. Do not terminate the old instance until the new one
+has passed section 7 <em>and</em> the new account owns its own AMI copy (step 5.7). Even then,
+prefer stopping it for a while first.
+</div>
+
+<h3>13.2 Troubleshooting table</h3>
+<table>
+<tr><th style="width:30%">Symptom</th><th style="width:32%">Likely cause</th><th>What to do</th></tr>
+<tr><td class="m">VcpuLimitExceeded on run-instances</td><td>G/VT quota is 0 or below 4 in the new account</td><td>Section 4.1. This is a support ticket, not a config change.</td></tr>
+<tr><td class="m">InvalidAMIID.NotFound in the new account</td><td>Launch permission not applied, or you are querying the wrong region</td><td>Re-run step 5.5 and check <code>describe-image-attribute</code>.</td></tr>
+<tr><td class="m">copy-image fails with a snapshot permission error</td><td>Only the AMI was shared, not the backing snapshot</td><td>Run the second command in step 5.5.</td></tr>
+<tr><td>SSH times out</td><td>Almost always the security group, not the box. The ISP address moves often.</td><td><code>.\aws_lock_ip.ps1 -Apply</code>. This happened during today's audit and cost the first attempt.</td></tr>
+<tr><td>App on 3900 unreachable but SSH works</td><td>Container still starting, or the SG rule for 3900 is missing</td><td><code>docker ps</code>, then check the SG has all three ports.</td></tr>
+<tr><td class="m">nvidia-smi: no devices</td><td>Wrong instance type, or the driver did not load</td><td>Confirm <code>g4dn.xlarge</code>. Reboot once. The driver is on the image, so this should not happen.</td></tr>
+<tr><td>Container up, GPU invisible inside it</td><td>nvidia-container-toolkit or the CDI refresh</td><td><code>docker exec omnivoice nvidia-smi</code>; check <code>nvidia-cdi-refresh.service</code>.</td></tr>
+<tr><td>Transcription/translation fails, app otherwise fine</td><td>gemini-proxy not running</td><td><code>systemctl status gemini-proxy</code>, then <code>journalctl -u gemini-proxy -n 50</code>. It is <code>enabled</code> with <code>Restart=always</code>, so investigate the ADC file first.</td></tr>
+<tr><td class="m">DefaultCredentialsError in a manual test</td><td><code>GOOGLE_APPLICATION_CREDENTIALS</code> is empty in the container env by design</td><td>Set it explicitly for the test. Not a fault &mdash; see the note in section 8.</td></tr>
+<tr><td>Google calls return 401/403</td><td>The refresh token was revoked or the Vertex project lost billing</td><td>Section 4.3. Consider switching to a service account.</td></tr>
+<tr><td class="m">InvalidToken warning about settings</td><td>The container was recreated, so the derived key changed</td><td>Section 9. Re-enter the two placeholder keys, or recreate with <code>--hostname 9276383fe31e</code>.</td></tr>
+<tr><td>Translation button does nothing</td><td>Provider not resolving</td><td>Check <code>llm.base_url.custom</code> is still <code>http://172.17.0.1:8900/v1</code> in the settings table.</td></tr>
+<tr><td>Timings differ from the reference job</td><td>A module was not carried across intact, or a stale <code>seg_*.wav</code> was reused</td><td>Tier-1 fingerprints first. Then park the stale clips and re-render. Do not conclude "it improved" &mdash; a score can rise because a stage stopped running.</td></tr>
+<tr><td>Render is suddenly slow again</td><td><code>OMNIVOICE_HEAD_LANG</code> got re-enabled</td><td>It must default to "0". That is worth 13.77&nbsp;s/line versus 2.44&nbsp;s/line.</td></tr>
+</table>
+
+<h3>13.3 Operating rules that still apply on the new box</h3>
+<ul>
+<li><strong>Never restart the app mid-render.</strong> Module defaults are read at import time, so
+a change needs a reload &mdash; but only when idle.</li>
+<li><strong>Write a <code>.sh</code> and ship it with <code>rsh.ps1</code>.</strong> Never build
+bash inside PowerShell strings; it has produced both a false invariant failure and a wrong
+measurement (an ASR count of 714 against a true 76).</li>
+<li><strong><code>docker exec</code> without <code>-i</code> discards a heredoc silently.</strong>
+Use <code>docker cp</code>, or <code>-i</code> with <code>bash -s</code> as <code>rsh.ps1</code>
+does.</li>
+<li><strong>The console is cp1252.</strong> No non-ASCII in <code>.sh</code> files; print
+codepoints rather than Devanagari or Telugu.</li>
+<li><strong>Verify the invariants before and after every change</strong>, not just after.</li>
+</ul>
+
+<h2>14. Slimming down on the way across (optional)</h2>
+
+<p>The migration is the natural moment to shed dead weight, because a smaller volume means a
+faster copy and a permanently smaller EBS bill. It is also the moment when a mistake is most
+expensive, so this section is deliberately conservative: <strong>do the cleanup on the old box,
+verify the pipeline still passes section 7, and only then take the AMI.</strong> Never clean up on
+the new box before you have proved it works.</p>
+
+<table>
+<tr><th style="width:30%">Candidate</th><th style="width:14%">Size</th><th style="width:16%">Confidence</th><th>Notes</th></tr>
+<tr><td class="m">/swapfile</td><td class="m">24&nbsp;GB</td><td><span class="tag ok">safe</span></td><td>0&nbsp;B in use. <code>swapoff /swapfile</code>, delete it, remove the fstab line. Biggest single win. Recreate smaller on the new box if you want a safety margin.</td></tr>
+<tr><td>Container <code>/root/bench</code></td><td class="m">6.7&nbsp;GB</td><td><span class="tag ok">safe</span></td><td>The FLEURS corpus and cached recogniser responses. Those responses cost about $2.85 of API calls, so <strong>archive to S3 rather than delete</strong> if you might re-run the bench.</td></tr>
+<tr><td>Container <code>/tmp</code></td><td class="m">2.9&nbsp;GB</td><td><span class="tag ok">safe</span></td><td>Scratch from measurement runs.</td></tr>
+<tr><td>Old job directories</td><td class="m">~3&nbsp;GB</td><td><span class="tag ok">safe</span></td><td><strong>Keep <code>faprim01</code></strong> &mdash; it is the verification control that section 7.3 depends on.</td></tr>
+<tr><td class="m">/home/ubuntu leftovers</td><td class="m">1.2&nbsp;GB</td><td><span class="tag ok">safe</span></td><td>Test artefacts. Do not touch <code>gemini_proxy.py</code>, <code>gcp_adc.json</code> or <code>cudnn8/</code>.</td></tr>
+<tr><td class="m">.py.pre* backup files</td><td class="m">small</td><td><span class="tag hand">keep</span></td><td>Tiny, and they are the audit trail of how the pipeline got here. Not worth removing.</td></tr>
+<tr><td>nllb-200-distilled-600M</td><td class="m">4.7&nbsp;GB</td><td><span class="tag hand">verify first</span></td><td>Likely dead &mdash; translation goes through Gemini now. Prove it with a full render before deleting.</td></tr>
+<tr><td>wav2vec2-xlsr-telugu + Wav2Vec2-xlsr-hindi</td><td class="m">3.6&nbsp;GB</td><td><span class="tag hand">verify first</span></td><td>Named in the aligner docstring as what MMS_FA <em>replaced</em>. Almost certainly unused, but verify.</td></tr>
+<tr><td>Seven whisper variants</td><td class="m">~8.3&nbsp;GB</td><td><span class="tag hand">verify first</span></td><td>tiny, small, medium, large-v3, large-v3-turbo and two forks. The pipeline uses one or two. Deleting the wrong one triggers a silent re-download at render time.</td></tr>
+</table>
+
+<p>Doing only the four "safe" rows takes the used figure from 115&nbsp;GB to roughly
+<strong>77&nbsp;GB</strong>, which comfortably fits a <strong>100&nbsp;GiB</strong> root volume and
+saves about $4/month forever. Add the "verify first" rows and you are near 60&nbsp;GB, but only
+attempt those if you are willing to run a full verification render afterwards.</p>
+
+<div class="box note">
+<strong>Sequence matters.</strong> A new root volume may be larger than the snapshot but never
+smaller. So the order is: clean up on the old box &rarr; verify with section 7 &rarr; take the AMI
+&rarr; launch with the smaller <code>VolumeSize</code>. If you take the AMI first, you are stuck
+with 150&nbsp;GiB.
+</div>
+
+<h2 class="newpage">15. What I have not verified</h2>
+
+<p>Stated plainly, so nothing here reads as more certain than it is.</p>
+
+<table>
+<tr><th style="width:36%">Claim</th><th>Status</th></tr>
+<tr><td>The AMI boots and the pipeline runs in another account</td><td><strong>Partly closed.</strong> The AMI now exists (<code>ami-09583800297a6f720</code>, created 2026-08-23 without stopping the instance and without disturbing the pipeline), so "can an image be taken safely" is answered: yes, measured. What remains unproven is the launch: no instance has yet been booted from it, in this account or another. The compatibility preconditions were each checked individually &mdash; no Marketplace product code, unencrypted volume, ENA, <code>uefi-preferred</code>, root device <code>/dev/sda1</code> &mdash; but the boot itself is untested. Section&nbsp;11's rehearsal closes this, and it can be done in the source account for a few dollars without involving a second account at all.</td></tr>
+<tr><td>Snapshot duration</td><td><strong>Measured, and it corrected me.</strong> 1.25% per minute, roughly 80 minutes for this volume. The document's original 20&ndash;60 minute estimate was optimistic.</td></tr>
+<tr><td>The target account's G/VT quota</td><td><strong>Unknown</strong> &mdash; I have no access to it. Only the source account was read: 4 vCPUs, adjustable. Check it yourself as the very first action.</td></tr>
+<tr><td>Behaviour of <code>/etc/machine-id</code> on a cloned host</td><td><strong>Not directly tested.</strong> It does not matter for the settings store, because that store falls back to the <em>container's</em> hostname (which the image preserves) rather than the host's machine-id. But if some other component ever reads the host machine-id, cloud-init may regenerate it on first boot of a cloned volume. Nothing known depends on it.</td></tr>
+<tr><td>Whether the Google refresh token will still be valid on the day you migrate</td><td><strong>Valid today</strong> &mdash; it minted a token at 17:44 UTC and Speech-to-Text answered 200 in three locations. Refresh tokens can be revoked or expire. Re-check on the day, and consider the service-account swap in 4.3.</td></tr>
+<tr><td>Exact snapshot size and copy duration</td><td><strong>Estimated,</strong> not measured: 20&ndash;60 minutes per copy and under 115&nbsp;GB billed. Depends on compression and how many blocks were ever written.</td></tr>
+<tr><td>That the "verify first" models in section 14 are unused</td><td><strong>Inferred</strong> from the aligner docstring and from the fact that translation runs through Gemini. Not proven by removal and a clean render.</td></tr>
+<tr><td>Whether <code>palashdeb/omnivoice-studio:latest</code> still points at the 12 Aug build</td><td><strong>Not checked.</strong> Irrelevant for method A, which never pulls. It matters only for method C, which this document recommends against.</td></tr>
+<tr><td>Cost figures</td><td><strong>Approximate</strong> ap-south-1 on-demand and EBS rates. Treat as order-of-magnitude; check the pricing page for exact numbers.</td></tr>
+</table>
+
+<h3>Where the facts in this document came from</h3>
+<p>Everything was captured on 2026-08-23 from the running instance and the AWS API. The capture
+scripts are read-only and are kept alongside the project so they can be re-run:</p>
+<table>
+<tr><th style="width:26%">Script</th><th style="width:22%">Output</th><th>What it captures</th></tr>
+<tr><td class="m">_mig_facts.sh</td><td class="m">_mig_facts.txt</td><td>Port 8900 ownership, full <code>docker inspect</code>, host software stack, credential presence, the golden fingerprints, disk sizing</td></tr>
+<tr><td class="m">_mig_proxy.sh</td><td class="m">_mig_proxy.txt</td><td>The systemd unit and drop-in verbatim, boot persistence, the proxy script, all host services and listening ports</td></tr>
+<tr><td class="m">_mig_wiring.sh</td><td class="m">_mig_wiring.txt</td><td>Where the app persists provider settings, which credentials the Chirp path reads, IMDS identity, per-job sizes</td></tr>
+<tr><td class="m">_mig_token.sh</td><td class="m">_mig_token.txt</td><td>Live Google token mint, Speech-to-Text v2 in three locations, the proxy model list and health</td></tr>
+<tr><td class="m">_mig_store.sh</td><td class="m">_mig_store.txt</td><td>The settings table contents (secrets redacted), the Fernet key derivation, <code>docker diff</code> totals</td></tr>
+<tr><td class="m">_mig_key.sh</td><td class="m">_mig_key.txt</td><td><code>_secret_key.py</code> in full, machine-identity sources container versus host, whether the proxy checks an API key</td></tr>
+<tr><td class="m">_disk_audit.sh</td><td class="m">_disk_audit.txt</td><td>The earlier 115&nbsp;GB breakdown reused in sections 2.5 and 14</td></tr>
+</table>
+<p class="small">No secret value appears in this document or in any capture file. The
+<code>HF_TOKEN</code>, the API keys in the settings table and the contents of
+<code>gcp_adc.json</code> were redacted at the point of capture, not afterwards.</p>
+
+<div class="box good">
+<strong>The one-paragraph version, for the day you need it.</strong> Stop the box. Take an AMI.
+Restart the box. Share the AMI and its snapshot with the new account. In the new account, copy
+the AMI so you own it, create the security group and the IAM role, and launch a g4dn.xlarge from
+your own copy with a 150&nbsp;GiB gp3 root volume. Point <code>_vs_ip.txt</code> at it and re-run
+<code>aws_lock_ip.ps1 -Apply</code>. Check the five MD5s, the two byte counts and the marker count
+of five. Re-render <code>faprim01</code> and confirm 139 of 139 line starts are unchanged. Then,
+and only then, let the old account go.
+</div>
+
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceStudio dubbing — which model does what</title>
+<style>
+  @page { size: A4; margin: 15mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font: 10pt/1.45 "Segoe UI", Arial, sans-serif; color: #17181a; margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 1mm; letter-spacing: -0.01em; }
+  .sub { color: #5c6066; font-size: 9pt; margin: 0 0 6mm; }
+  h2 { font-size: 12pt; margin: 7mm 0 2.5mm; padding-bottom: 1mm;
+       border-bottom: 1.3pt solid #17181a; break-after: avoid; }
+  h3 { font-size: 10pt; margin: 4mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul { margin: 0 0 3mm; padding-left: 5mm; } li { margin: 0 0 1.2mm; }
+  code { font-family: Consolas, monospace; font-size: 8.6pt; background: #f1f2f4;
+         padding: 0.2mm 1mm; border-radius: 1mm; }
+  table { border-collapse: collapse; width: 100%; font-size: 8.6pt; margin: 0 0 3mm; }
+  th, td { border: 0.5pt solid #c9ccd1; padding: 1.4mm 1.8mm; text-align: left;
+           vertical-align: top; }
+  th { background: #ebedf0; font-weight: 600; }
+  .g { background: #fff4e6; }   /* Google Vertex */
+  .l { background: #e9f3ec; }   /* local, open source */
+  .n { background: #eef1fb; }   /* not a model */
+  .page { break-before: page; }
+  svg { width: 100%; height: auto; display: block; }
+  .note { border-left: 2pt solid #9aa0a6; padding: 1.4mm 0 1.4mm 3mm; margin: 0 0 3mm;
+          background: #f7f8f9; break-inside: avoid; font-size: 9pt; }
+  .note strong { display: block; margin-bottom: 0.6mm; }
+  .legend { font-size: 8.4pt; color: #5c6066; margin-top: 1mm; }
+  .sw { display: inline-block; width: 3mm; height: 3mm; border: 0.4pt solid #aaa;
+        vertical-align: -0.3mm; margin: 0 1mm 0 3mm; }
+  .warn { background: #fdecec; border-left-color: #d05a5a; }
+</style>
+</head>
+<body>
+
+<h1>Which model does what</h1>
+<p class="sub">VoiceStudio dubbing pipeline, Hindi &rarr; Telugu, as running on 17 August 2026.
+Everything below was read from the running container or measured, not taken from documentation.</p>
+
+<h2>End to end</h2>
+
+<svg viewBox="0 0 680 690" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+            orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a9099"/></marker>
+  </defs>
+
+  <!-- row template: stage box + model chip -->
+  <g font-size="9.5">
+
+  <!-- 1 -->
+  <rect x="0" y="4" width="392" height="46" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="27" r="9" fill="#17181a"/><text x="20" y="30.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">1</text>
+  <text x="37" y="23" font-weight="600">Separate the audio</text>
+  <text x="37" y="38" font-size="8.4" fill="#5c6066">vocals stem and background stem;
+    the background survives into the mix</text>
+  <rect x="404" y="4" width="276" height="46" rx="7" fill="#e9f3ec" stroke="#9dbfa8"/>
+  <text x="542" y="23" text-anchor="middle" font-weight="600">Demucs</text>
+  <text x="542" y="37" text-anchor="middle" font-size="8.2" fill="#3f6b4d">local, on the T4</text>
+  <line x1="196" y1="50" x2="196" y2="66" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 2 -->
+  <rect x="0" y="70" width="392" height="46" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="93" r="9" fill="#17181a"/><text x="20" y="96.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">2</text>
+  <text x="37" y="89" font-weight="600">Transcribe the words</text>
+  <text x="37" y="104" font-size="8.4" fill="#5c6066">runs on the vocals stem, in timed chunks,
+    streamed to the UI</text>
+  <rect x="404" y="70" width="276" height="46" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+  <text x="542" y="89" text-anchor="middle" font-weight="600">gemini-3.6-flash</text>
+  <text x="542" y="103" text-anchor="middle" font-size="8.2" fill="#8a5a1a">Vertex, via the
+    local proxy</text>
+  <line x1="196" y1="116" x2="196" y2="132" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 3 -->
+  <rect x="0" y="136" width="392" height="46" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="159" r="9" fill="#17181a"/><text x="20" y="162.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">3</text>
+  <text x="37" y="155" font-weight="600">Find who is speaking</text>
+  <text x="37" y="170" font-size="8.4" fill="#5c6066">speaker turns; lines straddling a change
+    are split</text>
+  <rect x="404" y="136" width="276" height="46" rx="7" fill="#e9f3ec" stroke="#9dbfa8"/>
+  <text x="542" y="155" text-anchor="middle" font-weight="600">pyannote</text>
+  <text x="542" y="169" text-anchor="middle" font-size="8.2" fill="#3f6b4d">local, on the T4</text>
+  <line x1="196" y1="182" x2="196" y2="198" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 4 -->
+  <rect x="0" y="202" width="392" height="58" rx="7" fill="#fdf7ee" stroke="#e2b477"
+        stroke-width="1.4"/>
+  <circle cx="20" cy="231" r="9" fill="#17181a"/><text x="20" y="234.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">4</text>
+  <text x="37" y="221" font-weight="600">Fix the timing  ·  our work</text>
+  <text x="37" y="235" font-size="8.4" fill="#5c6066">word times, partition search, gap recovery,
+    speaker split,</text>
+  <text x="37" y="248" font-size="8.4" fill="#5c6066">onset snap. Two models, and neither is the
+    transcriber.</text>
+  <rect x="404" y="202" width="276" height="26" rx="6" fill="#fff4e6" stroke="#e2b477"/>
+  <text x="542" y="219" text-anchor="middle" font-weight="600" font-size="9">Chirp 2
+    <tspan font-weight="400" font-size="8">— words + times</tspan></text>
+  <rect x="404" y="232" width="276" height="26" rx="6" fill="#e9f3ec" stroke="#9dbfa8"/>
+  <text x="542" y="249" text-anchor="middle" font-weight="600" font-size="9">MMS_FA
+    <tspan font-weight="400" font-size="8">— forced alignment</tspan></text>
+  <line x1="196" y1="260" x2="196" y2="276" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 5 -->
+  <rect x="0" y="280" width="392" height="58" rx="7" fill="#fdf7ee" stroke="#e2b477"
+        stroke-width="1.4"/>
+  <circle cx="20" cy="309" r="9" fill="#17181a"/><text x="20" y="312.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">5</text>
+  <text x="37" y="299" font-weight="600">Choose the voice references  ·  our work</text>
+  <text x="37" y="313" font-size="8.4" fill="#5c6066">one reference per LINE, cut from that
+    line's own audio, plus</text>
+  <text x="37" y="326" font-size="8.4" fill="#5c6066">one pooled fallback per speaker</text>
+  <rect x="404" y="280" width="276" height="26" rx="6" fill="#e9f3ec" stroke="#9dbfa8"/>
+  <text x="542" y="297" text-anchor="middle" font-weight="600" font-size="9">AST
+    <tspan font-weight="400" font-size="8">— is this a voice talking?</tspan></text>
+  <rect x="404" y="310" width="276" height="26" rx="6" fill="#eef1fb" stroke="#a8b2d6"/>
+  <text x="542" y="327" text-anchor="middle" font-size="8.4" fill="#3c4a7a">no model: energy,
+    pitch and text rules</text>
+  <line x1="196" y1="338" x2="196" y2="354" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 6 -->
+  <rect x="0" y="358" width="392" height="58" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="387" r="9" fill="#17181a"/><text x="20" y="390.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">6</text>
+  <text x="37" y="377" font-weight="600">Translate</text>
+  <text x="37" y="391" font-size="8.4" fill="#5c6066">four models in a chain, one request per
+    line, each with a</text>
+  <text x="37" y="404" font-size="8.4" fill="#5c6066">hard character budget — detailed overleaf</text>
+  <rect x="404" y="358" width="276" height="58" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+  <text x="542" y="378" text-anchor="middle" font-weight="600" font-size="9">gemini-3.1-pro-preview</text>
+  <text x="542" y="392" text-anchor="middle" font-size="8.2" fill="#8a5a1a">+ 3.6-flash · 3.7-flash</text>
+  <text x="542" y="406" text-anchor="middle" font-size="8.2" fill="#8a5a1a">+ 3.1-pro as checker</text>
+  <line x1="196" y1="416" x2="196" y2="432" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 7 -->
+  <rect x="0" y="436" width="392" height="58" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="465" r="9" fill="#17181a"/><text x="20" y="468.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">7</text>
+  <text x="37" y="455" font-weight="600">Speak it in the cloned voice</text>
+  <text x="37" y="469" font-size="8.4" fill="#5c6066">per line, conditioned on that line's
+    reference audio and its</text>
+  <text x="37" y="482" font-size="8.4" fill="#5c6066">reference text. 24 kHz output.</text>
+  <rect x="404" y="436" width="276" height="58" rx="7" fill="#e9f3ec" stroke="#9dbfa8"/>
+  <text x="542" y="459" text-anchor="middle" font-weight="600">OmniVoice TTS</text>
+  <text x="542" y="473" text-anchor="middle" font-size="8.2" fill="#3f6b4d">local, on the T4</text>
+  <text x="542" y="486" text-anchor="middle" font-size="8.2" fill="#3f6b4d">clones from audio ·
+    no emotion input</text>
+  <line x1="196" y1="494" x2="196" y2="510" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 8 -->
+  <rect x="0" y="514" width="392" height="46" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="537" r="9" fill="#17181a"/><text x="20" y="540.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">8</text>
+  <text x="37" y="533" font-weight="600">Clean each clip</text>
+  <text x="37" y="548" font-size="8.4" fill="#5c6066">lead-in attenuation, sibilant-burst
+    removal, the 32-step floor</text>
+  <rect x="404" y="514" width="276" height="46" rx="7" fill="#eef1fb" stroke="#a8b2d6"/>
+  <text x="542" y="533" text-anchor="middle" font-size="8.6" fill="#3c4a7a" font-weight="600">no
+    model — signal processing</text>
+  <text x="542" y="547" text-anchor="middle" font-size="8.2" fill="#3c4a7a">off limits, verified
+    every change</text>
+  <line x1="196" y1="560" x2="196" y2="576" stroke="#8a9099" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <!-- 9 -->
+  <rect x="0" y="580" width="392" height="46" rx="7" fill="#f7f8f9" stroke="#c9ccd1"/>
+  <circle cx="20" cy="603" r="9" fill="#17181a"/><text x="20" y="606.5" fill="#fff"
+    font-size="9" text-anchor="middle" font-weight="600">9</text>
+  <text x="37" y="599" font-weight="600">Fit to the slot, then mix</text>
+  <text x="37" y="614" font-size="8.4" fill="#5c6066">dubbed lines over the background stem;
+    total duration unchanged</text>
+  <rect x="404" y="580" width="276" height="46" rx="7" fill="#eef1fb" stroke="#a8b2d6"/>
+  <text x="542" y="599" text-anchor="middle" font-size="8.6" fill="#3c4a7a" font-weight="600">no
+    model — time stretch + ffmpeg</text>
+  <text x="542" y="613" text-anchor="middle" font-size="8.2" fill="#3c4a7a">strict slot, 0.85&times;
+    stretch floor</text>
+
+  <text x="0" y="650" font-size="8.4" fill="#5c6066">Stages 4 and 5 (outlined) are the ones this
+    project added. Everything else is the stock application.</text>
+  <text x="0" y="664" font-size="8.4" fill="#5c6066">No lip sync anywhere in the pipeline. No
+    video model of any kind.</text>
+  </g>
+</svg>
+
+<p class="legend">
+  <span class="sw" style="background:#fff4e6"></span> Google Vertex, over the network
+  <span class="sw" style="background:#e9f3ec"></span> open-source model, local on the GPU box
+  <span class="sw" style="background:#eef1fb"></span> not a model — rules or signal processing
+</p>
+
+<div class="page"></div>
+<h2>Every model, in one table</h2>
+
+<table>
+  <tr><th style="width:15%">Stage</th><th style="width:22%">Model</th><th style="width:13%">Runs</th>
+      <th>What it decides, and what it measurably does</th></tr>
+  <tr class="l"><td>1 Separation</td><td>Demucs</td><td>local, T4</td>
+      <td>Splits into vocals and background. Everything downstream reads the <em>vocals</em>
+          stem, never the mix.</td></tr>
+  <tr class="g"><td>2 Transcription</td><td><code>gemini-3.6-flash</code><br>via
+      <code>openai-compat-asr</code></td><td>Vertex</td>
+      <td>Owns the <strong>words</strong>. An LLM doing transcription, so its segmentation and
+          timestamps differ between runs. Its timestamps are <em>not</em> used.</td></tr>
+  <tr class="l"><td>3 Diarization</td><td>pyannote</td><td>local, T4</td>
+      <td>Speaker turns. These decide which cloned voice each line gets, and where a line must
+          be cut.</td></tr>
+  <tr class="g"><td>4 Word timing</td><td>Chirp 2 (<code>chirp_2</code>)</td><td>Vertex,
+      us-central1</td>
+      <td>Words <em>and</em> their times in one pass, in 55&nbsp;s chunks fetched in parallel.
+          $0.016/min. Doubled well-placed lines over the transcriber's own timings
+          (27.9% &rarr; 59%+).</td></tr>
+  <tr class="l"><td>4 Alignment</td><td>MMS_FA (torchaudio), 315M<br>+ uroman</td><td>local, T4</td>
+      <td>Given the text, says where each word actually is. This is the accuracy argument:
+          ASR timestamps run ~400&nbsp;ms, forced aligners under 15&nbsp;ms. One model covers
+          1100+ languages; 598&nbsp;s of audio aligns in ~10&nbsp;s.</td></tr>
+  <tr class="l"><td>5 Reference gate</td><td>AST</td><td>local, T4</td>
+      <td>Answers only &ldquo;is this a voice talking?&rdquo;. Used to reject laughter, shouting
+          and crowd noise from the <em>pooled</em> reference. Not applied per line — there, a
+          shout is the point.</td></tr>
+  <tr class="g"><td>6 Translation</td><td><code>gemini-3.1-pro-preview</code></td><td>Vertex</td>
+      <td>The translator. Best meaning of the three tested: 4.54/5 adequacy, 91.7% of lines
+          rated 4-or-5, picked best on 56.9% of lines by a blind judge.</td></tr>
+  <tr class="g"><td>6 Reflect</td><td><code>gemini-3.6-flash</code></td><td>Vertex</td>
+      <td>Critiques and rewrites the draft for natural spoken register. Cannot lengthen a line
+          past its budget — the direct line ships if it tries.</td></tr>
+  <tr class="g"><td>6 Budget repair</td><td><code>gemini-3.7-flash</code></td><td>Vertex</td>
+      <td>Shortens a line that misses its slot. Best compressor measured: 97.2% inside budget
+          against 68.1% for 3.1-pro.</td></tr>
+  <tr class="g"><td>6 Loss check</td><td><code>gemini-3.1-pro-preview</code></td><td>Vertex</td>
+      <td>Asks whether the shortened line dropped anything. Necessary: ungated, the compressor
+          lost information on 68% of the lines it touched.</td></tr>
+  <tr class="l"><td>7 Speech</td><td>OmniVoice TTS, 24&nbsp;kHz</td><td>local, T4</td>
+      <td>Clones from reference audio + reference text. <strong>Accepts no emotion
+          input</strong> — expression comes from the reference clip alone.</td></tr>
+  <tr class="n"><td>8 Cleanup</td><td>&mdash;</td><td>local</td>
+      <td>Lead-in attenuation, sibilant-burst removal, 32-step floor. Signal processing, no
+          model, and off limits.</td></tr>
+  <tr class="n"><td>9 Fit &amp; mix</td><td>&mdash;</td><td>local</td>
+      <td>Strict slot, underrun filled by slowing to a 0.85&times; floor, then mixed over the
+          background stem.</td></tr>
+</table>
+
+<div class="note warn"><strong>One live discrepancy, from your own log</strong>
+Transcription is calling <code>gemini-3.6-flash</code>. The intent was 3.7-flash, and the proxy
+was configured with <code>PROXY_ASR_MODEL=gemini-3.7-flash</code> — but the application names
+the model in each request, so the proxy default never applies. 3.7 measured the best coverage of
+any word source tested (98.6% against 91&ndash;93% for Chirp), so this is worth changing. It is
+a client-side setting, not a proxy one.</div>
+
+<div class="page"></div>
+<h2>The idea the design turns on</h2>
+<p>Three different questions, three different models. Conflating them is what produced the
+faults this project spent its time removing.</p>
+
+<svg viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial">
+  <g font-size="9.5">
+    <rect x="0" y="0" width="216" height="196" rx="8" fill="#fff4e6" stroke="#e2b477"/>
+    <text x="108" y="24" text-anchor="middle" font-weight="600" font-size="11">WORDS</text>
+    <text x="108" y="44" text-anchor="middle" font-size="9">what was said</text>
+    <rect x="18" y="60" width="180" height="26" rx="6" fill="#fff" stroke="#e2b477"/>
+    <text x="108" y="77" text-anchor="middle" font-size="9">gemini-3.6-flash</text>
+    <text x="108" y="106" text-anchor="middle" font-size="8.3" fill="#6b5636">A recogniser is
+      asked</text>
+    <text x="108" y="118" text-anchor="middle" font-size="8.3" fill="#6b5636">an open question, so
+      it is</text>
+    <text x="108" y="130" text-anchor="middle" font-size="8.3" fill="#6b5636">the best judge of
+      content</text>
+    <text x="108" y="154" text-anchor="middle" font-size="8.3" fill="#a03c3c">but its timestamps
+      run</text>
+    <text x="108" y="166" text-anchor="middle" font-size="8.3" fill="#a03c3c">~400 ms, so they are</text>
+    <text x="108" y="178" text-anchor="middle" font-size="8.3" fill="#a03c3c">discarded entirely</text>
+
+    <rect x="232" y="0" width="216" height="196" rx="8" fill="#e9f3ec" stroke="#9dbfa8"/>
+    <text x="340" y="24" text-anchor="middle" font-weight="600" font-size="11">TIMING</text>
+    <text x="340" y="44" text-anchor="middle" font-size="9">when it was said</text>
+    <rect x="250" y="60" width="180" height="26" rx="6" fill="#fff" stroke="#9dbfa8"/>
+    <text x="340" y="77" text-anchor="middle" font-size="9">Chirp 2 &rarr; MMS_FA</text>
+    <text x="340" y="106" text-anchor="middle" font-size="8.3" fill="#3f6b4d">An aligner is TOLD
+      the</text>
+    <text x="340" y="118" text-anchor="middle" font-size="8.3" fill="#3f6b4d">text, so it answers a</text>
+    <text x="340" y="130" text-anchor="middle" font-size="8.3" fill="#3f6b4d">much easier question</text>
+    <text x="340" y="154" text-anchor="middle" font-size="8.3" fill="#3f6b4d">under 15 ms, roughly</text>
+    <text x="340" y="166" text-anchor="middle" font-size="8.3" fill="#3f6b4d">30&times; tighter than the</text>
+    <text x="340" y="178" text-anchor="middle" font-size="8.3" fill="#3f6b4d">recogniser it corrects</text>
+
+    <rect x="464" y="0" width="216" height="196" rx="8" fill="#e9f3ec" stroke="#9dbfa8"/>
+    <text x="572" y="24" text-anchor="middle" font-weight="600" font-size="11">VOICE</text>
+    <text x="572" y="44" text-anchor="middle" font-size="9">how it was said</text>
+    <rect x="482" y="60" width="180" height="26" rx="6" fill="#fff" stroke="#9dbfa8"/>
+    <text x="572" y="77" text-anchor="middle" font-size="9">OmniVoice TTS</text>
+    <text x="572" y="106" text-anchor="middle" font-size="8.3" fill="#3f6b4d">Takes no emotion
+      input,</text>
+    <text x="572" y="118" text-anchor="middle" font-size="8.3" fill="#3f6b4d">so delivery comes
+      only</text>
+    <text x="572" y="130" text-anchor="middle" font-size="8.3" fill="#3f6b4d">from the reference
+      clip</text>
+    <text x="572" y="154" text-anchor="middle" font-size="8.3" fill="#3f6b4d">one clip per LINE, not</text>
+    <text x="572" y="166" text-anchor="middle" font-size="8.3" fill="#3f6b4d">one per speaker: pitch</text>
+    <text x="572" y="178" text-anchor="middle" font-size="8.3" fill="#3f6b4d">tracking &minus;0.32 &rarr; +0.85</text>
+
+    <text x="340" y="228" text-anchor="middle" font-size="9" fill="#5c6066">Taking timing from a
+      recogniser is 7&ndash;10&times; outside broadcast tolerance by construction. Taking delivery
+      from</text>
+    <text x="340" y="241" text-anchor="middle" font-size="9" fill="#5c6066">one pooled clip per
+      speaker guarantees every line is performed identically, however good each line sounds
+      alone.</text>
+  </g>
+</svg>
+
+<h2>Inside stage 6: four models, in order</h2>
+
+<svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+            orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a9099"/></marker>
+  </defs>
+  <g font-size="9">
+    <rect x="0" y="14" width="148" height="52" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+    <text x="74" y="33" text-anchor="middle" font-weight="600" font-size="8.6">3.1-pro-preview</text>
+    <text x="74" y="47" text-anchor="middle" font-size="8">translate the line</text>
+    <text x="74" y="59" text-anchor="middle" font-size="7.6" fill="#8a5a1a">adequacy 4.54/5</text>
+    <line x1="148" y1="40" x2="170" y2="40" stroke="#8a9099" stroke-width="1.4" marker-end="url(#b)"/>
+
+    <rect x="176" y="14" width="148" height="52" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+    <text x="250" y="33" text-anchor="middle" font-weight="600" font-size="8.6">3.6-flash</text>
+    <text x="250" y="47" text-anchor="middle" font-size="8">reflect: rewrite for</text>
+    <text x="250" y="58" text-anchor="middle" font-size="8">natural spoken register</text>
+    <line x1="324" y1="40" x2="346" y2="40" stroke="#8a9099" stroke-width="1.4" marker-end="url(#b)"/>
+
+    <rect x="352" y="14" width="148" height="52" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+    <text x="426" y="33" text-anchor="middle" font-weight="600" font-size="8.6">3.7-flash</text>
+    <text x="426" y="47" text-anchor="middle" font-size="8">shorten it, only if it</text>
+    <text x="426" y="58" text-anchor="middle" font-size="8">misses its slot</text>
+    <line x1="500" y1="40" x2="522" y2="40" stroke="#8a9099" stroke-width="1.4" marker-end="url(#b)"/>
+
+    <rect x="528" y="14" width="152" height="52" rx="7" fill="#fff4e6" stroke="#e2b477"/>
+    <text x="604" y="33" text-anchor="middle" font-weight="600" font-size="8.6">3.1-pro-preview</text>
+    <text x="604" y="47" text-anchor="middle" font-size="8">did shortening lose</text>
+    <text x="604" y="58" text-anchor="middle" font-size="8">anything? if yes, revert</text>
+
+    <text x="0" y="92" font-size="8.6" fill="#5c6066">Each line carries its own hard character
+      budget, calibrated against the video's own measured speaking rate rather</text>
+    <text x="0" y="105" font-size="8.6" fill="#5c6066">than a fixed table. On the live path the
+      first stage already ships 0% of lines over budget, so stages 3 and 4 are a</text>
+    <text x="0" y="118" font-size="8.6" fill="#5c6066">safety net that fires on the few lines
+      reflect grows past the limit.</text>
+    <text x="0" y="138" font-size="8.6" fill="#a03c3c">The offline Argos engine is a different
+      branch entirely: no budget control, no tone rule. Do not use it for a dub.</text>
+  </g>
+</svg>
+
+<h2>Deliberately not used</h2>
+<table>
+  <tr><th style="width:24%">Model</th><th>Why not</th></tr>
+  <tr><td>Chirp 3</td><td>Behind an allowlist, and it refuses
+      <code>word_level_confidence</code> — the one feature we want from it. A better transcript
+      with no word times leaves us where the transcriber already is.</td></tr>
+  <tr><td>CosyVoice 3</td><td>In the registry, and the only engine here whose
+      <code>instruct</code> takes free-form natural language ("emotion/dialect/speed"). Would be
+      the move if instruct-driven emotion is ever wanted — an engine switch, with its own
+      quality trade-offs.</td></tr>
+  <tr><td>Claude / AWS Bedrock</td><td>No Bedrock Claude model accepts audio, and the GPU box has
+      no AWS credentials at all.</td></tr>
+  <tr><td>Amazon Transcribe</td><td>Measured. Best raw words of any source, worst placement after
+      alignment (74.7% well placed against 84.7% for Chirp).</td></tr>
+  <tr><td>Whisper / WhisperX</td><td>No aligner for eight of the target languages
+      (<code>ta kn bn mr gu pa or as</code>). MMS_FA covers 1100+ with one model.</td></tr>
+  <tr><td>Wav2Lip, any video model</td><td>No lip sync in this pipeline. ElevenLabs does not do it
+      either — their "100% match" means phrase-level isochrony.</td></tr>
+</table>
+
+<p class="legend">Sources: read from the running container on 17 August 2026, plus measurements
+recorded in <code>CLAUDE.md</code>. The transcription model is as observed in the application's
+own log during a live run.</p>
+
+</body>
+</html>

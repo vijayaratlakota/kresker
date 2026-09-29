@@ -1,0 +1,118 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+
+// The backend uses a session COOKIE plus a CSRF header. Proxying instead of
+// calling http://127.0.0.1:8099 directly keeps everything same-origin, so the
+// cookie is sent without SameSite exemptions and without CORS on the API.
+// One consequence worth knowing: /dl/{token} is proxied too, because a finished
+// download 307-redirects from /api/jobs/{id}/download to /dl/{token} and the
+// browser has to be able to follow it.
+// Read from the environment without needing @types/node in the app's tsconfig.
+const BACKEND =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ?.VITE_BACKEND ?? 'http://127.0.0.1:8099';
+
+// Printed on every start. Pointing the UI at the wrong backend looks like a
+// broken app rather than a misconfiguration, and this is one line that removes
+// the whole class of confusion.
+// eslint-disable-next-line no-console
+console.log(`  [kresker] proxying /api to ${BACKEND}`);
+
+export default defineConfig(({ isSsrBuild }) => ({
+  plugins: [react(), tailwindcss()],
+
+  build: {
+    /*
+      ── THE SSR PASS IS A DIFFERENT SHAPE OF BUILD ───────────────────────────
+
+      `npm run build` runs Vite twice. The second pass compiles
+      `src/entry-server.tsx` for Node so `scripts/prerender.mjs` can render the seven
+      public routes to HTML — see the long note in that file for why the site shipped
+      eight words per page without it.
+
+      The vendor split below must NOT apply to that pass. `manualChunks` describes how
+      to divide code for a BROWSER cache across many visitors; the SSR bundle is
+      loaded once by one Node process, so splitting it buys nothing and Rollup rejects
+      the combination outright for some output shapes.
+
+      Everything else — the plugins, the aliases, the env handling — is deliberately
+      shared, so the components compile the same way for both.
+
+      ── WHY THERE IS A VENDOR SPLIT AT ALL ──────────────────────────────────
+
+      Route-level `lazy()` in App.tsx cuts the PAGES apart, but on its own it leaves
+      every shared library in the entry chunk — so the first paint still waits on
+      react-dom, react-router and Base UI together, and a deploy that changes one line
+      of our own code invalidates all of it in every returning visitor's cache.
+
+      Splitting the libraries out separates the two things that change at completely
+      different rates. `react-vendor` moves when React does, which is twice a year;
+      our own code moves daily. After this, a deploy re-downloads our chunk and leaves
+      ~140 KB of framework in cache.
+
+      ONE GROUP ONLY: react + react-dom + the router. Every route needs all three, so
+      there is no arrangement in which any of it is avoidable, and isolating them
+      further would only add requests.
+
+      BASE UI IS DELIBERATELY *NOT* IN A MANUAL CHUNK, and this was measured rather
+      than assumed. Adding `'ui-vendor': ['@base-ui/react', 'sonner']` produced a
+      227 KB chunk on the critical path and made the total BIGGER than the unsplit
+      build. Naming a package in `manualChunks` pulls its whole reachable graph into
+      one file, which defeats the per-subpath tree-shaking the five separate imports
+      (`accordion`, `menu`, `combobox`, `dialog`, `tabs`) were getting for free.
+
+      Left to Rollup, each subpath lands in the chunk of the route that imports it:
+      combobox with Dubbing, dialog with AdminPeople, tabs with AdminSystem. The
+      homepage then pays for the accordion and nothing else. The tool can see that;
+      a list maintained by hand cannot.
+
+      FLAT FILENAMES ARE LOAD-BEARING. `_verify_ui.py` globs `dist/assets/*.js`
+      non-recursively and concatenates the result to grep for shipped strings — the
+      tracker bans, the rupee sign, the measured cursor variables, `vs_privacy_ack`
+      and about twenty more. Moving chunks to `assets/js/` would make every one of
+      those checks pass against a blob that no longer contains the code, which is
+      worse than failing. So: no `assetsDir` override and no nested
+      `chunkFileNames`.
+    */
+    rollupOptions: isSsrBuild
+      ? {}
+      : {
+          output: {
+            manualChunks: {
+              'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            },
+          },
+        },
+    /*
+      The default is 500 kB and the entry chunk is now well under it. Lowered rather
+      than raised, so the warning starts working as a budget again: if a future import
+      drags the dashboard back into the entry, this says so at build time instead of
+      the regression being noticed on a phone.
+    */
+    chunkSizeWarningLimit: 300,
+  },
+
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': { target: BACKEND, changeOrigin: false },
+      '/dl': { target: BACKEND, changeOrigin: false },
+      // robots.txt and the sitemap are GENERATED by the backend, because the Sitemap
+      // line has to be an absolute URL and a checked-in file would hard-code one
+      // environment's domain. Proxied so they can be read in dev too — an SEO file
+      // nobody can look at until production is an SEO file nobody checks.
+      '/robots.txt': { target: BACKEND, changeOrigin: false },
+      '/sitemap.xml': { target: BACKEND, changeOrigin: false },
+      '/db': { target: BACKEND, changeOrigin: false },
+      '/docs': { target: BACKEND, changeOrigin: false },
+      '/openapi.json': { target: BACKEND, changeOrigin: false },
+      // NOT PROXIED, deliberately: /llms.txt. Unlike robots.txt and the sitemap it is
+      // not generated by the backend — `scripts/prerender.mjs` writes it into dist/
+      // from the same route and plan data the pages use, so nginx serves it as a
+      // static file and there is no second copy of the generator in Python to drift.
+      // In dev it therefore does not exist, and the SPA fallback answers. Read the
+      // real thing with `npm run build` then `dist/llms.txt`.
+    },
+  },
+}));

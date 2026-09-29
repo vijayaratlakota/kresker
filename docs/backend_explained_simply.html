@@ -1,0 +1,1359 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your Dubbing Website - Backend Explained Simply</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 16mm 13mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 10.5pt; line-height: 1.55; color: #14171a; margin: 0; }
+  h1 { font-size: 24pt; margin: 0 0 3mm 0; letter-spacing: -0.5pt; }
+  h2 { font-size: 16pt; margin: 0 0 4mm 0; padding: 2mm 0 2mm 0;
+       border-bottom: 2pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 6mm 0 2mm 0; page-break-after: avoid; color: #0b3d6b; }
+  p  { margin: 0 0 3mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+  li { margin: 0 0 1.5mm 0; }
+  code { font-family: Consolas, monospace; font-size: 9.5pt;
+         background: #eef1f4; padding: 0.4mm 1.2mm; border-radius: 1mm; }
+  td.m { font-family: Consolas, monospace; font-size: 9.5pt; }
+
+  .page { page-break-after: always; }
+  .last { page-break-after: auto; }
+
+  /* the big coloured lead-in line under each heading */
+  .lead { font-size: 12pt; color: #0b3d6b; font-weight: 600; margin: 0 0 4mm 0; }
+
+  .fig { margin: 4mm 0 5mm 0; page-break-inside: avoid; text-align: center; }
+  .fig svg { width: 100%; height: auto; }
+  .cap { font-size: 9pt; color: #55606a; margin-top: 1.5mm; text-align: center; }
+
+  .box { border: 0.5pt solid #c8ced4; border-left: 3.5pt solid #6b7d8f;
+         background: #f7f9fa; padding: 3mm 3.5mm; margin: 4mm 0; page-break-inside: avoid; }
+  .box.good { border-left-color: #0a7a3d; background: #f1faf4; }
+  .box.warn { border-left-color: #a8321a; background: #fdf3f1; }
+  .box.note { border-left-color: #1a5fa8; background: #f1f6fd; }
+  .box .t { font-weight: 700; display: block; margin-bottom: 1.5mm; font-size: 11pt; }
+
+  table { border-collapse: collapse; width: 100%; margin: 3mm 0 4mm 0; font-size: 9.5pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.8mm 2mm; font-size: 9pt; }
+  td { border-bottom: 0.4pt solid #dde3e8; padding: 1.8mm 2mm; vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+
+  .jargon { background: #fffbe8; border: 0.5pt solid #e0d5a8; border-radius: 1.5mm;
+            padding: 2.5mm 3mm; margin: 3mm 0; font-size: 10pt; page-break-inside: avoid; }
+  .jargon b { color: #6b5a12; }
+
+  .cover { padding-top: 40mm; page-break-after: always; }
+  .cover .sub { font-size: 14pt; color: #4a5560; margin-top: 2mm; line-height: 1.5; }
+  .cover .meta { margin-top: 20mm; font-size: 10pt; color: #55606a;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 5mm; }
+
+  .toc { font-size: 11pt; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; padding: 2.2mm 2mm; }
+  .toc td.n { width: 10mm; font-weight: 700; color: #1a5fa8; }
+  .toc tbody tr:nth-child(even) td { background: transparent; }
+
+  .big { font-size: 13pt; font-weight: 600; color: #0a7a3d; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Your Dubbing Website</h1>
+  <div class="sub">The backend, explained simply &mdash; with pictures.<br>
+  No prior knowledge assumed.</div>
+
+  <div class="box good" style="margin-top:14mm">
+    <span class="t">How to read this</span>
+    Every section is one idea, on one or two pages, with a diagram. Yellow boxes explain a
+    technical word the first time it appears. If you only read the diagrams and the green boxes,
+    you will still understand the whole plan.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written:</strong> 24 August 2026</div>
+    <div><strong>This is the simple version.</strong> The full technical plan, with exact numbers
+    and settings, is <code>docs/Website_Backend_Plan_v2.pdf</code>.</div>
+  </div>
+</div>
+
+<!-- ============================================ CONTENTS -->
+<div class="page">
+<h2>What's inside</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>What we are building</td></tr>
+<tr><td class="n">2</td><td>The one rule: never touch the dubbing engine</td></tr>
+<tr><td class="n">3</td><td>What happens when someone dubs a video</td></tr>
+<tr><td class="n">4</td><td>How the video gets to them, cheaply</td></tr>
+<tr><td class="n">5</td><td>The money-saving switch</td></tr>
+<tr><td class="n">6</td><td>Where everything is stored</td></tr>
+<tr><td class="n">7</td><td>Keeping it safe</td></tr>
+<tr><td class="n">8</td><td>How people pay you</td></tr>
+<tr><td class="n">9</td><td>What it costs to run</td></tr>
+<tr><td class="n">10</td><td>How long it takes to build</td></tr>
+<tr><td class="n">11</td><td>Three things still to sort out</td></tr>
+</table>
+
+<div class="box note" style="margin-top:8mm">
+<span class="t">First, four words you will see everywhere</span>
+<table style="margin:0">
+<tr><td style="width:26mm"><b>Backend</b></td><td>Everything the user never sees. The part that stores data, does work, and takes payments. The <b>frontend</b> is the screens they click on.</td></tr>
+<tr><td><b>Database</b></td><td>A filing cabinet that never forgets. Good at text and numbers, bad at big files.</td></tr>
+<tr><td><b>S3 / R2</b></td><td>Warehouses for big files, because a database would choke on video. S3 is Amazon's and charges for downloads. <b>R2 is Cloudflare's and does not</b> - which is why we use it. Section 4.</td></tr>
+<tr><td><b>The box</b></td><td>The rented Amazon computer with the graphics card that actually does the dubbing. It costs about &#8377;47 for every hour it is switched on.</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ============================================ 1 -->
+<div class="page">
+<h2>1. What we are building</h2>
+<p class="lead">A website where someone signs up, uploads a video, picks a language, and gets a
+dubbed video back.</p>
+
+<p>You already own the hard part. The dubbing engine works, and you spent days tuning it to sound
+right. What is missing is everything <em>around</em> it: accounts, payments, storage, and a queue.
+That is what we are building, and it sits in front of your engine like a shop front in front of a
+workshop.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a1" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <!-- user -->
+  <rect x="10" y="112" width="150" height="96" rx="8" fill="#eef1f4" stroke="#44515c" stroke-width="1.5"/>
+  <text x="85" y="146" text-anchor="middle" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#14171a">The user</text>
+  <text x="85" y="170" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" fill="#55606a">in a web browser</text>
+  <text x="85" y="190" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" fill="#55606a">on a phone or laptop</text>
+
+  <!-- our backend -->
+  <rect x="222" y="34" width="336" height="256" rx="10" fill="#f1f6fd" stroke="#1a5fa8" stroke-width="2"/>
+  <text x="390" y="60" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#0b3d6b">WHAT WE ARE BUILDING</text>
+  <text x="390" y="79" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#4a5560">all new code, all yours</text>
+
+  <rect x="242" y="94" width="140" height="52" rx="6" fill="#ffffff" stroke="#1a5fa8" stroke-width="1.2"/>
+  <text x="312" y="115" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">Accounts</text>
+  <text x="312" y="133" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">login, passwords</text>
+
+  <rect x="398" y="94" width="140" height="52" rx="6" fill="#ffffff" stroke="#1a5fa8" stroke-width="1.2"/>
+  <text x="468" y="115" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">Payments</text>
+  <text x="468" y="133" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">plans, quota</text>
+
+  <rect x="242" y="158" width="140" height="52" rx="6" fill="#ffffff" stroke="#1a5fa8" stroke-width="1.2"/>
+  <text x="312" y="179" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">Database</text>
+  <text x="312" y="197" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">history, jobs</text>
+
+  <rect x="398" y="158" width="140" height="52" rx="6" fill="#ffffff" stroke="#1a5fa8" stroke-width="1.2"/>
+  <text x="468" y="179" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">R2 storage</text>
+  <text x="468" y="197" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">the video files</text>
+
+  <rect x="242" y="222" width="296" height="50" rx="6" fill="#ffffff" stroke="#1a5fa8" stroke-width="1.2"/>
+  <text x="390" y="243" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">The worker + the queue</text>
+  <text x="390" y="261" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">takes one job at a time and drives the engine</text>
+
+  <!-- the box -->
+  <rect x="620" y="76" width="270" height="172" rx="10" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="755" y="104" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#0a5c2e">YOUR DUBBING ENGINE</text>
+  <text x="755" y="124" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#4a5560">already built, already tuned</text>
+  <rect x="646" y="140" width="218" height="46" rx="6" fill="#ffffff" stroke="#0a7a3d" stroke-width="1.2"/>
+  <text x="755" y="160" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="600" fill="#14171a">VoiceStudio on the box</text>
+  <text x="755" y="177" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">graphics card does the work</text>
+  <text x="755" y="212" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#a8321a">WE CHANGE NOTHING</text>
+  <text x="755" y="231" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#a8321a">not one line, not one setting</text>
+
+  <!-- arrows -->
+  <line x1="162" y1="160" x2="216" y2="160" stroke="#44515c" stroke-width="2" marker-end="url(#a1)"/>
+  <line x1="562" y1="160" x2="614" y2="160" stroke="#44515c" stroke-width="2" marker-end="url(#a1)"/>
+  <text x="189" y="150" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#55606a">asks</text>
+  <text x="588" y="150" text-anchor="middle" font-family="Consolas, monospace" font-size="10" fill="#55606a">asks</text>
+</svg>
+<div class="cap">The shape of the whole system. The user only ever talks to the middle box.
+They can never reach your engine directly.</div>
+</div>
+
+<div class="box good">
+<span class="t">The single most important thing on this page</span>
+The user's browser <strong>never</strong> talks to your dubbing engine, and never sees any password
+or key. It only talks to our new website. That one boundary is what keeps your engine safe and your
+keys private.
+</div>
+</div>
+
+<!-- ============================================ 2 -->
+<div class="page">
+<h2>2. The one rule: never touch the dubbing engine</h2>
+<p class="lead">Your dub quality is your whole product. So the plan is built to make changing it
+impossible by accident.</p>
+
+<p>Your engine has dozens of settings. You tested them for days and found the combination that
+sounds right. If the website could change any of them, one bad request could ruin a customer's
+video &mdash; and you would not know why.</p>
+
+<p>So we do the opposite of flexible. The website is allowed to choose <strong>one thing
+only</strong>: the language. Everything else is fixed in our code as a locked list of settings.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a2" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <!-- user picks -->
+  <rect x="14" y="100" width="176" height="100" rx="8" fill="#eef1f4" stroke="#44515c" stroke-width="1.5"/>
+  <text x="102" y="130" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#14171a">User chooses</text>
+  <text x="102" y="158" text-anchor="middle" font-family="Segoe UI, Arial" font-size="20" font-weight="700" fill="#0a7a3d">Telugu</text>
+  <text x="102" y="180" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#55606a">...and nothing else</text>
+
+  <line x1="192" y1="150" x2="248" y2="150" stroke="#44515c" stroke-width="2" marker-end="url(#a2)"/>
+
+  <!-- locked settings -->
+  <rect x="254" y="24" width="330" height="252" rx="10" fill="#fffbe8" stroke="#b39a3d" stroke-width="2"/>
+  <text x="419" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#6b5a12">THE LOCKED SETTINGS LIST</text>
+  <text x="419" y="69" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a6a2a">fixed in our code - no request can change it</text>
+
+  <rect x="274" y="82" width="290" height="26" rx="4" fill="#ffffff" stroke="#c9b877"/>
+  <text x="286" y="100" font-family="Consolas, monospace" font-size="11" fill="#14171a">timing        = strict_slot</text>
+  <rect x="274" y="112" width="290" height="26" rx="4" fill="#ffffff" stroke="#c9b877"/>
+  <text x="286" y="130" font-family="Consolas, monospace" font-size="11" fill="#14171a">voice match   = consistent</text>
+  <rect x="274" y="142" width="290" height="26" rx="4" fill="#ffffff" stroke="#c9b877"/>
+  <text x="286" y="160" font-family="Consolas, monospace" font-size="11" fill="#14171a">background    = keep it</text>
+  <rect x="274" y="172" width="290" height="26" rx="4" fill="#ffffff" stroke="#c9b877"/>
+  <text x="286" y="190" font-family="Consolas, monospace" font-size="11" fill="#14171a">steps         = 16</text>
+  <rect x="274" y="202" width="290" height="26" rx="4" fill="#ffffff" stroke="#c9b877"/>
+  <text x="286" y="220" font-family="Consolas, monospace" font-size="11" fill="#14171a">...and 8 more, all fixed</text>
+  <text x="419" y="252" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a6a2a">stamped with a version + fingerprint on every job</text>
+
+  <line x1="588" y1="150" x2="644" y2="150" stroke="#44515c" stroke-width="2" marker-end="url(#a2)"/>
+
+  <!-- engine -->
+  <rect x="650" y="100" width="240" height="100" rx="8" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="770" y="132" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#0a5c2e">The engine</text>
+  <text x="770" y="156" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#55606a">gets the same instructions</text>
+  <text x="770" y="176" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#55606a">every single time</text>
+</svg>
+<div class="cap">The user picks a language. Our code fills in everything else from a fixed list.
+The engine cannot tell one customer's job from another.</div>
+</div>
+
+<div class="jargon">
+<b>Why "stamped with a fingerprint"?</b> Every job records exactly which settings were used. So if
+a customer ever says "this dub is worse than last month's", you can check whether anything actually
+changed instead of guessing. It also means you can undo a bad change in one step.
+</div>
+
+<div class="box warn">
+<span class="t">Three traps we found by reading your engine's code</span>
+Your engine has some unhelpful factory defaults. If we send nothing, it does <em>not</em> show an
+error &mdash; it quietly does the wrong thing:
+<table style="margin-top:2mm">
+<tr><th style="width:38mm">If we forget...</th><th>What the customer gets</th></tr>
+<tr><td>to name the audio track</td><td><strong>The original video, undubbed.</strong> No error at all. This has already happened once on your project.</td></tr>
+<tr><td>to set the timing mode</td><td>Audio slowly drifts out of sync with the mouths</td></tr>
+<tr><td>to set voice matching</td><td>A breathy hiss at the start of roughly 1 line in 3</td></tr>
+</table>
+This is exactly why the settings list is locked and written down, rather than left to defaults.
+</div>
+</div>
+
+<!-- ============================================ 3 -->
+<div class="page">
+<h2>3. What happens when someone dubs a video</h2>
+<p class="lead">Nine steps, about 55 minutes for a 30-minute video. The user just waits, or closes
+the tab and gets an email.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a3" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <!-- lane labels -->
+  <rect x="0" y="0" width="900" height="26" fill="#14171a"/>
+  <text x="112" y="18" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#ffffff">BROWSER</text>
+  <text x="380" y="18" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#ffffff">OUR WEBSITE</text>
+  <text x="700" y="18" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#ffffff">THE BOX (engine)</text>
+
+  <line x1="228" y1="26" x2="228" y2="620" stroke="#dde3e8" stroke-width="1"/>
+  <line x1="536" y1="26" x2="536" y2="620" stroke="#dde3e8" stroke-width="1"/>
+
+  <!-- step template helper: circles + boxes -->
+  <!-- 1 -->
+  <circle cx="20" cy="56" r="11" fill="#1a5fa8"/><text x="20" y="61" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">1</text>
+  <rect x="38" y="40" width="182" height="34" rx="5" fill="#eef1f4" stroke="#44515c"/>
+  <text x="129" y="61" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Picks language, hits Dub</text>
+
+  <!-- 2 -->
+  <circle cx="20" cy="106" r="11" fill="#1a5fa8"/><text x="20" y="111" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">2</text>
+  <rect x="246" y="90" width="278" height="34" rx="5" fill="#f1f6fd" stroke="#1a5fa8"/>
+  <text x="385" y="105" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Checks their plan has minutes left,</text>
+  <text x="385" y="119" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">then issues a one-time upload ticket</text>
+
+  <!-- 3 -->
+  <circle cx="20" cy="158" r="11" fill="#1a5fa8"/><text x="20" y="163" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">3</text>
+  <rect x="38" y="142" width="182" height="34" rx="5" fill="#eef1f4" stroke="#44515c"/>
+  <text x="129" y="163" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Video goes straight to R2</text>
+  <text x="330" y="163" font-family="Segoe UI, Arial" font-size="10.5" fill="#8a6a1a">(not through our server - it would choke)</text>
+
+  <!-- 4 -->
+  <circle cx="20" cy="210" r="11" fill="#0a7a3d"/><text x="20" y="215" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">4</text>
+  <rect x="246" y="194" width="278" height="34" rx="5" fill="#f1f6fd" stroke="#1a5fa8"/>
+  <text x="385" y="209" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Checks the real length of the file,</text>
+  <text x="385" y="223" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">then SWITCHES ON the box</text>
+  <rect x="556" y="194" width="330" height="34" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="721" y="215" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Boots up - about 3 minutes</text>
+
+  <!-- 5 -->
+  <circle cx="20" cy="262" r="11" fill="#0a7a3d"/><text x="20" y="267" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">5</text>
+  <rect x="556" y="246" width="330" height="34" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="721" y="261" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Splits voices from background music,</text>
+  <text x="721" y="275" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">writes down who says what, when</text>
+
+  <!-- 6 -->
+  <circle cx="20" cy="314" r="11" fill="#0a7a3d"/><text x="20" y="319" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">6</text>
+  <rect x="556" y="298" width="330" height="34" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="721" y="319" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Translates every line to Telugu</text>
+  <rect x="246" y="298" width="278" height="34" rx="5" fill="#fffbe8" stroke="#b39a3d"/>
+  <text x="385" y="313" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#6b5a12">We SAVE the text in our database</text>
+  <text x="385" y="327" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#6b5a12">(see the warning below)</text>
+
+  <!-- 7 -->
+  <circle cx="20" cy="366" r="11" fill="#0a7a3d"/><text x="20" y="371" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">7</text>
+  <rect x="556" y="350" width="330" height="34" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="721" y="365" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Clones each speaker's voice and</text>
+  <text x="721" y="379" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">speaks the new lines - about 17 min</text>
+
+  <!-- 8 -->
+  <circle cx="20" cy="422" r="11" fill="#1a5fa8"/><text x="20" y="427" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">8</text>
+  <rect x="246" y="400" width="278" height="46" rx="5" fill="#f1f6fd" stroke="#1a5fa8"/>
+  <text x="385" y="418" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Copies the finished video to R2,</text>
+  <text x="385" y="432" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#a8321a">checks the audio is really Telugu,</text>
+  <text x="385" y="443" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">records the minutes used, emails them</text>
+  <rect x="556" y="400" width="330" height="46" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="721" y="423" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Working files wiped off the box</text>
+  <text x="721" y="438" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">nobody's video is left lying around</text>
+
+  <!-- 9 -->
+  <circle cx="20" cy="486" r="11" fill="#1a5fa8"/><text x="20" y="491" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">9</text>
+  <rect x="38" y="470" width="182" height="34" rx="5" fill="#eef1f4" stroke="#44515c"/>
+  <text x="129" y="491" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Downloads the dub</text>
+  <rect x="246" y="470" width="278" height="34" rx="5" fill="#f1f6fd" stroke="#1a5fa8"/>
+  <text x="385" y="491" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Gives a link that expires in 15 minutes</text>
+
+  <!-- switch off -->
+  <rect x="556" y="530" width="330" height="42" rx="5" fill="#fdf3f1" stroke="#a8321a" stroke-width="1.5"/>
+  <text x="721" y="548" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#a8321a">10 minutes later: box switches OFF</text>
+  <text x="721" y="564" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a3a28">costs nothing until the next customer</text>
+  <line x1="721" y1="450" x2="721" y2="526" stroke="#a8321a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a3)"/>
+
+  <!-- total -->
+  <rect x="38" y="530" width="482" height="42" rx="5" fill="#f1faf4" stroke="#0a7a3d" stroke-width="1.5"/>
+  <text x="279" y="548" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#0a5c2e">Total for a 30-minute video: about 55 minutes</text>
+  <text x="279" y="564" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">Costs you about &#8377;53 - &#8377;86. They paid &#8377;299 - &#8377;1,499 a month.</text>
+</svg>
+<div class="cap">Green circles are steps where the expensive box is switched on. Blue circles are
+cheap. Notice how few green steps there are.</div>
+</div>
+
+<div class="box good">
+<span class="t">What happens if the customer presses F5?</span>
+<strong>Nothing. The job carries on.</strong> This is worth understanding, because it is the difference
+between your current setup and the website.
+<br><br>
+<b>Today, when you dub a video yourself,</b> your browser tab is <em>doing</em> part of the job &mdash;
+it holds the translated text in memory and hands it to the engine at the end. Press F5 and that text is
+gone, because the only copy was in the tab. About 12 minutes of work for a long video.
+<br><br>
+<b>On the website, the browser only watches.</b> The customer clicks once and the work happens on the
+server: our worker drives the box, and every result is written into our database as it appears. The tab
+is a window onto that, not a participant.
+<br><br>
+So on F5, this is the whole sequence: the page reloads, asks our server "how is job 1234 doing?", the
+server reads the database, and the progress bar comes back exactly where it was. The box never knew the
+browser went away.
+</div>
+
+<div class="box note">
+<span class="t">And they will not only press F5 on purpose</span>
+You are right that nobody deliberately refreshes a page they are waiting on. But over 17 to 55 minutes
+of rendering, plenty happens by itself: the wifi drops, a phone locks, a laptop sleeps, a tab crashes,
+they switch to their phone, or they simply close it and get on with their day.
+<br><br>
+That last one is the point. <strong>"Upload it and come back later" has to be a normal thing to do</strong>,
+not something that breaks the job. The customer should be able to shut the laptop, and get an email when
+it is ready. None of that is possible if the browser is holding anything important.
+<br><br>
+<span class="small">This is why the transcript and translation go into the database as each step
+finishes, and it is the main reason the backend exists at all rather than being a thin pass-through.
+Note that with transcript editing removed, F5 was never going to lose 12 minutes of the
+<em>customer's</em> work &mdash; there is nothing for them to edit. The database is there so their
+<em>history</em>, ownership, minutes and refunds survive, and so the box can be switched off without
+anything going dark.</span>
+</div>
+</div>
+
+<!-- ============================================ 4 -->
+<div class="page">
+<h2>4. How the video gets to them, cheaply</h2>
+<p class="lead">They can download their dub as many times as they like for 7 days, then it is deleted. Done the obvious
+way, that would cost you money every single time. Here is how it costs nothing.</p>
+
+<div class="jargon">
+<b>"Egress" is the word for this.</b> Amazon charges you a fee every time a file <em>leaves</em>
+their network. Uploading to them is free; downloading from them is not. About &#8377;3.30 for a
+30-minute video. That sounds tiny until you promise unlimited downloads.
+</div>
+
+<p>If the video sits in Amazon's S3 and a customer downloads it ten times over the month, you pay
+that fee ten times. One enthusiastic customer could cost you more in fees than they pay you in
+subscription. So we move the finished video <strong>out of Amazon</strong> to Cloudflare R2, which
+charges <strong>nothing</strong> for downloads, ever.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="d1" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 Z" fill="#a8321a"/>
+    </marker>
+    <marker id="d2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 Z" fill="#0a7a3d"/>
+    </marker>
+  </defs>
+
+  <!-- TOP: the expensive way -->
+  <rect x="10" y="14" width="880" height="164" rx="8" fill="#fdf3f1" stroke="#a8321a" stroke-width="2"/>
+  <text x="28" y="40" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#a8321a">THE EXPENSIVE WAY - keep the video in Amazon S3</text>
+
+  <rect x="34" y="58" width="150" height="56" rx="6" fill="#ffffff" stroke="#a8321a"/>
+  <text x="109" y="82" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="600" fill="#14171a">Amazon S3</text>
+  <text x="109" y="100" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">holds the video</text>
+
+  <line x1="188" y1="86" x2="252" y2="86" stroke="#a8321a" stroke-width="2" marker-end="url(#d1)"/>
+  <text x="220" y="78" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10" font-weight="700" fill="#a8321a">&#8377;3.30</text>
+
+  <rect x="258" y="58" width="120" height="56" rx="6" fill="#ffffff" stroke="#a8321a"/>
+  <text x="318" y="82" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">download 1</text>
+  <text x="318" y="100" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#a8321a">you pay</text>
+
+  <rect x="392" y="58" width="120" height="56" rx="6" fill="#ffffff" stroke="#a8321a"/>
+  <text x="452" y="82" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">download 2</text>
+  <text x="452" y="100" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#a8321a">you pay again</text>
+
+  <rect x="526" y="58" width="120" height="56" rx="6" fill="#ffffff" stroke="#a8321a"/>
+  <text x="586" y="82" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">download 3</text>
+  <text x="586" y="100" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#a8321a">again</text>
+
+  <text x="676" y="92" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#a8321a">... forever</text>
+
+  <rect x="34" y="126" width="832" height="34" rx="5" fill="#f6dad3"/>
+  <text x="450" y="148" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#a8321a">500 videos a month, 3 downloads each  =  about &#8377;4,950 every month</text>
+
+  <!-- BOTTOM: the cheap way -->
+  <rect x="10" y="196" width="880" height="192" rx="8" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="28" y="222" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#0a5c2e">THE CHEAP WAY - move it out of Amazon once, to Cloudflare R2</text>
+
+  <rect x="34" y="240" width="140" height="56" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="104" y="264" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="600" fill="#14171a">The box</text>
+  <text x="104" y="282" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">makes the video</text>
+
+  <line x1="178" y1="268" x2="238" y2="268" stroke="#a8321a" stroke-width="2" marker-end="url(#d1)"/>
+  <text x="208" y="260" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10" font-weight="700" fill="#a8321a">&#8377;3.30</text>
+  <text x="208" y="288" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#7a3a28">once only</text>
+
+  <rect x="244" y="240" width="150" height="56" rx="6" fill="#ffffff" stroke="#0a7a3d" stroke-width="1.6"/>
+  <text x="319" y="264" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#14171a">Cloudflare R2</text>
+  <text x="319" y="282" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">holds it for 7 days</text>
+
+  <line x1="398" y1="268" x2="458" y2="268" stroke="#0a7a3d" stroke-width="2" marker-end="url(#d2)"/>
+  <text x="428" y="260" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10" font-weight="700" fill="#0a7a3d">&#8377;0</text>
+
+  <rect x="464" y="240" width="112" height="56" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="520" y="264" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">download 1</text>
+  <text x="520" y="282" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#0a7a3d">free</text>
+
+  <rect x="586" y="240" width="112" height="56" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="642" y="264" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">download 50</text>
+  <text x="642" y="282" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#0a7a3d">still free</text>
+
+  <text x="720" y="274" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#0a7a3d">... always free</text>
+
+  <rect x="34" y="308" width="832" height="34" rx="5" fill="#e4f5ea"/>
+  <text x="450" y="330" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#0a5c2e">500 videos a month, any number of downloads  =  about &#8377;1,650 + &#8377;40 storage</text>
+
+  <rect x="34" y="352" width="832" height="26" rx="5" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="450" y="370" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Saves roughly &#8377;3,260 a month - and the more people download, the bigger the saving gets</text>
+</svg>
+<div class="cap">The video only has to leave Amazon once. After that it lives somewhere that does not
+charge for downloads.</div>
+</div>
+
+<div class="box warn">
+<span class="t">One correction to what you asked for</span>
+You asked to use <strong>Cloudflare Workers</strong> to send the video from the GPU or from S3. A
+Worker on its own would <em>not</em> save anything &mdash; if it fetched the file from S3 each time,
+Amazon would still charge its fee, plus you would now also pay Cloudflare. It would be worse than
+doing nothing.
+<br><br>
+<strong>The saving comes from where the file lives, not from what serves it.</strong> So the plan is:
+put the finished video in Cloudflare R2, and use a Worker as the doorman that checks the person is
+allowed to have it. The Worker is still there &mdash; it just is not the part that saves the money.
+<br><br>
+<strong>And we must never send downloads from the GPU box.</strong> The box would have to be switched
+on for every download, at &#8377;47 an hour, which would destroy the whole money-saving switch in
+section 5.
+</div>
+</div>
+
+<div class="page">
+<h3>Making sure only the right person can download</h3>
+<p>The storage is completely private. There is no public link to anybody's video. So how does a
+download work without letting strangers in? With a ticket.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="d3" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <circle cx="26" cy="46" r="12" fill="#1a5fa8"/><text x="26" y="51" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">1</text>
+  <rect x="48" y="28" width="300" height="36" rx="5" fill="#eef1f4" stroke="#44515c"/>
+  <text x="198" y="51" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">User clicks Download in their dashboard</text>
+
+  <circle cx="26" cy="112" r="12" fill="#1a5fa8"/><text x="26" y="117" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">2</text>
+  <rect x="48" y="80" width="440" height="66" rx="5" fill="#f1f6fd" stroke="#1a5fa8"/>
+  <text x="62" y="100" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0b3d6b">Our website checks four things:</text>
+  <text x="62" y="118" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">are they logged in?  is this really their video?</text>
+  <text x="62" y="136" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">is it finished?  is it still inside its 7 days?</text>
+
+  <circle cx="26" cy="182" r="12" fill="#1a5fa8"/><text x="26" y="187" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">3</text>
+  <rect x="48" y="164" width="440" height="36" rx="5" fill="#fffbe8" stroke="#b39a3d"/>
+  <text x="268" y="187" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">If all four pass: issue a 5-minute ticket for THAT ONE video</text>
+
+  <circle cx="26" cy="248" r="12" fill="#0a7a3d"/><text x="26" y="253" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">4</text>
+  <rect x="48" y="216" width="440" height="64" rx="5" fill="#f1faf4" stroke="#0a7a3d"/>
+  <text x="62" y="238" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a5c2e">The Cloudflare Worker (the doorman):</text>
+  <text x="62" y="256" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">checks the ticket is genuine and not expired,</text>
+  <text x="62" y="272" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">then streams the video from R2</text>
+
+  <line x1="500" y1="150" x2="548" y2="150" stroke="#44515c" stroke-width="2" marker-end="url(#d3)"/>
+
+  <rect x="556" y="60" width="330" height="180" rx="8" fill="#f7f9fa" stroke="#6b7d8f" stroke-width="1.5"/>
+  <text x="721" y="86" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#14171a">Why a ticket, not a link</text>
+  <text x="572" y="112" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">&#8226; It names one video, so it cannot be</text>
+  <text x="582" y="128" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">edited to fetch somebody else's</text>
+  <text x="572" y="150" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">&#8226; It dies in 5 minutes, so a leaked</text>
+  <text x="582" y="166" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">ticket is useless almost immediately</text>
+  <text x="572" y="188" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">&#8226; The doorman holds no storage keys</text>
+  <text x="582" y="204" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">at all, so there is nothing to steal</text>
+  <text x="572" y="226" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">&#8226; Slow connections are fine: the 5</text>
+  <text x="582" y="242" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">minutes limits starting, not finishing</text>
+</svg>
+<div class="cap">The doorman never decides who is allowed in. It only checks a decision your website
+already made.</div>
+</div>
+
+<div class="box good">
+<span class="t">A bonus you get for free</span>
+Cloudflare has servers all over the world, so it sends the video from somewhere near the customer
+rather than from Mumbai. An overseas customer gets a noticeably faster download. Since you are
+planning to sell internationally, that matters &mdash; and it is unusual for the cheaper option to
+also be the faster one.
+</div>
+
+<div class="box note">
+<span class="t">And there is no editing any more</span>
+An earlier version of this plan let paying customers check and correct the transcript and translation
+before rendering. <strong>That is removed.</strong> Every job is now one click, start to finish.
+<br><br>
+It removed a lot: a whole pause-and-continue system, five extra screens' worth of backend, and the
+riskiest untested assumption in the plan (that a half-done job could survive the box being switched
+off). It also saved about a week of building.
+<br><br>
+<strong>What you give up:</strong> roughly 1 line in 4 is not placed perfectly, and a customer with a
+wrong name or brand in their dub now has no way to fix it themselves. They either accept it or ask
+you. That is a real trade &mdash; worth revisiting later if customers actually ask for it, rather
+than guessing now.
+</div>
+</div>
+
+<!-- ============================================ 5 -->
+<div class="page">
+<h2>5. The money-saving switch</h2>
+<p class="lead">The box costs &#8377;47 an hour while it is on. Leaving it on all month would cost
+&#8377;34,000. So it switches itself on and off.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a5" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <!-- ON trigger -->
+  <rect x="14" y="30" width="230" height="90" rx="8" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="129" y="56" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#0a5c2e">SWITCH ON when</text>
+  <text x="129" y="79" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">somebody starts uploading</text>
+  <text x="129" y="99" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">and the box is off</text>
+
+  <line x1="248" y1="75" x2="300" y2="75" stroke="#44515c" stroke-width="2" marker-end="url(#a5)"/>
+
+  <rect x="306" y="30" width="240" height="90" rx="8" fill="#eef1f4" stroke="#44515c" stroke-width="1.5"/>
+  <text x="426" y="62" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#14171a">BOX IS ON</text>
+  <text x="426" y="86" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#a8321a">&#8377;47 per hour</text>
+  <text x="426" y="106" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">doing real work</text>
+
+  <!-- checker -->
+  <rect x="306" y="150" width="240" height="160" rx="8" fill="#fffbe8" stroke="#b39a3d" stroke-width="2"/>
+  <text x="426" y="174" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#6b5a12">EVERY MINUTE, CHECK:</text>
+  <text x="322" y="198" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Anything transcribing?</text>
+  <text x="322" y="220" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Anything translating?</text>
+  <text x="322" y="242" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Anything rendering?</text>
+  <text x="322" y="264" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Anyone still uploading?</text>
+  <text x="322" y="286" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Anything waiting in the queue?</text>
+  <text x="522" y="198" text-anchor="end" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a7a3d">NO</text>
+  <text x="522" y="220" text-anchor="end" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a7a3d">NO</text>
+  <text x="522" y="242" text-anchor="end" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a7a3d">NO</text>
+  <text x="522" y="264" text-anchor="end" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a7a3d">NO</text>
+  <text x="522" y="286" text-anchor="end" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0a7a3d">NO</text>
+  <line x1="426" y1="124" x2="426" y2="146" stroke="#44515c" stroke-width="2" marker-end="url(#a5)"/>
+
+  <line x1="550" y1="230" x2="614" y2="230" stroke="#44515c" stroke-width="2" marker-end="url(#a5)"/>
+  <text x="582" y="220" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10" fill="#55606a">all clear</text>
+
+  <!-- wait 10 -->
+  <rect x="620" y="196" width="270" height="68" rx="8" fill="#f1f6fd" stroke="#1a5fa8" stroke-width="2"/>
+  <text x="755" y="222" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#0b3d6b">Wait 10 more minutes</text>
+  <text x="755" y="244" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">in case another customer arrives</text>
+
+  <rect x="620" y="30" width="270" height="90" rx="8" fill="#fdf3f1" stroke="#a8321a" stroke-width="2"/>
+  <text x="755" y="60" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#a8321a">SWITCH OFF</text>
+  <text x="755" y="84" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" fill="#7a3a28">&#8377;0 per hour</text>
+  <text x="755" y="104" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a3a28">nothing is lost - files are safe</text>
+  <line x1="755" y1="192" x2="755" y2="126" stroke="#a8321a" stroke-width="2" marker-end="url(#a5)"/>
+</svg>
+<div class="cap">The checker refuses to switch off if any real work is happening. Failing to switch
+off wastes money; switching off wrongly destroys a customer's video. So it errs towards wasting a
+little money.</div>
+</div>
+
+<div class="box good">
+<span class="t">The box switches on at UPLOAD - and we do not try to save money here</span>
+The moment a customer starts uploading, the box begins waking up. Not after the upload finishes, not
+when translation starts. The six-minute warm-up happens <em>while their video is still going up</em>,
+so by the time the file has landed the machine is ready and work starts straight away.
+<br><br>
+<strong>Why not wait and save a little?</strong> Because the six minutes get paid either way &mdash;
+starting early mostly just moves the warm-up somewhere the customer cannot see it. The only time it
+costs extra is when someone's upload is slower than the warm-up, and the box sits ready for a few
+minutes waiting. That is a few rupees.
+<br><br>
+<span class="big">Those few rupees are the whole product.</span> The alternative is every customer
+staring at a six-minute spinner <em>after</em> they have already waited for their upload, with nothing
+visibly happening. That is what makes software feel broken. We save money on the switch-off
+(below), never on the switch-on.
+</div>
+
+<div class="box good">
+<span class="t">Why 10 minutes and not 5</span>
+Every start-up costs about <strong>6 minutes of paid time</strong> before any real work happens,
+whether the video is 60 seconds or 30 minutes. So switching off just before the next customer
+arrives is the most wasteful thing the system can do.
+<br><br>
+Waiting 5 extra minutes costs about <strong>&#8377;4</strong>. An unnecessary restart costs about
+<strong>&#8377;5</strong> <em>and</em> makes the next customer wait two extra minutes.
+<span class="big">So 10 minutes is actually cheaper than 5</span> any time a second customer shows
+up within that window. It only costs more on a genuinely quiet day.
+</div>
+
+<div class="jargon">
+<b>"Nothing is lost when it switches off"</b> &mdash; switching off an Amazon machine is like closing
+a laptop lid, not like formatting it. The hard disk keeps everything, so nothing in progress is
+damaged and the next job starts from a clean, intact machine.
+</div>
+</div>
+
+<!-- ============================================ 6 -->
+<div class="page">
+<h2>6. Where everything is stored</h2>
+<p class="lead">Three places, three very different lifetimes. Getting this right is what makes the
+history page honest.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- DB -->
+  <rect x="14" y="20" width="284" height="360" rx="10" fill="#f1f6fd" stroke="#1a5fa8" stroke-width="2"/>
+  <text x="156" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#0b3d6b">THE DATABASE</text>
+  <text x="156" y="70" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">text and numbers only</text>
+  <rect x="40" y="88" width="232" height="52" rx="6" fill="#1a5fa8"/>
+  <text x="156" y="112" text-anchor="middle" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#fff">KEPT FOREVER</text>
+  <text x="156" y="131" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#dbe7f7">until they delete their account</text>
+  <text x="44" y="168" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; who they are, their plan</text>
+  <text x="44" y="192" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; every video they ever dubbed</text>
+  <text x="44" y="216" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; the transcript and translation</text>
+  <text x="44" y="240" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; minutes used, payments</text>
+  <text x="44" y="264" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; what went wrong, if anything</text>
+  <rect x="40" y="286" width="232" height="76" rx="6" fill="#ffffff" stroke="#1a5fa8"/>
+  <text x="156" y="308" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#0b3d6b">Why forever?</text>
+  <text x="156" y="328" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">It is just text. A whole job is a</text>
+  <text x="156" y="344" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">few hundred KB. Deleting it to</text>
+  <text x="156" y="358" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">save money would be silly.</text>
+
+  <!-- S3 -->
+  <rect x="308" y="20" width="284" height="360" rx="10" fill="#fffbe8" stroke="#b39a3d" stroke-width="2"/>
+  <text x="450" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#6b5a12">CLOUDFLARE R2</text>
+  <text x="450" y="70" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a6a2a">the big video files</text>
+  <rect x="334" y="88" width="232" height="52" rx="6" fill="#b39a3d"/>
+  <text x="450" y="112" text-anchor="middle" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#fff">7 DAYS</text>
+  <text x="450" y="131" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#fdf6df">unlimited downloads</text>
+  <text x="338" y="168" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; the finished dubbed video</text>
+  <text x="338" y="196" font-family="Segoe UI, Arial" font-size="11" fill="#7a6a2a">&nbsp;&nbsp;free users: 24 hours</text>
+  <rect x="334" y="216" width="232" height="60" rx="6" fill="#ffffff" stroke="#b39a3d"/>
+  <text x="450" y="236" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#6b5a12">Their original video?</text>
+  <text x="450" y="256" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">Deleted the moment the job ends.</text>
+  <text x="450" y="270" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">We have no reason to keep it.</text>
+  <rect x="334" y="288" width="232" height="74" rx="6" fill="#ffffff" stroke="#b39a3d"/>
+  <text x="450" y="308" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#6b5a12">Downloads cost you nothing</text>
+  <text x="450" y="328" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">R2 never charges to send a</text>
+  <text x="450" y="344" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">file out, so 1 download or</text>
+  <text x="450" y="358" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">50 costs exactly the same.</text>
+
+  <!-- box -->
+  <rect x="602" y="20" width="284" height="360" rx="10" fill="#fdf3f1" stroke="#a8321a" stroke-width="2"/>
+  <text x="744" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#a8321a">THE BOX</text>
+  <text x="744" y="70" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a3a28">scratch space while working</text>
+  <rect x="628" y="88" width="232" height="52" rx="6" fill="#a8321a"/>
+  <text x="744" y="112" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">WIPED AT THE END</text>
+  <text x="744" y="131" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#f8dcd6">of every single job</text>
+  <text x="632" y="168" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; voices split from music</text>
+  <text x="632" y="192" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; voice samples for cloning</text>
+  <text x="632" y="216" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">&#8226; each spoken line as a clip</text>
+  <rect x="628" y="240" width="232" height="122" rx="6" fill="#ffffff" stroke="#a8321a"/>
+  <text x="744" y="262" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" font-weight="700" fill="#a8321a">Why wipe it?</text>
+  <text x="744" y="282" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">Two reasons. It is a shared</text>
+  <text x="744" y="297" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">machine, so nobody's video</text>
+  <text x="744" y="312" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">should sit on it. And it is</text>
+  <text x="744" y="327" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">small - a full disk would</text>
+  <text x="744" y="342" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" font-weight="700" fill="#a8321a">break every job at once.</text>
+</svg>
+<div class="cap">Text is cheap and kept forever. Video is kept 7 days in Cloudflare, where downloads
+are free, then deleted. Scratch files are wiped immediately.</div>
+</div>
+
+<div class="box good">
+<span class="t">What this means on their history page</span>
+They always see <strong>every video they ever dubbed</strong>, with the transcript still readable,
+because that is text and we never delete it. After 7 days the <em>download button</em> stops
+working, because the file is gone. For those 7 days they can download it as often as they like, at no cost to you.
+<br><br>
+The row stays and the button greys out with a reason. That is more honest than deleting the history
+so that every button always works.
+</div>
+
+<div class="box good">
+<span class="t">Why the video is deleted after a week</span>
+The honest reason is <strong>privacy, not money</strong>. Once a customer has collected their dub,
+keeping a copy of their video on your servers stops being a service and starts being a risk. Every
+extra day it sits there is one more day it could leak, one more thing you would have to hand over if
+somebody asked, and one more thing to explain. Deleting it is the safer default.
+<br><br>
+It does happen to save about <strong>&#8377;170 a month</strong> in storage, but that is a bonus, not
+the reason.
+<br><br>
+<strong>Three things make this fair rather than annoying:</strong>
+<ul style="margin-top:2mm">
+<li><strong>You tell them the first time they download.</strong> A message they have to click past,
+with the real date on it &mdash; "this video is deleted on 31 August at 18:40" &mdash; not a vague
+"in 7 days". A date reads as a fact; a duration reads as a suggestion.</li>
+<li><strong>A small countdown sits next to the video</strong> every time they visit: "deleted in 6d
+4h". In the last day it switches to hours and minutes and changes colour. Nobody is caught out.</li>
+<li><strong>They can delete it themselves, sooner.</strong> If a customer wants their video gone
+today, that should be one button, not an email to support. It cannot be undone, so it asks once
+first.</li>
+</ul>
+</div>
+
+<div class="box warn">
+<span class="t">One rule that protects you here</span>
+Deleting a video must <strong>not</strong> give the customer their minutes back. The minutes paid for
+the <em>work</em> of making the dub, and that work already happened.
+<br><br>
+If deleting returned the minutes, anyone could dub a video, download it, delete it, and do it again
+forever &mdash; a paid plan with no limit. Easy to miss, expensive to discover.
+</div>
+
+<div class="box note">
+<span class="t">And the box needs a bigger disk</span>
+It is currently <strong>79% full</strong> &mdash; 32 GB free out of 146 GB. That is enough for the
+dubbing itself, but uncomfortable, because a completely full disk fails <em>every</em> job rather
+than one. You chose to grow it to <strong>250 GB</strong>, which costs about
+<strong>&#8377;803 more per month</strong> and takes free space to about 132 GB. Four times the
+breathing room.
+</div>
+</div>
+
+<!-- ============================================ 7 -->
+<div class="page">
+<h2>7. Keeping it safe</h2>
+<p class="lead">You asked that no key, no password, and nobody else's data can ever leak into the
+browser. Here is the shape of that.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+  <!-- outside -->
+  <rect x="14" y="20" width="250" height="380" rx="10" fill="#fdf3f1" stroke="#a8321a" stroke-width="2"/>
+  <text x="139" y="48" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#a8321a">THE BROWSER</text>
+  <text x="139" y="66" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#7a3a28">assume anyone can read this</text>
+
+  <rect x="36" y="86" width="206" height="30" rx="5" fill="#ffffff" stroke="#a8321a"/>
+  <text x="139" y="106" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">a login wristband (cookie)</text>
+  <rect x="36" y="122" width="206" height="30" rx="5" fill="#ffffff" stroke="#a8321a"/>
+  <text x="139" y="142" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">their own videos and history</text>
+  <rect x="36" y="158" width="206" height="44" rx="5" fill="#ffffff" stroke="#a8321a"/>
+  <text x="139" y="176" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">a download ticket that dies</text>
+  <text x="139" y="192" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">after 15 minutes</text>
+
+  <rect x="36" y="222" width="206" height="160" rx="5" fill="#f6dad3" stroke="#a8321a" stroke-dasharray="4,3"/>
+  <text x="139" y="244" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#a8321a">NEVER reaches here:</text>
+  <text x="139" y="268" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">Google keys</text>
+  <text x="139" y="290" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">Amazon keys</text>
+  <text x="139" y="312" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">database password</text>
+  <text x="139" y="334" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">payment secret key</text>
+  <text x="139" y="356" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">anyone else's data</text>
+  <text x="139" y="376" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#7a3a28">the engine itself</text>
+
+  <!-- wall -->
+  <rect x="284" y="20" width="46" height="380" fill="#14171a"/>
+  <text x="307" y="215" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#ffffff" transform="rotate(-90 307 215)">THE WALL</text>
+
+  <!-- inside -->
+  <rect x="350" y="20" width="536" height="380" rx="10" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="618" y="48" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#0a5c2e">INSIDE - PRIVATE NETWORK</text>
+  <text x="618" y="66" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">no public address, unreachable from the internet</text>
+
+  <rect x="372" y="86" width="238" height="70" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="491" y="108" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#14171a">Secrets Manager</text>
+  <text x="491" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">Amazon's key safe. Our server</text>
+  <text x="491" y="142" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">fetches keys when it starts up.</text>
+
+  <rect x="626" y="86" width="238" height="70" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="745" y="108" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#14171a">The database</text>
+  <text x="745" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">Locked away. Encrypted.</text>
+  <text x="745" y="142" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">You reach it via a secure tunnel.</text>
+
+  <rect x="372" y="170" width="492" height="70" rx="6" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="618" y="192" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#14171a">The dubbing box</text>
+  <text x="618" y="211" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#55606a">Has NO public address at all. Only our worker is allowed to talk to it.</text>
+  <text x="618" y="228" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#a8321a">Its Google credentials live only on the box and never leave it.</text>
+
+  <rect x="372" y="256" width="492" height="126" rx="6" fill="#e4f5ea" stroke="#0a7a3d"/>
+  <text x="618" y="278" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#0a5c2e">The rule that keeps customers apart</text>
+  <text x="618" y="302" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#14171a">SELECT * FROM jobs</text>
+  <text x="618" y="320" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#14171a">WHERE id = (the one asked for)</text>
+  <text x="618" y="338" text-anchor="middle" font-family="Consolas, monospace" font-size="11" font-weight="700" fill="#0a5c2e">AND owner = (whoever is logged in)</text>
+  <text x="618" y="362" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#4a5560">The owner check is inside the question, not a separate "if" afterwards.</text>
+  <text x="618" y="377" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#4a5560">One forgotten "if" is how companies leak customer data.</text>
+</svg>
+<div class="cap">The browser is treated as hostile. Everything valuable lives behind the wall.</div>
+</div>
+
+<div class="jargon">
+<b>Why the "15-minute ticket" instead of just a link?</b> The video warehouse is completely private
+&mdash; there are no public links. When a user wants their video, our server signs a temporary
+ticket for <em>that one file</em>. It stops working after 15 minutes. So even if the link leaks, it
+is useless very quickly, and nobody can guess their way to somebody else's video.
+</div>
+
+<div class="box warn">
+<span class="t">A customer never touches the dubbing box. Not once.</span>
+This is worth being very clear about, because it is easy to assume otherwise. The engine on the GPU box
+has <strong>no password on it at all</strong> &mdash; anyone who can reach it gets in, and that machine
+holds keys that can spend money on your Amazon account. So it is put somewhere the internet simply
+cannot reach:
+<pre style="margin:2mm 0">customer's browser  --->  our website        (public, needs login)
+our website         --->  our worker         (private)
+our worker          --->  the dubbing box    (private, no public address at all)</pre>
+Three hops, and the customer only ever talks to the first one. There is no request they can make that
+arrives at the box. The only two things they touch are <b>our website</b> and <b>the download link</b>
+(which comes from Cloudflare, not from the box).
+</div>
+
+<div class="box good">
+<span class="t">So how does their transcript reach their dashboard?</span>
+<strong>We copy it out as it is made.</strong> The box is a workshop, not a filing cabinet. As each step
+finishes, our worker takes the result out of the box and writes it into our own database:
+<ul style="margin-top:2mm">
+<li>after transcribing &rarr; every line of the original text, with its timings and who said it</li>
+<li>after translating &rarr; every line of the translated text</li>
+<li>after rendering &rarr; the finished video is pushed straight to Cloudflare storage</li>
+<li>then the box's copies are <b>deleted</b></li>
+</ul>
+So when the customer opens their dashboard, it reads from <b>our database</b> and <b>Cloudflare</b>.
+The box could be switched off, or replaced with a brand new one, and their history page would look
+exactly the same.
+</div>
+
+<div class="jargon">
+<b>"But switching the box off doesn't erase its disk, does it?"</b> &mdash; correct, it does not. The
+files would still be sitting there. The problem is different: the box is <em>switched off most of the
+day</em>, so a dashboard that read from it would be dead most of the day, and waking a &#8377;47-an-hour
+graphics computer just to display a line of text is absurd. On top of that, its disk is already
+<b>79% full and filling by itself</b>, you cannot run proper searches across it, and it would not come
+with you if you ever moved Amazon accounts. Our database has none of those problems.
+</div>
+
+<div class="box warn">
+<span class="t">Two real problems I found and dealt with</span>
+<table style="margin-top:2mm">
+<tr><th style="width:34mm">What</th><th>Status</th></tr>
+<tr><td><b>A Google key was saved in your project files</b> and uploaded to GitHub</td><td><strong>Fixed.</strong> Your GitHub is private so nobody outside saw it. Nothing in your code was using it. I backed it up, then deleted it at Google and confirmed it is dead.</td></tr>
+<tr><td><b>A second key (HuggingFace) is in another file</b></td><td><strong>Still to do, carefully.</strong> This one <em>is</em> in use, and replacing it badly makes all your characters come out in one voice instead of separate cloned voices. It should be done during planned maintenance, not in a hurry.</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ============================================ 8 -->
+<div class="page">
+<h2>8. How people pay you</h2>
+<p class="lead">Razorpay handles the card and UPI details. They never touch your servers, which
+keeps you out of a lot of legal complexity.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a8" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#44515c"/>
+    </marker>
+  </defs>
+
+  <rect x="14" y="60" width="180" height="80" rx="8" fill="#eef1f4" stroke="#44515c" stroke-width="1.5"/>
+  <text x="104" y="90" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#14171a">1. User picks</text>
+  <text x="104" y="110" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#14171a">a plan</text>
+  <text x="104" y="128" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#55606a">on your site</text>
+
+  <line x1="198" y1="100" x2="244" y2="100" stroke="#44515c" stroke-width="2" marker-end="url(#a8)"/>
+
+  <rect x="250" y="60" width="200" height="80" rx="8" fill="#f1f6fd" stroke="#1a5fa8" stroke-width="2"/>
+  <text x="350" y="88" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#0b3d6b">2. Sent to Razorpay</text>
+  <text x="350" y="108" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">card / UPI typed on</text>
+  <text x="350" y="124" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">THEIR page, not yours</text>
+
+  <line x1="454" y1="100" x2="500" y2="100" stroke="#44515c" stroke-width="2" marker-end="url(#a8)"/>
+
+  <rect x="506" y="40" width="200" height="120" rx="8" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="606" y="68" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#0a5c2e">3. Razorpay phones</text>
+  <text x="606" y="86" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#0a5c2e">your server directly</text>
+  <text x="606" y="110" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">"payment confirmed,</text>
+  <text x="606" y="126" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">and here is proof</text>
+  <text x="606" y="142" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" fill="#4a5560">it is really us"</text>
+
+  <line x1="710" y1="100" x2="756" y2="100" stroke="#44515c" stroke-width="2" marker-end="url(#a8)"/>
+
+  <rect x="762" y="60" width="128" height="80" rx="8" fill="#eef1f4" stroke="#44515c" stroke-width="1.5"/>
+  <text x="826" y="90" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#14171a">4. Account</text>
+  <text x="826" y="110" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#14171a">upgraded</text>
+
+  <!-- the important bit -->
+  <rect x="14" y="196" width="876" height="88" rx="8" fill="#fdf3f1" stroke="#a8321a" stroke-width="2"/>
+  <text x="452" y="222" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" font-weight="700" fill="#a8321a">Step 3 is the important one: we never believe the browser about payment</text>
+  <text x="452" y="246" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">If the customer closes the tab mid-payment, they still get upgraded, because Razorpay tells us directly.</text>
+  <text x="452" y="266" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">If somebody fakes a "payment worked!" message from their browser, they get nothing.</text>
+</svg>
+<div class="cap">The truth about money comes from Razorpay's own signed message, never from the
+customer's computer.</div>
+</div>
+
+<div class="box warn">
+<span class="t">Something you need to know about your annual Pro price</span>
+Indian rules cap any <em>automatic repeating</em> payment at <strong>&#8377;15,000 per charge</strong>
+unless the customer personally approves each one. This applies to card auto-payments as well as UPI,
+not just UPI. Your annual prices at 20% off work out as:
+<table style="margin-top:2mm">
+<tr><td style="width:30mm">Starter</td><td class="m">&#8377;2,870</td><td>fine</td></tr>
+<tr><td>Creator</td><td class="m">&#8377;9,590</td><td>fine</td></tr>
+<tr><td><b>Pro</b></td><td class="m"><b>&#8377;14,390</b></td><td><strong>only &#8377;610 under the limit</strong></td></tr>
+</table>
+It works today. But if you ever raise Pro above about &#8377;1,562 a month, that yearly charge would
+start needing the customer to approve it every single time &mdash; and an approval nobody is
+watching for is a renewal that quietly fails. You would lose the customer without either of you
+deciding anything.
+<br><br>
+<strong>DECIDED: annual plans are taken as a one-off payment</strong> rather than a repeating
+auto-payment. The cap only applies to auto-payments, so this removes the problem completely, at any
+price you might charge later. Monthly plans keep using auto-payment &mdash; at &#8377;1,499 they are
+nowhere near the limit and never will be.
+</div>
+
+<div class="box note">
+<span class="t">The one catch, so it is not a surprise later</span>
+A one-off payment <strong>does not renew itself</strong>. Nothing charges the customer when their year
+runs out.
+<br><br>
+So the reminder emails stop being a nicety and become the thing that keeps yearly customers:
+<strong>14 days before, 3 days before, and on the day itself</strong>, each with a link straight to
+checkout. Give them a <strong>7-day grace period</strong> too, so somebody who pays a day late does
+not lose their history or a video mid-job.
+<br><br>
+Without those reminders a yearly customer does not cancel &mdash; they simply vanish, and you find
+out from a chart months later.
+</div>
+
+<div class="box note">
+<span class="t">Accepting foreign cards takes time, so start now</span>
+Razorpay does not switch on international cards by default. You have to request it, pass their
+checks, and their own documentation says activating a payment method takes around
+<strong>10 working days</strong> on average.
+<br><br>
+That is waiting, not work. <strong>Apply for it now</strong>, while the building happens, so it is
+ready when you launch. If it is not approved in time, launch India-only &mdash; the plan stores
+prices in a way that lets you add dollar pricing later without rebuilding anything.
+</div>
+</div>
+
+<!-- ============================================ 9 -->
+<div class="page">
+<h2>9. Your admin panel</h2>
+
+<p class="lead">One private page, only you can open it, that answers the questions you will actually
+ask and does the few jobs you should never do by hand.</p>
+
+<table>
+<tr><th style="width:52mm">What you want</th><th>What the panel shows or does</th></tr>
+<tr><td><b>Is the box on or off?</b></td><td>The real answer, asked of Amazon directly &mdash; not what our own database <em>thinks</em>. Plus a stop button as a safety valve.</td></tr>
+<tr><td><b>Who is logged in?</b></td><td>Everyone signed in, when they signed in, and from where. You can also sign someone out.</td></tr>
+<tr><td><b>Has this person subscribed?</b></td><td>Their plan, whether it is still active, when it ends, and how many minutes they have left.</td></tr>
+<tr><td><b>Give someone a subscription</b></td><td>Search for the person, pick a plan and how many months, type a reason. Done.</td></tr>
+<tr><td><b>How much have I earned?</b></td><td>Today, this week, and total &mdash; counting money that actually arrived, with refunds taken off.</td></tr>
+<tr><td><b>Someone emailed to say their dub failed but their credits were taken</b></td><td>Their videos by name, whether each finished or failed, how many minutes it cost them, and a <b>refund</b> button for that one video.</td></tr>
+<tr><td><b>Dub videos yourself</b></td><td>Unlimited, no quota, through the same pipeline.</td></tr>
+<tr><td><b>Everything you change is written down</b></td><td>Who did what, to whom, when, and why. Permanently.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">Three rules that keep the numbers honest</span>
+<b>1. A refund adds a line, it never rewrites one.</b> When you refund someone's minutes we do not go
+back and edit the original charge &mdash; we add a second line that cancels it out. The balance ends up
+correct <em>and</em> the story still adds up when you read it a year later. Editing the past makes the
+total look right and the history a lie.
+<br><br>
+<b>2. Giving a free subscription must not look like a sale.</b> It would be easy to record a gifted plan
+as though money came in &mdash; and then the earnings figure on that very same screen is wrong. A gift
+is recorded as a gift. The earnings number only ever counts money Razorpay actually took.
+<br><br>
+<b>3. Your own test dubs get labelled as yours.</b> They cost real GPU money, so they appear in your
+costs. But they stay out of anything that looks like customer demand, otherwise you end up measuring
+your own testing and mistaking it for business.
+</div>
+
+<div class="box warn">
+<span class="t">This is the most dangerous page in the whole system</span>
+Everywhere else the website can only fetch <em>your own</em> data &mdash; that is the rule that stops
+one customer seeing another's videos. The admin panel is the one deliberate exception: it looks up
+other people's accounts on purpose. So it is treated accordingly:
+<ul style="margin-top:2mm">
+<li>The panel is <b>not part of the website customers download</b>. Not hidden, not greyed out &mdash;
+simply absent from their copy.</li>
+<li>Every request re-checks that you are an admin, on the server. Never trusted from the browser.</li>
+<li><b>Giving subscriptions and giving refunds ask for your password again</b>, because those two move
+money. If someone ever steals your signed-in session, they still cannot quietly hand out a year of Pro.</li>
+</ul>
+</div>
+
+<div class="jargon">
+<b>"Why bother writing down every change?"</b> &mdash; because in six months somebody, possibly you,
+will ask "why does this account have Pro without ever paying?" or "why does this person's balance not
+match what they were charged?". If the panel keeps a permanent note of every action and the reason you
+typed at the time, both are answered in seconds. Without it, neither can be answered at all.
+</div>
+</div>
+
+<!-- ============================================ 10 -->
+<div class="page">
+<h2>10. What it costs to run</h2>
+<p class="lead">Two kinds of cost: a fixed monthly bill you pay even with zero customers, and a
+small cost per video.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg">
+  <!-- fixed -->
+  <rect x="14" y="20" width="430" height="300" rx="10" fill="#f1f6fd" stroke="#1a5fa8" stroke-width="2"/>
+  <text x="229" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#0b3d6b">FIXED - every month, always</text>
+
+  <text x="40" y="84" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Database</text>
+  <text x="418" y="84" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;1,150 - 1,600</text>
+  <text x="40" y="110" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Web servers</text>
+  <text x="418" y="110" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;1,600 - 2,650</text>
+  <text x="40" y="136" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Front door + firewall</text>
+  <text x="418" y="136" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;700 - 1,320</text>
+  <text x="40" y="162" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Cloudflare R2 + Workers</text>
+  <text x="418" y="162" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;0 - 650</text>
+  <text x="40" y="188" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Email, logs, key safe</text>
+  <text x="418" y="188" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;440 - 880</text>
+  <text x="40" y="214" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">Box disk (250 GB)</text>
+  <text x="418" y="214" text-anchor="end" font-family="Consolas, monospace" font-size="11.5" fill="#14171a">&#8377;2,006</text>
+  <line x1="40" y1="228" x2="418" y2="228" stroke="#1a5fa8" stroke-width="1.5"/>
+  <rect x="40" y="240" width="378" height="42" rx="5" fill="#1a5fa8"/>
+  <text x="58" y="267" font-family="Segoe UI, Arial" font-size="14" font-weight="700" fill="#ffffff">TOTAL</text>
+  <text x="400" y="267" text-anchor="end" font-family="Consolas, monospace" font-size="14" font-weight="700" fill="#ffffff">&#8377;6,200 - 9,300</text>
+  <text x="229" y="304" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#4a5560">You pay this on a day with no customers at all.</text>
+
+  <!-- per video -->
+  <rect x="458" y="20" width="428" height="300" rx="10" fill="#f1faf4" stroke="#0a7a3d" stroke-width="2"/>
+  <text x="672" y="50" text-anchor="middle" font-family="Segoe UI, Arial" font-size="15" font-weight="700" fill="#0a5c2e">PER VIDEO - only when used</text>
+
+  <text x="484" y="86" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">A 30-minute video costs you</text>
+  <rect x="484" y="96" width="376" height="40" rx="5" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="672" y="122" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#0a5c2e">&#8377;53 - &#8377;86</text>
+
+  <text x="484" y="166" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">What each plan costs you per month, if</text>
+  <text x="484" y="182" font-family="Segoe UI, Arial" font-size="11.5" fill="#14171a">they use their whole allowance:</text>
+
+  <rect x="484" y="194" width="376" height="26" rx="4" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="496" y="212" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Starter pays &#8377;299</text>
+  <text x="848" y="212" text-anchor="end" font-family="Consolas, monospace" font-size="11" fill="#0a5c2e">costs &#8377;21-51</text>
+  <rect x="484" y="224" width="376" height="26" rx="4" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="496" y="242" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Creator pays &#8377;999</text>
+  <text x="848" y="242" text-anchor="end" font-family="Consolas, monospace" font-size="11" fill="#0a5c2e">costs &#8377;90-145</text>
+  <rect x="484" y="254" width="376" height="26" rx="4" fill="#ffffff" stroke="#0a7a3d"/>
+  <text x="496" y="272" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Pro pays &#8377;1,499</text>
+  <text x="848" y="272" text-anchor="end" font-family="Consolas, monospace" font-size="11" fill="#0a5c2e">costs &#8377;212-344</text>
+
+  <text x="672" y="304" text-anchor="middle" font-family="Segoe UI, Arial" font-size="11" font-weight="700" fill="#0a5c2e">Every plan keeps roughly 80% of what they pay.</text>
+  <text x="672" y="320" text-anchor="middle" font-family="Segoe UI, Arial" font-size="10.5" fill="#4a5560">Downloads add nothing, however many they do.</text>
+</svg>
+<div class="cap">The margins per customer are healthy. The fixed bill is what needs the first few
+customers.</div>
+</div>
+
+<div class="box good">
+<span class="t">The number that matters most</span>
+<span class="big">You break even at roughly 5&ndash;7 Pro subscribers, or 25&ndash;30 Starter
+subscribers.</span>
+<br><br>
+After that, each new customer is nearly all profit, because they only cost you &#8377;20&ndash;340
+of the &#8377;299&ndash;1,499 they pay.
+</div>
+
+<div class="box warn">
+<span class="t">Watch the free tier - it is the most expensive thing per minute</span>
+A 60-second free trial needs about 6 minutes of warm-up for 1.6 minutes of actual work. Warm-up is
+nearly 80% of the cost. So a free trial costs you around <strong>&#8377;6&ndash;7</strong> &mdash;
+while a 30-minute paid video, thirty times longer, costs &#8377;53&ndash;86.
+<br><br>
+A thousand trials would cost about <strong>&#8377;6,500</strong>, close to your whole fixed monthly
+bill. <strong>The way to keep that under control is to limit how often someone can have one, not how
+fast they get it:</strong>
+<ul style="margin-top:2mm">
+<li><strong>One 60-second trial per account, for life</strong> &mdash; not 90 seconds every month.
+A monthly freebie is an invitation to make throwaway email addresses, and it turns a one-time cost
+into one you pay for that person forever.</li>
+<li><strong>The trial starts the box straight away, just like a paid job.</strong> No waiting in a
+separate queue.</li>
+</ul>
+</div>
+
+<div class="box warn">
+<span class="t">Why the trial must not be made to wait</span>
+It is tempting to save the warm-up by having free videos ride along with a paying customer's job and
+telling people "your free preview will be ready in a few hours". That saves about &#8377;5 per
+trial, and it is a bad trade.
+<br><br>
+Think about who is using the trial. It is somebody deciding whether to <em>pay</em> you. They will
+not come back hours later to check a preview &mdash; they will close the tab and try someone else,
+and you will never see that you lost them. On top of that, the most convincing thing about your
+product is that <strong>one click gives a finished dub in minutes</strong>. Making the trial slow
+hides exactly the thing you most want people to see.
+<br><br>
+The better way to think about the &#8377;6&ndash;7: it is not a render cost, it is the price of
+getting a customer, paid once. Compare it to a &#8377;299 subscription, not to the cost of a paid
+video. Even if only 1 in 20 people who try it subscribe, you are well ahead.
+</div>
+
+<div class="box good">
+<span class="t">You still get the saving, just without the delay</span>
+If a trial happens to arrive while the box is already awake &mdash; a paying customer is mid-job, or
+another trial came in during the ten-minute idle window &mdash; the warm-up is already paid for and
+that trial costs only about <strong>&#8377;1&ndash;2</strong>. Once you have real traffic this
+happens a lot on its own. You take the discount when it turns up, instead of forcing it by making
+people queue.
+</div>
+</div>
+
+<!-- ============================================ 10 -->
+<div class="page">
+<h2>11. How long it takes to build</h2>
+<p class="lead">About 7 to 10 weeks of full-time work for one developer, to something you would
+happily charge money for.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 410" xmlns="http://www.w3.org/2000/svg">
+  <!-- week gridlines: x = 340 + 61*week -->
+  <line x1="401" y1="42" x2="401" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="462" y1="42" x2="462" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="523" y1="42" x2="523" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="584" y1="42" x2="584" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="645" y1="42" x2="645" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="706" y1="42" x2="706" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="767" y1="42" x2="767" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <line x1="828" y1="42" x2="828" y2="358" stroke="#e6ebef" stroke-width="1"/>
+  <text x="401" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">wk 1</text>
+  <text x="462" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">2</text>
+  <text x="523" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">3</text>
+  <text x="584" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">4</text>
+  <text x="645" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">5</text>
+  <text x="706" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">6</text>
+  <text x="767" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">7</text>
+  <text x="828" y="34" text-anchor="middle" font-family="Segoe UI, Arial" font-size="9.5" fill="#8a949c">8</text>
+
+  <!-- divider between labels and timeline -->
+  <line x1="336" y1="42" x2="336" y2="358" stroke="#b8c2ca" stroke-width="1.2"/>
+
+  <!-- rows: label right-aligned at 328, bar from computed x -->
+  <text x="328" y="62" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Cleanup + check how your engine is called</text>
+  <rect x="340" y="50" width="18" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="92" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Set up the Amazon account properly</text>
+  <rect x="358" y="80" width="61" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="122" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Signup, login, passwords</text>
+  <rect x="419" y="110" width="55" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="152" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" font-weight="700" fill="#0a5c2e">One video, start to finish</text>
+  <rect x="474" y="140" width="98" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="182" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Their history page</text>
+  <rect x="572" y="170" width="30" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="212" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">The automatic on/off switch</text>
+  <rect x="602" y="200" width="43" height="20" rx="3" fill="#0a7a3d"/>
+
+  <text x="328" y="242" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Payments and plans</text>
+  <rect x="645" y="230" width="73" height="20" rx="3" fill="#1a5fa8"/>
+
+  <text x="328" y="272" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Delivery through Cloudflare</text>
+  <rect x="718" y="260" width="34" height="20" rx="3" fill="#1a5fa8"/>
+
+  <text x="328" y="302" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Firewall, alarms, admin access</text>
+  <rect x="773" y="290" width="43" height="20" rx="3" fill="#1a5fa8"/>
+
+  <text x="328" y="332" text-anchor="end" font-family="Segoe UI, Arial" font-size="11" fill="#14171a">Security review + practice a move</text>
+  <rect x="816" y="320" width="55" height="20" rx="3" fill="#7a5a1a"/>
+
+  <!-- milestone at end of "one video" -->
+  <line x1="572" y1="42" x2="572" y2="366" stroke="#a8321a" stroke-width="1.8" stroke-dasharray="5,3"/>
+  <text x="578" y="382" font-family="Segoe UI, Arial" font-size="11" font-weight="700" fill="#a8321a">&#9668; it genuinely works from here (about 4 weeks)</text>
+
+  <!-- legend -->
+  <rect x="20" y="372" width="14" height="12" rx="2" fill="#0a7a3d"/>
+  <text x="40" y="382" font-family="Segoe UI, Arial" font-size="10" fill="#4a5560">must have</text>
+  <rect x="120" y="372" width="14" height="12" rx="2" fill="#1a5fa8"/>
+  <text x="140" y="382" font-family="Segoe UI, Arial" font-size="10" fill="#4a5560">before charging money</text>
+  <rect x="272" y="372" width="14" height="12" rx="2" fill="#7a5a1a"/>
+  <text x="292" y="382" font-family="Segoe UI, Arial" font-size="10" fill="#4a5560">before scaling</text>
+</svg>
+<div class="cap">One developer, one task at a time. The dashed line is the point where a real video
+goes in and a real dubbed video comes out, for a real logged-in user.</div>
+</div>
+
+<div class="box note">
+<span class="t">Why the first item is not code</span>
+Before writing anything, one short session is needed with your box switched on, recording exactly
+what your engine is asked and what it answers. Reading the code got most of it, but
+<strong>one important thing is still unclear</strong>: whether your good dubs came from your engine
+doing the translating, or from Gemini doing it outside the engine. Those give completely different
+results.
+<br><br>
+Guessing would mean building the wrong thing and rewriting it. Half a day of checking prevents that.
+</div>
+
+<div class="box good">
+<span class="t">The order is deliberate</span>
+The <strong>one-click path is built first and completely</strong>: uploading, dubbing, storing and
+delivering one video end to end, for one logged-in user, before anything about money or polish. That
+way there is always something real working, and everything afterwards is an addition to something
+proven rather than a complication in something half-built.
+</div>
+</div>
+
+<!-- ============================================ 11 -->
+<div class="last">
+<h2>12. How a dub actually flows, and three things still to sort out</h2>
+<div class="box good">
+<span class="t">The five steps, and they do not change</span>
+The customer picks a language and presses one button. Behind that, the website asks your existing
+engine to do exactly what it already does:
+<ol style="margin-top:2mm">
+<li><strong>Upload and prepare</strong> &mdash; the video goes to the box, the audio is pulled out, and
+the singing/music is separated from the speech.</li>
+<li><strong>Transcribe</strong> &mdash; Gemini writes down what was said, Google Chirp says exactly
+when each word happened, and the engine works out who was speaking and takes a voice sample of each
+person.</li>
+<li><strong>Translate</strong> &mdash; Gemini translates, 20 lines at a time, told how long each line
+is allowed to be so it fits the gap it has to sit in.</li>
+<li><strong>Render</strong> &mdash; each line is spoken in that character's cloned voice and fitted to
+its slot.</li>
+<li><strong>Deliver</strong> &mdash; the dub is laid over the original video and the finished file goes
+to storage, then to the customer's dashboard.</li>
+</ol>
+Steps 1, 2 and 4 need the expensive box. Step 3 does not, but it sits between two that do, so the box
+stays on for the whole job &mdash; switching it off and on again would cost more than it saved.
+</div>
+
+<p class="lead">Two need a decision from you. The third is now answered.</p>
+
+<table>
+<tr><th style="width:8mm">#</th><th style="width:52mm">What</th><th>Why it matters</th></tr>
+<tr>
+  <td><b>1</b></td>
+  <td><b>Which route made your good dubs?</b><br><span style="color:#0a7a3d"><b>ANSWERED &mdash; your own engine did all of it</b></span></td>
+  <td>Settled by examining the dub you approved, which we saved off the test machine before deleting it. Every file that job left behind was written by the engine's own code &mdash; including <code>chirp_wire.py</code>, one of the five files we fingerprint to prove the tuning is intact. The engine transcribed it, timed it, translated it, cloned the voices and rendered it. Nothing ran outside the box. So the website simply drives the engine's own four steps in order and changes nothing.</td>
+</tr>
+<tr>
+  <td><b>2</b></td>
+  <td><b>The HuggingFace key</b><br><span style="color:#55606a">Needs your go-ahead</span></td>
+  <td>It is saved in a project file and needs replacing. But it is in daily use, and replacing it carelessly makes every character in a dub come out in one voice instead of separate cloned voices. It should be done during planned maintenance with a backup ready, not in a rush.</td>
+</tr>
+<tr>
+  <td><b>3</b></td>
+  <td><b>Disk resize and encryption together</b><br><span style="color:#55606a">Needs your go-ahead</span></td>
+  <td>The box's disk is not encrypted, and it is about to hold paying customers' videos. Encrypting means building a fresh disk, which needs a short planned outage. Since a fresh disk can be any size, <strong>do the 250 GB resize at the same time</strong> &mdash; one outage instead of two, and the resize comes free.</td>
+</tr>
+</table>
+
+<div class="box good" style="margin-top:8mm">
+<span class="t">The whole plan in five sentences</span>
+<ol style="margin-bottom:0">
+<li>Build a normal, well-secured website in front of your dubbing engine, and treat the engine as a
+sealed box that we switch on, feed, read from, and switch off.</li>
+<li>The website can choose the language and nothing else, so your dub quality cannot drift and
+nobody can meddle with the engine through it.</li>
+<li>Text goes in the database and is kept forever; the dubbed video goes to Cloudflare R2 and is kept
+<strong>7 days</strong>, where the customer can download it unlimited times at no cost to you, and is
+then deleted for their privacy; scratch files are wiped after every job.</li>
+<li>The expensive box switches itself on when someone uploads and off 10 minutes after the last
+job, having first checked that nothing is transcribing, translating or rendering.</li>
+<li>No key, no password and nobody else's data ever reaches the browser, and every question asked
+of the database carries "and this belongs to the person logged in" inside it.</li>
+</ol>
+</div>
+
+<p style="margin-top:8mm; font-size:9.5pt; color:#55606a">
+Simple companion to <code>docs/Website_Backend_Plan_v2.pdf</code>, which has the exact settings,
+table designs, endpoint lists and figures behind everything summarised here. Source file:
+<code>docs/backend_explained_simply.html</code>.
+</p>
+</div>
+
+</body>
+</html>

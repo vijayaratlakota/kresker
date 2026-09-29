@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dubbing Website - Backend Plan</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 9.4pt; line-height: 1.45; color: #14171a; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 2mm 0; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm 0; padding-bottom: 1.2mm;
+       border-bottom: 1.6pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm 0; page-break-after: avoid; color: #0b3d6b; }
+  h4 { font-size: 9.6pt; margin: 3.5mm 0 1mm 0; page-break-after: avoid; }
+  p  { margin: 0 0 2mm 0; }
+  ul, ol { margin: 0 0 2mm 0; padding-left: 5mm; }
+  li { margin: 0 0 1mm 0; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt;
+              background: #f2f4f6; padding: 0.3mm 1mm; border-radius: 1mm; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8pt;
+        background: #f6f8fa; border: 0.4pt solid #d5dbe0; border-left: 2.4pt solid #6b7d8f;
+        padding: 2mm 2.5mm; margin: 1.5mm 0 2.5mm 0; white-space: pre-wrap;
+        overflow-wrap: break-word; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm 0;
+          font-size: 8.3pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.3mm 1.6mm;
+       font-weight: 600; font-size: 8.1pt; }
+  td { border-bottom: 0.4pt solid #dfe4e8; padding: 1.2mm 1.6mm; vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.m, th.m { font-family: Consolas, monospace; font-size: 7.9pt; }
+  .box { border: 0.5pt solid #c8ced4; border-left: 3pt solid #14171a;
+         background: #f7f9fa; padding: 2.5mm 3mm; margin: 2.5mm 0; page-break-inside: avoid; }
+  .warn { border-left-color: #a8321a; background: #fdf4f2; }
+  .good { border-left-color: #0a7a3d; background: #f2faf5; }
+  .note { border-left-color: #1a5fa8; background: #f2f7fd; }
+  .cover { text-align: left; padding-top: 30mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #4a5560; margin-top: 1mm; }
+  .cover .meta { margin-top: 14mm; font-family: Consolas, monospace; font-size: 9pt;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 4mm; }
+  .cover .meta div { margin-bottom: 1.4mm; }
+  .newpage { page-break-before: always; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; font-size: 9.2pt; }
+  .toc td.n { width: 9mm; font-family: Consolas, monospace; color: #4a5560; }
+  .small { font-size: 8pt; color: #4a5560; }
+  .tag { display: inline-block; font-family: Consolas, monospace; font-size: 7.4pt;
+         padding: 0.3mm 1.4mm; border-radius: 1mm; background: #e3e8ec; }
+  .tag.p1 { background: #0a7a3d; color: #fff; }
+  .tag.p2 { background: #1a5fa8; color: #fff; }
+  .tag.p3 { background: #7a5a1a; color: #fff; }
+  .flow { font-family: Consolas, monospace; font-size: 7.8pt; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Dubbing Website &mdash; Backend Plan</h1>
+  <div class="sub">Users upload a video, choose a language, and get a dubbed video back
+  &mdash; built around the existing pipeline without changing it</div>
+
+  <div class="box good" style="margin-top:10mm">
+    <strong>The one rule this whole design is built around.</strong> The dubbing pipeline is
+    finished and correct. This plan <strong>does not modify a single line of it</strong>. The
+    website talks to VoiceStudio through the same HTTP endpoints your browser already drives,
+    in the same order, with the same settings. VoiceStudio cannot tell the difference between
+    your browser and our server, so the output quality cannot change. Every new piece of
+    software described here lives <em>outside</em> the GPU box.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written</strong>&nbsp;&nbsp;2026-08-22</div>
+    <div><strong>Scope</strong>&nbsp;&nbsp;Backend only: API, database, auth, payments, storage, GPU lifecycle, security, deployment</div>
+    <div><strong>Existing asset</strong>&nbsp;&nbsp;VoiceStudio 0.4.2 on EC2 g4dn.xlarge, container <code>omnivoice</code>, ap-south-1</div>
+    <div><strong>Status</strong>&nbsp;&nbsp;Plan for review. No code written yet.</div>
+  </div>
+</div>
+
+<h2>Contents</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>What we are building, and what stays untouched</td></tr>
+<tr><td class="n">2</td><td>The shape of the system</td></tr>
+<tr><td class="n">3</td><td>Technology choices, and why each one</td></tr>
+<tr><td class="n">4</td><td>The complete journey of one video</td></tr>
+<tr><td class="n">5</td><td>GPU on demand: start on upload, stop after 5 idle minutes</td></tr>
+<tr><td class="n">6</td><td>Database design</td></tr>
+<tr><td class="n">7</td><td>Security, in detail</td></tr>
+<tr><td class="n">8</td><td>Subscriptions, plans and quota</td></tr>
+<tr><td class="n">9</td><td>Your own access to the database</td></tr>
+<tr><td class="n">10</td><td>Moving everything to another AWS account</td></tr>
+<tr><td class="n">11</td><td>GitHub: private repository and deployment</td></tr>
+<tr><td class="n">12</td><td>Monitoring, alerts and what breaks</td></tr>
+<tr><td class="n">13</td><td>Build order and effort</td></tr>
+<tr><td class="n">14</td><td>What it costs to run</td></tr>
+<tr><td class="n">15</td><td>Questions I need answered before writing code</td></tr>
+<tr><td class="n">16</td><td>What I have not verified</td></tr>
+</table>
+
+<h2 class="newpage">1. What we are building, and what stays untouched</h2>
+
+<h3>1.1 The product, in one paragraph</h3>
+<p>A visitor signs up, logs in, uploads a video, picks the language they want it dubbed into,
+and pays or spends quota. The job goes into a queue. The GPU machine starts by itself, the
+existing pipeline transcribes, translates and renders exactly as it does today, and the
+finished video appears in the user's dashboard for download. When nobody has work for the GPU
+for five minutes, it shuts itself down so it costs nothing.</p>
+
+<h3>1.2 The boundary that protects the pipeline</h3>
+<p>There are two systems, and the line between them is a network call:</p>
+<table>
+<tr><th>Existing &mdash; do not touch</th><th>New &mdash; everything we build</th></tr>
+<tr><td>The GPU box: VoiceStudio 0.4.2, the patched backend, chirp_3, forced alignment, the onset snap, the speaker cloning, all the settings in the pipeline handbook</td><td>Web API, database, login, payments, upload handling, the job queue, the GPU on/off controller, the website itself</td></tr>
+<tr><td>Reached only through its own HTTP API on port 3900</td><td>Calls that API the same way the browser does</td></tr>
+<tr><td>Zero code changes</td><td>All new code, in its own private repository</td></tr>
+</table>
+<div class="box good">
+<strong>Why quality cannot drop.</strong> The pipeline's behaviour is decided by the module
+defaults inside the container &mdash; recogniser, timing source, star tokens, band gate, snap
+settings. We change none of them and we set no environment variables. We send the same
+requests with the same parameters. Our job is scheduling and plumbing, not dubbing.
+</div>
+
+<h3>1.3 The one honest complication</h3>
+<div class="box warn">
+Today the translated text lives <strong>in your browser</strong>. The job row in VoiceStudio's
+own database has <code>tracks: []</code> and no translated fields &mdash; which is why
+refreshing the page loses the translation. A server cannot rely on a browser to hold that.
+So our backend must <strong>keep the transcript and translation itself</strong>, between the
+translate call and the render call. That is new orchestration on our side, not a change to
+the pipeline: we store what the pipeline returns and hand it back verbatim when we ask it to
+render. Whatever bytes come out of translate are the bytes that go into render.
+</div>
+
+<h2 class="newpage">2. The shape of the system</h2>
+
+<pre class="flow">
+                        Internet
+                            |
+                     [ CloudFront + WAF ]        TLS, rate limiting, bot rules
+                            |
+                   +--------+---------+
+                   |                  |
+            [ Frontend ]        [ Web API ]              our code, private subnet
+          static site, S3      FastAPI on ECS Fargate
+                                      |
+              +-----------------+-----+------+------------------+
+              |                 |            |                  |
+        [ RDS Postgres ]   [ S3 buckets ]  [ Secrets      [ EventBridge
+         users, jobs,      uploads +        Manager ]      + Lambda ]
+         subscriptions     outputs         all keys        idle watchdog
+              |                                                 |
+              |                                                 | StartInstances
+        [ Worker ]  same image, queue consumer                   | StopInstances
+              |                                                 v
+              +----------------------------------------> [ GPU EC2 g4dn.xlarge ]
+                        private network only                VoiceStudio 0.4.2
+                        security group to security group    UNCHANGED
+</pre>
+
+<h3>2.1 What each piece is responsible for</h3>
+<table>
+<tr><th>Component</th><th>Responsibility</th><th>Never does</th></tr>
+<tr><td><strong>Frontend</strong></td><td>Screens, forms, progress display. Holds a session cookie and nothing else.</td><td>Never holds any key, never talks to the GPU box, never talks to S3 without a URL our API issued.</td></tr>
+<tr><td><strong>Web API</strong></td><td>Signup, login, quota checks, issuing upload URLs, creating jobs, serving status and results.</td><td>Never renders anything. Never blocks for 20 minutes.</td></tr>
+<tr><td><strong>Worker</strong></td><td>Takes one job at a time, drives the VoiceStudio API end to end, stores results, updates state.</td><td>Never accepts requests from the internet.</td></tr>
+<tr><td><strong>Idle watchdog</strong></td><td>Every minute, decides whether the GPU should be running.</td><td>Never stops a machine with work in progress.</td></tr>
+<tr><td><strong>Postgres</strong></td><td>Users, sessions, jobs, the queue itself, subscriptions, usage, audit log.</td><td>Never reachable from the internet.</td></tr>
+<tr><td><strong>S3</strong></td><td>Uploaded videos and finished dubs.</td><td>Never public. No bucket-wide credential ever leaves the server.</td></tr>
+<tr><td><strong>GPU box</strong></td><td>Dubbing, exactly as today.</td><td>Never reachable from the internet, never modified by this project.</td></tr>
+</table>
+
+<h2>3. Technology choices, and why each one</h2>
+<table>
+<tr><th>Layer</th><th>Choice</th><th>Why this one</th></tr>
+<tr><td>API language</td><td><strong>Python 3.11 + FastAPI</strong></td><td>The pipeline is Python. One language across the project means one set of skills, and the code that talks to VoiceStudio can reuse patterns we already understand. FastAPI gives request validation for free, which is a security feature, not a convenience.</td></tr>
+<tr><td>Server process</td><td>Uvicorn behind Gunicorn</td><td>Standard, boring, well understood.</td></tr>
+<tr><td>Database</td><td><strong>PostgreSQL on Amazon RDS</strong></td><td>Relational data (users, subscriptions, jobs) with real transactions. Also acts as the job queue, which removes a whole extra service. Postgres dumps and restores cleanly, which is what makes account migration realistic.</td></tr>
+<tr><td>Database access</td><td>SQLAlchemy 2.x + Alembic</td><td>Alembic gives versioned, repeatable schema migrations &mdash; the same mechanism that lets us rebuild the schema in a fresh AWS account with one command.</td></tr>
+<tr><td>Queue</td><td><strong>Postgres table with <code>FOR UPDATE SKIP LOCKED</code></strong></td><td>We have exactly one GPU, so we need strict one-at-a-time processing, not a distributed queue. Postgres does this correctly in about 15 lines and adds nothing to migrate. Redis or SQS would be more moving parts for no benefit at this scale.</td></tr>
+<tr><td>File storage</td><td><strong>S3</strong>, encrypted with a customer-managed KMS key</td><td>Videos are large; they must never pass through the API server's memory or disk. Browsers upload straight to S3 using a short-lived URL our API signs.</td></tr>
+<tr><td>Compute for API and worker</td><td><strong>ECS Fargate</strong></td><td>No server to patch, no SSH, scales to zero-ish, and the task definition is a file in git. A single small EC2 with Docker Compose is cheaper (see section 14) and is a legitimate Phase 1 choice; Fargate is the one I would live with.</td></tr>
+<tr><td>Front door</td><td><strong>CloudFront + AWS WAF</strong></td><td>TLS, caching for the static site, and managed rules against common attacks plus a rate limit, before any request reaches our code.</td></tr>
+<tr><td>Authentication</td><td><strong>Our own, in Postgres</strong> &mdash; Argon2id passwords, opaque session cookies</td><td>Deliberate, and the reason matters: <strong>AWS Cognito cannot export password hashes.</strong> Moving accounts to another AWS account would force every user to reset their password. Since easy migration with data is a hard requirement, authentication has to live in our own database.</td></tr>
+<tr><td>Payments</td><td><strong>Razorpay</strong> (or Stripe)</td><td>Razorpay suits Indian cards and UPI; Stripe if the audience is international. Either way we never touch card data &mdash; the provider's hosted checkout does, so we stay out of PCI scope. Truth about what was paid comes from signed webhooks, never from the browser.</td></tr>
+<tr><td>Email</td><td>Amazon SES</td><td>Verification, password reset, "your dub is ready". Cheap and in-account.</td></tr>
+<tr><td>Secrets</td><td><strong>AWS Secrets Manager</strong></td><td>Database password, Razorpay keys, SES, the GPU box's HF token, the Gemini proxy key, the Google service account. Read at boot by IAM role. Nothing in code, nothing in git, nothing in an environment variable committed anywhere.</td></tr>
+<tr><td>Infrastructure as code</td><td><strong>Terraform</strong></td><td>This is the migration plan. Every bucket, role, security group and database is described in files; a new AWS account is <code>terraform apply</code> with different variables, not a week of clicking.</td></tr>
+<tr><td>Container registry</td><td>ECR (per account)</td><td>Images rebuilt from git in the new account, so nothing is tied to the old one.</td></tr>
+<tr><td>CI/CD</td><td>GitHub Actions with <strong>OIDC</strong></td><td>Deploys assume an AWS role by short-lived token. No permanent AWS keys stored in GitHub, which is one of the most common ways companies get breached.</td></tr>
+<tr><td>Frontend</td><td>Next.js or plain React, static, on S3 + CloudFront</td><td>Out of scope for this document, but noted so the boundary is clear: it is a static site that calls our API. It never holds a secret.</td></tr>
+</table>
+
+<h2 class="newpage">4. The complete journey of one video</h2>
+<p>Every step names who does the work. Notice that the browser never speaks to the GPU box, and
+never receives anything except its own data and short-lived URLs.</p>
+
+<h3>4.1 Signing up and logging in</h3>
+<ol>
+<li><strong>Browser</strong> posts email and password to <code>POST /api/auth/signup</code> over HTTPS.</li>
+<li><strong>API</strong> checks the password against a minimum strength rule and against a list of known-breached passwords, hashes it with Argon2id, creates the user as <em>unverified</em>, and emails a single-use verification link that expires in 24 hours.</li>
+<li><strong>API</strong> returns success without saying whether the email already existed &mdash; otherwise the endpoint becomes a tool for discovering who has an account.</li>
+<li>On <code>POST /api/auth/login</code>, the API verifies the hash, then creates a session: a 256-bit random token. <strong>Only a SHA-256 hash of that token is stored.</strong> The token itself goes back as an <code>HttpOnly; Secure; SameSite=Lax</code> cookie.</li>
+<li>Every later request carries the cookie automatically. JavaScript cannot read it, so a cross-site scripting bug cannot steal the session.</li>
+</ol>
+
+<h3>4.2 Uploading a video</h3>
+<ol>
+<li><strong>Browser</strong> asks <code>POST /api/uploads</code> for permission, sending the filename, size and content type.</li>
+<li><strong>API</strong> checks the session, checks the user's plan and remaining quota, checks the size against the plan's ceiling, then generates a <strong>presigned S3 PUT URL</strong>: valid 15 minutes, one specific object key <code>uploads/{user_id}/{upload_id}.mp4</code>, with the content length and type pinned.</li>
+<li><strong>Browser</strong> uploads directly to S3. The video never passes through our API server.</li>
+<li><strong>Browser</strong> calls <code>POST /api/jobs</code> with the upload id, source language, target language.</li>
+<li><strong>API</strong> verifies the object actually exists and belongs to that user, runs <code>ffprobe</code> against it to read the real duration and codec &mdash; <strong>never trusting the file extension</strong> &mdash; rejects anything that is not really a video or exceeds the plan's duration limit, then writes a <code>jobs</code> row with state <code>queued</code> and returns the job id.</li>
+</ol>
+
+<h3>4.3 The job runs</h3>
+<ol>
+<li><strong>API</strong>, on enqueue, checks whether the GPU is running. If not, it calls <code>StartInstances</code> and marks the job <code>preparing</code>.</li>
+<li><strong>Worker</strong> claims exactly one queued job with <code>SELECT ... FOR UPDATE SKIP LOCKED</code>, so two workers can never take the same job even if we run two by accident.</li>
+<li><strong>Worker</strong> waits for the GPU box to answer <code>/sysinfo</code> on the private network, with a timeout and a bounded number of retries.</li>
+<li><strong>Worker</strong> copies the video from S3 to the GPU box and drives VoiceStudio exactly as the browser does: upload, transcribe, translate, generate, export. It reads progress from the task stream and writes it to <code>job_events</code> so the user sees real progress.</li>
+<li><strong>Crucially</strong>, the worker stores the transcript and the translated lines in our database between the translate and generate calls, then passes them back verbatim. This is the piece the browser used to do.</li>
+<li>When the mux completes, the <strong>worker</strong> pulls the finished file to S3 under <code>outputs/{user_id}/{job_id}.mp4</code>, records the duration billed in <code>usage_ledger</code>, sets the job <code>done</code>, and sends the "ready" email.</li>
+<li><strong>Worker</strong> deletes the working copies from the GPU box, so user videos do not accumulate on a shared machine.</li>
+</ol>
+
+<h3>4.4 Getting the result</h3>
+<ol>
+<li><strong>Browser</strong> polls <code>GET /api/jobs/{id}</code> (or holds an SSE stream) and shows progress.</li>
+<li>When done, it asks <code>GET /api/jobs/{id}/download</code>. The <strong>API</strong> checks the session, checks that this job belongs to this user, and returns a <strong>presigned GET URL valid for 15 minutes</strong>.</li>
+<li>The bucket itself stays private forever. There is no public link, and an old URL stops working.</li>
+</ol>
+
+<h3>4.5 The API surface</h3>
+<table>
+<tr><th>Method and path</th><th>Purpose</th><th>Who may call it</th></tr>
+<tr><td class="m">POST /api/auth/signup</td><td>create account, send verification</td><td>anyone, rate limited</td></tr>
+<tr><td class="m">POST /api/auth/verify</td><td>confirm email</td><td>anyone with a valid token</td></tr>
+<tr><td class="m">POST /api/auth/login</td><td>start a session</td><td>anyone, rate limited and lockout</td></tr>
+<tr><td class="m">POST /api/auth/logout</td><td>revoke this session</td><td>logged in</td></tr>
+<tr><td class="m">POST /api/auth/password/forgot</td><td>send reset link</td><td>anyone, rate limited</td></tr>
+<tr><td class="m">POST /api/auth/password/reset</td><td>set a new password, revoke all sessions</td><td>valid single-use token</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/me</td><td>profile, plan, quota left</td><td>logged in</td></tr>
+<tr><td class="m">POST /api/uploads</td><td>issue a presigned upload URL</td><td>logged in, verified, within quota</td></tr>
+<tr><td class="m">POST /api/jobs</td><td>create a dubbing job</td><td>logged in, verified, within quota</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/jobs</td><td>my jobs, paginated</td><td>owner only</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/jobs/{id}</td><td>one job's state and progress</td><td>owner only</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/jobs/{id}/download</td><td>presigned download URL</td><td>owner only</td></tr>
+<tr><td class="m">POST /api/jobs/{id}/cancel</td><td>cancel if not finished</td><td>owner only</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/plans</td><td>list plans</td><td>anyone</td></tr>
+<tr><td class="m">POST /api/billing/checkout</td><td>start a subscription</td><td>logged in</td></tr>
+<tr><td class="m">POST /api/billing/webhook</td><td>payment provider callback</td><td>provider only, signature verified</td></tr>
+<tr><td class="m">GET&nbsp;&nbsp;/api/health</td><td>liveness</td><td>anyone</td></tr>
+</table>
+<div class="box note">
+There is <strong>no endpoint that proxies to VoiceStudio</strong>, and no endpoint that takes a
+URL or a file path from the client and fetches it. Both are deliberate: the first would expose
+an unauthenticated engine to the internet, the second is how server-side request forgery
+happens.
+</div>
+
+<h2 class="newpage">5. GPU on demand: start on upload, stop after 5 idle minutes</h2>
+<p>This is the part that decides the bill, and the part where a bug is most expensive &mdash;
+either money burned on an idle GPU, or a render killed halfway.</p>
+
+<h3>5.1 The rule, stated precisely</h3>
+<pre>START  when a job is created and no GPU instance is running.
+
+STOP   when ALL of these are true:
+         - no job is in state 'preparing' or 'processing'
+         - no job is in state 'queued'
+         - the last job finished at least 5 minutes ago
+         - the instance is actually running</pre>
+<p>The check runs <strong>every minute</strong>. Because it requires the queue to be empty as
+well as idle, a burst of uploads keeps the machine up and processes them back to back, which is
+both faster for users and cheaper than starting and stopping repeatedly.</p>
+
+<h3>5.2 How it is implemented</h3>
+<table>
+<tr><th>Piece</th><th>What it does</th></tr>
+<tr><td><strong>Start</strong></td><td>Inside <code>POST /api/jobs</code>. Reads the <code>gpu_state</code> row, and if the instance is not running calls EC2 <code>StartInstances</code>. Idempotent: two simultaneous uploads cannot start two machines, because the row is locked while the decision is made.</td></tr>
+<tr><td><strong>Readiness</strong></td><td>The worker polls <code>http://&lt;private-ip&gt;:3900/sysinfo</code>. The container's restart policy is already <code>unless-stopped</code>, so it comes back on boot by itself. Expect about 2 minutes for the instance plus about 1 minute for the model to load.</td></tr>
+<tr><td><strong>Stop</strong></td><td>An <strong>EventBridge rule every 1 minute</strong> invokes a small Lambda. The Lambda reads the database, applies the four conditions above, and calls <code>StopInstances</code>. It lives outside the API on purpose, so an API restart or crash cannot leave the GPU running.</td></tr>
+<tr><td><strong>Truth</strong></td><td>The database is the only source of truth for "is there work". The Lambda never guesses from CPU load, which would be fooled by a model still loading.</td></tr>
+</table>
+
+<h3>5.3 The safety rules that stop this being dangerous</h3>
+<div class="box warn">
+<ul>
+<li><strong>Never stop with work in flight.</strong> The Lambda refuses if any job is
+<code>preparing</code> or <code>processing</code>. A render takes about 7 minutes for 156 lines;
+killing it wastes the whole job.</li>
+<li><strong>If the database is unreachable, do nothing.</strong> Failing to stop costs money;
+stopping wrongly destroys a user's job. So the failure mode is deliberately the expensive-but-safe
+one, and it raises an alarm.</li>
+<li><strong>A stuck job must not hold the GPU for ever.</strong> Any job <code>processing</code>
+for longer than a generous ceiling (say 90 minutes) is marked failed, the user is told, and an
+alert fires. Without this, one bad job pins a GPU indefinitely.</li>
+<li><strong>A cost alarm independent of all of it.</strong> A CloudWatch alarm on the instance
+running more than N hours in a day emails you regardless of what the software believes.</li>
+<li><strong>Graceful shutdown.</strong> Stopping the instance sends SIGTERM to the container. We
+never run <code>docker stop</code> ourselves &mdash; with the <code>unless-stopped</code> policy
+a manually stopped container would not restart on the next boot, which would look like a total
+outage.</li>
+</ul>
+</div>
+
+<h3>5.4 What the user sees while the GPU boots</h3>
+<p>Honest progress, not a spinner that lies: <em>"Starting the dubbing engine (about 2
+minutes)"</em>, then transcription, translation and rendering percentages from the real task
+stream. For a 12-minute video the whole thing is roughly 20 minutes, so the flow is
+"we will email you", with the page updating live if they stay.</p>
+
+<h2 class="newpage">6. Database design</h2>
+<p>PostgreSQL. Every table has <code>id</code> (UUID), <code>created_at</code> and
+<code>updated_at</code>. Money is stored in integer minor units, never floating point.</p>
+
+<h3>6.1 Accounts and access</h3>
+<table>
+<tr><th>Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">users</td><td>email (unique, lowercased), password_hash, email_verified_at, status, role, created_at</td><td><code>role</code> is <code>user</code> or <code>admin</code>. <code>status</code> allows suspension without deletion.</td></tr>
+<tr><td class="m">sessions</td><td>user_id, token_sha256 (unique), expires_at, absolute_expires_at, revoked_at, ip, user_agent</td><td>Only the hash is stored. Sliding expiry with a hard ceiling. Deleting a row logs that device out instantly.</td></tr>
+<tr><td class="m">email_tokens</td><td>user_id, purpose, token_sha256, expires_at, used_at</td><td>One table for verification and password reset. Single use, enforced by <code>used_at</code>.</td></tr>
+<tr><td class="m">login_attempts</td><td>email, ip, at, success</td><td>Feeds rate limiting and lockout, and gives you an audit trail after an incident.</td></tr>
+</table>
+
+<h3>6.2 Work</h3>
+<table>
+<tr><th>Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">uploads</td><td>user_id, s3_key, bytes, content_type, probed_duration_s, probed_codec, status</td><td>What ffprobe actually found, not what the client claimed.</td></tr>
+<tr><td class="m">jobs</td><td>user_id, upload_id, source_lang, target_lang, state, attempts, vs_job_id, output_s3_key, error_code, queued_at, started_at, finished_at, expires_at</td><td>The queue lives here. <code>state</code> is one of <code>queued, preparing, processing, done, failed, cancelled</code>. <code>vs_job_id</code> links to VoiceStudio's own job for debugging.</td></tr>
+<tr><td class="m">job_artifacts</td><td>job_id, kind, payload (JSONB)</td><td><strong>Where the transcript and translated lines are kept</strong> between translate and render &mdash; the state the browser used to hold. Also stores the timing report so quality can be audited per job.</td></tr>
+<tr><td class="m">job_events</td><td>job_id, at, state, percent, detail</td><td>Append-only progress and error history. Drives the user's progress bar and your debugging.</td></tr>
+<tr><td class="m">gpu_state</td><td>instance_id, desired_state, last_seen_running_at, last_job_finished_at, updated_at</td><td>One row. Locked while start/stop decisions are made so they cannot race.</td></tr>
+</table>
+
+<h3>6.3 Money</h3>
+<table>
+<tr><th>Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">plans</td><td>code, name, price_minor, currency, minutes_per_period, max_video_minutes, max_concurrent_jobs, active</td><td>Limits live in the database, not in code, so a plan can change without a deploy.</td></tr>
+<tr><td class="m">subscriptions</td><td>user_id, plan_id, provider, provider_subscription_id, status, current_period_start, current_period_end, cancel_at</td><td>Status only ever changes from a verified webhook.</td></tr>
+<tr><td class="m">payments</td><td>user_id, provider_payment_id (unique), amount_minor, currency, status, at</td><td>The unique provider id is what makes replayed webhooks harmless.</td></tr>
+<tr><td class="m">usage_ledger</td><td>user_id, job_id, minutes_charged, at, note</td><td><strong>Append-only.</strong> Quota remaining is computed by summing this against the plan allowance &mdash; never by decrementing a counter, which drifts and cannot be audited.</td></tr>
+<tr><td class="m">webhook_events</td><td>provider, provider_event_id (unique), received_at, processed_at, signature_ok</td><td>Idempotency: the same event arriving twice is recorded once and acted on once.</td></tr>
+</table>
+
+<h3>6.4 Security records</h3>
+<table>
+<tr><th>Table</th><th>Purpose</th></tr>
+<tr><td class="m">audit_log</td><td>Who did what, when, from where: logins, password changes, plan changes, admin actions, job deletions. Append-only, never updated.</td></tr>
+</table>
+
+<div class="box note">
+<strong>Two design decisions worth defending.</strong> First, the queue is a table rather than a
+separate queue service &mdash; with one GPU, correctness means strict serialisation, and
+<code>FOR UPDATE SKIP LOCKED</code> gives exactly that with nothing extra to migrate. Second,
+quota is a ledger rather than a counter. A counter that gets decremented is impossible to
+reconcile when something half-fails; a ledger can always be recomputed and explained to a
+customer who disputes a charge.
+</div>
+
+<h2 class="newpage">7. Security, in detail</h2>
+
+<h3>7.1 Passwords</h3>
+<ul>
+<li><strong>Argon2id</strong>, memory 64 MB, 3 iterations, 4 lanes. This is the current
+recommendation and is deliberately slow and memory-hungry so that a stolen database cannot be
+brute-forced cheaply on GPUs.</li>
+<li>Each hash carries its own random salt, handled by the library.</li>
+<li>Minimum 10 characters, checked against a known-breached password list. No forced special
+characters &mdash; that produces predictable passwords.</li>
+<li>Passwords are never logged, never returned by any endpoint, and never sent by email.</li>
+<li>On password change or reset, <strong>every session for that user is revoked</strong>, so a
+stolen cookie dies with the password.</li>
+</ul>
+
+<h3>7.2 Sessions and cookies</h3>
+<table>
+<tr><th>Property</th><th>Value</th><th>What it prevents</th></tr>
+<tr><td>Token</td><td>256-bit random, from the OS random source</td><td>Guessing</td></tr>
+<tr><td>Storage</td><td>Only SHA-256 of the token, in <code>sessions</code></td><td>A database leak does not yield usable session tokens</td></tr>
+<tr><td class="m">HttpOnly</td><td>on</td><td>JavaScript cannot read the cookie, so an XSS bug cannot steal the session</td></tr>
+<tr><td class="m">Secure</td><td>on</td><td>Never sent over plain HTTP</td></tr>
+<tr><td class="m">SameSite</td><td><code>Lax</code></td><td>The cookie is not attached to cross-site POSTs, killing most CSRF</td></tr>
+<tr><td class="m">Path / Domain</td><td><code>/</code>, host-only (no <code>Domain</code> attribute)</td><td>Subdomains cannot read it</td></tr>
+<tr><td>Lifetime</td><td>7 days sliding, 30 days absolute</td><td>An abandoned session eventually dies no matter what</td></tr>
+<tr><td>Rotation</td><td>New token issued on login and on privilege change</td><td>Session fixation</td></tr>
+</table>
+<p><strong>Why sessions and not JWTs.</strong> A JWT cannot be revoked before it expires without
+keeping a server-side blocklist &mdash; at which point you have a session table with extra
+steps. Opaque tokens in a table mean "log this device out now" actually works.</p>
+
+<h3>7.3 CSRF, CORS and headers</h3>
+<ul>
+<li><code>SameSite=Lax</code> plus a <strong>required <code>X-CSRF-Token</code> header</strong> on
+every state-changing request, matching a per-session value. Two independent defences, because
+browsers and SameSite behaviour vary.</li>
+<li><strong>CORS allows exactly one origin</strong> &mdash; our own site &mdash; with credentials.
+No wildcard, ever.</li>
+<li>Response headers: <code>Strict-Transport-Security</code> with a long max-age,
+<code>Content-Security-Policy</code> with no inline scripts, <code>X-Content-Type-Options:
+nosniff</code>, <code>Referrer-Policy: strict-origin-when-cross-origin</code>, and
+<code>X-Frame-Options: DENY</code>.</li>
+</ul>
+
+<h3>7.4 Authorization &mdash; the rule that prevents users seeing each other's videos</h3>
+<div class="box warn">
+<strong>Every query that touches user data is scoped by the session's user id, in the query
+itself.</strong>
+<pre>SELECT * FROM jobs WHERE id = :job_id AND user_id = :session_user_id</pre>
+Not "fetch the job, then compare" &mdash; that pattern is how one forgotten <code>if</code>
+becomes a data breach. Job ids are UUIDs so they cannot be enumerated, but that is a second
+layer, never the defence itself. A job that does not belong to the caller returns
+<strong>404, not 403</strong>, so the API does not confirm that someone else's job exists.
+Admin endpoints, if we add them, live under a separate path with a separate role check and are
+written to <code>audit_log</code> every time.
+</div>
+
+<h3>7.5 Secrets &mdash; how the VoiceStudio keys never leak</h3>
+<p>This was an explicit requirement, so here is the full chain.</p>
+<table>
+<tr><th>Secret</th><th>Lives in</th><th>Reaches</th><th>Never</th></tr>
+<tr><td>Database password</td><td>Secrets Manager, rotated</td><td>API and worker at boot, by IAM role</td><td>Not in code, git, or any client</td></tr>
+<tr><td>Razorpay / Stripe keys</td><td>Secrets Manager</td><td>API only</td><td>The browser only ever gets a checkout session id, never a secret key</td></tr>
+<tr><td>SES credentials</td><td>IAM role, no key at all</td><td>API</td><td>&mdash;</td></tr>
+<tr><td><strong>GPU box: HF token, Google service account, Gemini proxy key</strong></td><td>Secrets Manager</td><td>Delivered to the instance at boot by its own IAM instance profile</td><td><strong>Never baked into an AMI, never in a Docker image, never in git, never sent to the browser</strong></td></tr>
+<tr><td>Session signing / CSRF secret</td><td>Secrets Manager</td><td>API only</td><td>&mdash;</td></tr>
+</table>
+<ul>
+<li><strong>The frontend receives exactly three kinds of thing:</strong> its own session cookie,
+its own data, and presigned URLs that work for one object for 15 minutes. Nothing else. There is
+no configuration file shipped to the browser containing any key.</li>
+<li><strong>The GPU box's HF token is currently visible in the container environment.</strong> It
+should be rotated before launch and delivered from Secrets Manager thereafter, because anything
+in a container environment shows up in logs and diagnostics sooner or later.</li>
+<li><strong>Presigned URLs are treated as secrets.</strong> They contain a signature, so they are
+never written to logs and never put in a URL that could end up in a referrer header.</li>
+<li><strong>Git is scanned.</strong> A <code>gitleaks</code> pre-commit hook plus a CI scan on
+every push. Secret scanning and push protection enabled on the GitHub repository.</li>
+</ul>
+
+<h3>7.6 Protecting the GPU box</h3>
+<div class="box warn">
+<strong>VoiceStudio has no authentication of any kind.</strong> A GET to port 3900 returns 200 to
+anyone who can reach it, and the box holds an AWS instance role. That is acceptable today only
+because your firewall allows exactly one home IP address. A public website changes the picture
+completely, so:
+<ul>
+<li>The GPU instance gets <strong>no public IP</strong> and sits in a private subnet.</li>
+<li>Its security group allows port 3900 <strong>only from the worker's security group</strong>
+&mdash; not from an IP range, and not from the internet.</li>
+<li>Its IAM role is narrowed to only what the pipeline genuinely needs.</li>
+<li>Outbound access for Google Speech and the Gemini proxy goes through a NAT gateway, or the
+instance keeps a public IP with <strong>no inbound rules at all</strong> if we want to avoid the
+NAT cost. Both are safe for inbound; the difference is cost and egress control.</li>
+<li>The website's API never proxies arbitrary requests to it.</li>
+</ul>
+</div>
+
+<h3>7.7 Data at rest and in transit</h3>
+<ul>
+<li><strong>S3</strong>: Block Public Access on at the account level, SSE-KMS with a
+customer-managed key, a bucket policy that <em>denies</em> any request not using TLS, versioning
+on, and access logging.</li>
+<li><strong>RDS</strong>: private subnet, not publicly accessible, encrypted at rest with KMS,
+<code>rds.force_ssl</code> so unencrypted connections are refused, automated backups with
+point-in-time recovery, deletion protection on.</li>
+<li><strong>In transit</strong>: TLS 1.2 or better everywhere, including inside the VPC to RDS.</li>
+<li><strong>Lifecycle</strong>: uploaded source videos deleted after 7 days, outputs after 30
+days (or per plan). Less stored data is less to leak, and it keeps the bill down.</li>
+<li><strong>Deletion</strong>: an account deletion request removes S3 objects, job rows and
+personal fields, and leaves only anonymised billing records that the law requires.</li>
+</ul>
+
+<h3>7.8 Upload safety</h3>
+<ul>
+<li>Size and duration capped per plan, enforced <strong>server-side</strong> after upload using
+<code>ffprobe</code>, because a client can claim anything.</li>
+<li>Content type pinned in the presigned URL; the real container and codec verified afterwards.</li>
+<li>The stored object key is generated by us from the user id and a UUID. <strong>The user's
+filename is never used as a path</strong> &mdash; that is how path traversal happens. The original
+name is kept as a display label only.</li>
+<li>A pathological input &mdash; a 4-hour video on a free plan, a file that probes as audio-only,
+a video with no speech &mdash; is rejected with a clear message before any GPU time is spent.</li>
+</ul>
+
+<h3>7.9 Rate limiting and abuse</h3>
+<table>
+<tr><th>Endpoint</th><th>Limit</th><th>On breach</th></tr>
+<tr><td>login</td><td>5 per account per 15 min, 20 per IP</td><td>Exponential backoff, then temporary lock; the user is emailed</td></tr>
+<tr><td>signup</td><td>3 per IP per hour</td><td>Reject; consider a CAPTCHA if abused</td></tr>
+<tr><td>password reset</td><td>3 per account per hour</td><td>Reject silently</td></tr>
+<tr><td>upload / job creation</td><td>plan's concurrent job limit, plus a daily ceiling</td><td>Reject with the reason</td></tr>
+<tr><td>everything</td><td>WAF rate rule at the edge</td><td>Blocked before reaching our code</td></tr>
+</table>
+<p>Timing-safe comparison for all tokens, and a deliberate constant-time-ish response on login
+whether or not the email exists, so the endpoint cannot be used to enumerate customers.</p>
+
+<h3>7.10 Logging &mdash; and what must never be logged</h3>
+<ul>
+<li>Structured JSON logs to CloudWatch, with a request id threaded through, retention set
+explicitly.</li>
+<li><strong>Never logged:</strong> passwords, session tokens or cookies, reset tokens, presigned
+URLs, payment card data, full request bodies on auth endpoints.</li>
+<li><strong>Always logged:</strong> user id (not email) for actions, job state changes, admin
+actions, webhook signature results, and every authorization failure.</li>
+<li>Errors go to Sentry with PII scrubbing on.</li>
+</ul>
+
+<h2 class="newpage">8. Subscriptions, plans and quota</h2>
+
+<h3>8.1 How money is handled without touching card data</h3>
+<ol>
+<li>The user picks a plan. Our API creates a checkout session with Razorpay or Stripe and returns
+only an opaque id.</li>
+<li>The provider's own hosted page takes the card details. <strong>They never reach our
+servers</strong>, which keeps us out of PCI scope entirely.</li>
+<li>The provider calls <code>POST /api/billing/webhook</code>. We <strong>verify the
+signature</strong> before reading the body, record the event id in
+<code>webhook_events</code>, and ignore duplicates.</li>
+<li>Only then does the subscription become active. <strong>The browser is never believed about
+payment.</strong> A user who closes the tab mid-payment is still upgraded when the webhook lands;
+a user who forges a "success" call to our API achieves nothing.</li>
+</ol>
+
+<h3>8.2 Quota, enforced in one place</h3>
+<pre>minutes_used_this_period = SUM(usage_ledger.minutes_charged) since period start
+minutes_left             = plan.minutes_per_period - minutes_used_this_period</pre>
+<p>Checked at two moments: when the upload URL is requested (fail early, before a big upload) and
+again when the job is created (because time passes and other jobs may have run). Billing is on
+<strong>video duration as measured by ffprobe</strong>, decided before work starts, so a user
+always knows the cost in advance. A failed job writes no usage row &mdash; nobody pays for our
+bugs.</p>
+
+<h2>9. Your own access to the database</h2>
+<p>The database is private, which means no public endpoint to attack &mdash; and it still needs to
+be usable by you.</p>
+<table>
+<tr><th>Route</th><th>How</th><th>Why this way</th></tr>
+<tr><td><strong>Recommended: SSM tunnel</strong></td><td><code>aws ssm start-session --target &lt;instance&gt; --document-name AWS-StartPortForwardingSessionToRemoteHost</code>, then point pgAdmin or DBeaver at <code>localhost:5432</code></td><td>No public bastion, no SSH keys to lose, every session is IAM-authenticated and recorded in CloudTrail. You get a normal GUI over a private database.</td></tr>
+<tr><td>A read-only login</td><td>A Postgres role with <code>SELECT</code> only, for day-to-day looking</td><td>You cannot accidentally write to production while browsing</td></tr>
+<tr><td>Admin write access</td><td>A separate role, used deliberately</td><td>Separating "look" from "change" is most of the value</td></tr>
+<tr><td>Later, if useful</td><td>A small internal admin page behind the admin role</td><td>Convenience only &mdash; the tunnel is the real tool</td></tr>
+</table>
+<div class="box note">
+Query the database for support, not the logs. "Why did this user's job fail" is answered by
+<code>jobs</code> plus <code>job_events</code> in one query, which is exactly why
+<code>job_events</code> exists.
+</div>
+
+<h2 class="newpage">10. Moving everything to another AWS account</h2>
+<p>This was a hard requirement, so it shapes several earlier decisions rather than being an
+afterthought. The design rule: <strong>nothing that matters may exist only as a setting somebody
+clicked.</strong></p>
+
+<h3>10.1 What makes it possible</h3>
+<table>
+<tr><th>Decision</th><th>Why it helps migration</th></tr>
+<tr><td>Everything in <strong>Terraform</strong></td><td>A new account is <code>terraform apply</code> with a different account id, region and domain. No manual rebuild.</td></tr>
+<tr><td>No hardcoded account ids or ARNs</td><td>They come from variables and data sources, so nothing has to be found and edited.</td></tr>
+<tr><td><strong>Our own authentication</strong> instead of Cognito</td><td>Password hashes move with the database. Cognito cannot export them, which would force every user to reset their password &mdash; a migration that loses customers is not a migration.</td></tr>
+<tr><td>Plain <strong>PostgreSQL</strong></td><td><code>pg_dump</code> and <code>pg_restore</code> work between any two accounts, and between AWS and anything else.</td></tr>
+<tr><td>Alembic migrations in git</td><td>The schema can be rebuilt from scratch and verified independently of any dump.</td></tr>
+<tr><td>Queue inside Postgres</td><td>Nothing extra to drain, recreate or reconcile.</td></tr>
+<tr><td>Images rebuilt from source</td><td>The new account's registry is filled from git, not copied from the old account.</td></tr>
+<tr><td>Secrets listed by name in Terraform, values entered separately</td><td>The new account gets its own secret values; nothing sensitive travels in a repository.</td></tr>
+</table>
+
+<h3>10.2 The migration runbook</h3>
+<ol>
+<li>In the new account, create the Terraform state bucket and lock table, then
+<code>terraform apply</code> with the new variables. Infrastructure exists, empty.</li>
+<li>Create the secrets in the new account's Secrets Manager (new database password, new
+provider keys, rotated GPU tokens).</li>
+<li>Build and push the images from git to the new account's ECR.</li>
+<li>Run Alembic against the new database to create the schema.</li>
+<li><strong>Freeze writes</strong>: put the API in maintenance mode and let running jobs finish.</li>
+<li><code>pg_dump</code> the old database, <code>pg_restore</code> into the new one, then verify
+row counts table by table and spot-check a few users and jobs.</li>
+<li><code>aws s3 sync</code> both buckets across accounts (a temporary cross-account bucket
+policy, removed afterwards). Verify object counts and a few checksums. <strong>Note KMS: objects
+are re-encrypted with the new account's key on copy</strong> &mdash; expected, and worth
+allowing time for on large buckets.</li>
+<li>Create the GPU instance in the new account from the same AMI or a fresh build, and confirm the
+pipeline handbook's fingerprints match. This is the step to be most careful with: <strong>the
+patched backend must arrive byte-identical</strong>, verified by the MD5s in the handbook.</li>
+<li>Point DNS at the new front door. Watch error rates.</li>
+<li>Keep the old account read-only for a fortnight before deleting anything.</li>
+</ol>
+<div class="box warn">
+<strong>Rehearse it once, into a throwaway account, before you need it.</strong> A migration plan
+that has never been executed is a hypothesis. The rehearsal also produces the real timings, which
+is what tells you how long the maintenance window has to be.
+</div>
+
+<h2>11. GitHub: private repository and deployment</h2>
+<table>
+<tr><th>Item</th><th>Setting</th></tr>
+<tr><td>Repository</td><td><strong>Private.</strong> One repository containing <code>api/</code>, <code>worker/</code>, <code>infra/</code> (Terraform), <code>migrations/</code>, <code>docs/</code>.</td></tr>
+<tr><td>Branch protection</td><td><code>main</code> protected: no direct pushes, review required, CI must pass.</td></tr>
+<tr><td>Secret hygiene</td><td>GitHub secret scanning and push protection on. <code>gitleaks</code> as a pre-commit hook and in CI. A <code>.env.example</code> with names only, never values.</td></tr>
+<tr><td>Dependencies</td><td>Pinned versions with a lock file. Dependabot on. <code>pip-audit</code> in CI.</td></tr>
+<tr><td><strong>AWS credentials in CI</strong></td><td><strong>None.</strong> GitHub Actions assumes an AWS role via OIDC, getting a short-lived token per run. There is no long-lived AWS key to steal.</td></tr>
+<tr><td>Deploy flow</td><td>Push to <code>main</code> &rarr; tests &rarr; build image &rarr; push to ECR &rarr; run Alembic &rarr; update the ECS service. Terraform changes applied deliberately, with a plan reviewed first.</td></tr>
+<tr><td>Environments</td><td><code>staging</code> and <code>production</code>, separate databases and buckets. Never test against production data.</td></tr>
+</table>
+
+<h2 class="newpage">12. Monitoring, alerts and what breaks</h2>
+<h3>12.1 What you get told about</h3>
+<table>
+<tr><th>Alert</th><th>Why it matters</th></tr>
+<tr><td>GPU instance running with no work for over 15 minutes</td><td>The watchdog has failed and money is burning</td></tr>
+<tr><td>GPU instance running more than N hours today</td><td>Cost ceiling, independent of the software</td></tr>
+<tr><td>Any job <code>processing</code> longer than 90 minutes</td><td>Stuck job holding the GPU</td></tr>
+<tr><td>Queue depth above a threshold, or oldest job waiting too long</td><td>Demand exceeds one GPU &mdash; time to decide about a second</td></tr>
+<tr><td>Job failure rate above a few percent</td><td>Something regressed</td></tr>
+<tr><td>Webhook signature failures</td><td>Either a misconfiguration or someone probing</td></tr>
+<tr><td>Authorization failures spiking</td><td>Someone testing for other people's data</td></tr>
+<tr><td>Database CPU, storage or connection ceiling</td><td>The usual capacity warnings</td></tr>
+</table>
+
+<h3>12.2 Failure modes, and what happens</h3>
+<table>
+<tr><th>What fails</th><th>Behaviour</th></tr>
+<tr><td>GPU will not start</td><td>Job stays <code>preparing</code>, retried a bounded number of times, then failed with an honest message. No quota charged.</td></tr>
+<tr><td>VoiceStudio errors mid-render</td><td>Job failed, the error recorded in <code>job_events</code>, user told, no quota charged, alert raised.</td></tr>
+<tr><td>Worker dies mid-job</td><td>The job's claim expires and it returns to <code>queued</code> for one retry. <code>attempts</code> stops an infinite loop.</td></tr>
+<tr><td>Watchdog Lambda fails</td><td>GPU keeps running &mdash; wasteful but safe &mdash; and the cost alarm tells you.</td></tr>
+<tr><td>Payment webhook is late</td><td>The user is not upgraded until it arrives. They are told the payment is confirming.</td></tr>
+<tr><td>S3 upload abandoned</td><td>No job is created; the orphaned object is removed by the lifecycle rule.</td></tr>
+<tr><td>Two uploads at once from one user</td><td>Allowed only up to the plan's concurrency; the GPU still processes strictly one at a time.</td></tr>
+</table>
+
+<h2>13. Build order and effort</h2>
+<p>Rough working days for one developer. The order is chosen so something real works early and
+nothing security-critical is left until last.</p>
+<table>
+<tr><th></th><th>Phase</th><th>Contents</th><th>Days</th></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>Foundations</strong></td><td>Terraform for VPC, RDS, S3, ECR, ECS, secrets. Repository, CI with OIDC, staging environment.</td><td>4&ndash;6</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>Accounts</strong></td><td>Signup, email verification, login, logout, password reset, sessions and cookies, CSRF, rate limits, audit log.</td><td>4&ndash;5</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>One job end to end</strong></td><td>Presigned upload, ffprobe validation, jobs table and queue, worker driving VoiceStudio, artifact storage, output to S3, download URL, progress events.</td><td>6&ndash;8</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>GPU lifecycle</strong></td><td>Start on enqueue, readiness polling, EventBridge and Lambda watchdog, all the safety rules, cost alarm.</td><td>2&ndash;3</td></tr>
+<tr><td><span class="tag p2">2</span></td><td><strong>Money</strong></td><td>Plans, checkout, webhooks with idempotency, subscriptions, usage ledger, quota enforcement, invoices.</td><td>4&ndash;6</td></tr>
+<tr><td><span class="tag p2">2</span></td><td><strong>Operations</strong></td><td>WAF, CloudFront, alarms, Sentry, admin role, SSM database access, runbooks.</td><td>3&ndash;4</td></tr>
+<tr><td><span class="tag p3">3</span></td><td><strong>Hardening and migration rehearsal</strong></td><td>Penetration-style self-review against this document, load test the queue, rehearse the account migration into a throwaway account, restore-from-backup drill.</td><td>4&ndash;5</td></tr>
+</table>
+<p><strong>Roughly 27&ndash;37 working days</strong> to a service you would be willing to charge
+money for. A demo that works for one logged-in user is reachable in about two weeks; the
+difference is everything in Phase 2 and 3, which is what stops a small breach becoming a serious
+one.</p>
+
+<h2 class="newpage">14. What it costs to run</h2>
+<p>ap-south-1, rough monthly figures, low traffic. Prices change, so treat these as the shape of
+the bill rather than a quotation.</p>
+<table>
+<tr><th>Item</th><th class="m">Fixed / month</th><th>Notes</th></tr>
+<tr><td>RDS Postgres <code>db.t4g.micro</code></td><td class="m">$13&ndash;18</td><td>Multi-AZ doubles it; not needed at first</td></tr>
+<tr><td>ECS Fargate, API + worker, small</td><td class="m">$18&ndash;30</td><td>A single <code>t4g.small</code> EC2 with Docker Compose is about $12 and a fair Phase 1 alternative</td></tr>
+<tr><td>CloudFront + WAF</td><td class="m">$8&ndash;15</td><td>WAF managed rules carry a small fixed fee</td></tr>
+<tr><td>S3 storage and requests</td><td class="m">$3&ndash;10</td><td>Depends entirely on the retention policy</td></tr>
+<tr><td>Secrets Manager, SES, CloudWatch, KMS</td><td class="m">$5&ndash;10</td><td>Per-secret and per-log-group charges</td></tr>
+<tr><td>NAT gateway <em>if</em> the GPU goes fully private</td><td class="m">$32+</td><td>Avoidable: keep a public IP with no inbound rules instead</td></tr>
+<tr><td><strong>Fixed subtotal</strong></td><td class="m"><strong>$45&ndash;85</strong></td><td>Without NAT</td></tr>
+<tr><td><strong>GPU, per hour while running</strong></td><td class="m">about $0.53</td><td><code>g4dn.xlarge</code> on demand</td></tr>
+</table>
+<h3>14.1 What one video actually costs</h3>
+<p>From measured pipeline timings: a 12-minute video is roughly 12 minutes of translation and 7
+minutes of rendering, so call it <strong>25 minutes of GPU time including boot</strong>.</p>
+<pre>25 min of g4dn.xlarge   ~ $0.22
+Google Chirp 3 + Gemini ~ $0.05 - 0.20   depends on length and retries
+S3 and transfer         ~ $0.01 - 0.05
+                        -------------------
+per 12-minute video     ~ $0.28 - 0.47</pre>
+<p>The five-minute idle shutdown is what makes this work: a quiet day costs the fixed
+$45&ndash;85 and nothing more. It also means <strong>back-to-back jobs are much cheaper per
+video</strong> than isolated ones, because the boot is amortised &mdash; worth remembering when
+setting prices.</p>
+
+<h2>15. Questions I need answered before writing code</h2>
+<ol>
+<li><strong>Who are the users?</strong> India only (Razorpay, UPI, INR) or international (Stripe,
+USD)? This decides the payment integration.</li>
+<li><strong>Which language pairs do we advertise?</strong> The pipeline handles seven, but English
+placement is measurably weaker and there is an unshipped English-only fix. We should not sell what
+we have not validated.</li>
+<li><strong>Longest video allowed?</strong> This sets timeouts, storage and the free-tier limit.
+Your test material was 3&ndash;13 minutes.</li>
+<li><strong>Can the user edit the transcript or translation before rendering?</strong> A big
+product decision: it is where dubbing quality is really won, but it roughly doubles the backend
+work because the job becomes multi-step with human review in the middle.</li>
+<li><strong>Free tier?</strong> If yes, expect abuse and budget for a CAPTCHA and tighter limits.</li>
+<li><strong>Retention?</strong> How long do we keep a user's source video and output.</li>
+<li><strong>Domain name</strong>, and do you already have one in Route 53?</li>
+<li><strong>How much waiting is acceptable</strong> before we buy a second GPU? That number is the
+trigger for a scaling decision, and it is better agreed now than during an outage.</li>
+</ol>
+
+<h2>16. What I have not verified</h2>
+<div class="box warn">
+<ul>
+<li><strong>The exact VoiceStudio API contract.</strong> I know the endpoints your browser calls
+&mdash; <code>/dub/transcribe</code>, <code>/dub/translate</code>,
+<code>/dub/generate/{job}</code>, <code>/tasks/stream/{task}</code>,
+<code>/dub/media/{job}</code>, <code>/tasks/cancel/{task}</code> &mdash; but not every required
+field of every request body. <strong>Before any code is written, one short discovery pass with the
+box running should capture the precise request and response shapes</strong>, ideally by recording
+a real session. Guessing here would produce a worker that half-works.</li>
+<li><strong>Whether uploading via the API path behaves identically to the desktop client's
+path.</strong> It should, but it must be proved with one end-to-end job whose output is compared
+against a known-good render.</li>
+<li><strong>Boot-to-ready time</strong> was inferred from logs at roughly 2 minutes plus about a
+minute of model load. Worth measuring properly, because it is what the user waits through.</li>
+<li><strong>Concurrency inside VoiceStudio.</strong> I have assumed strictly one job at a time.
+That matches one GPU and everything observed, but it has not been tested by deliberately sending
+two.</li>
+<li><strong>Cost figures</strong> are estimates from published pricing, not from your bill.</li>
+<li><strong>The IAM policy update failed</strong> the last time the firewall script ran
+(<code>policy update FAILED</code>). Harmless for the work done since, because none of it used
+AWS APIs from the box &mdash; but it must be fixed before anything relies on Amazon Translate or
+Bedrock.</li>
+</ul>
+</div>
+
+<div class="box good" style="margin-top:6mm">
+<strong>The shortest summary.</strong> Build a normal, boring, well-secured web application in
+front of the dubbing engine, and let it treat the engine as a black box it starts, feeds, reads
+and stops. Every hard requirement you gave &mdash; easy account migration, no leaked keys, secure
+user data, database access for you, automatic GPU shutdown &mdash; is satisfied by a specific
+decision above rather than by good intentions: Terraform, our own auth in Postgres, secrets only
+in Secrets Manager, an SSM tunnel, and a watchdog that refuses to stop a machine that is working.
+</div>
+
+<p class="small" style="margin-top:6mm">Companion document to
+<code>docs/VoiceStudio_Pipeline_Handbook.pdf</code>, which records the pipeline this plan must not
+disturb. Source: <code>docs/website_backend_plan.html</code>.</p>
+
+</body>
+</html>

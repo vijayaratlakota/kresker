@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kresker Launch Playbook - 67 platforms, ready-to-paste copy</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 16mm 13mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 10.5pt; line-height: 1.6; color: #e6e8ec;
+         background: #08090b; margin: 0; }
+
+  h1 { font-size: 25pt; margin: 0 0 3mm 0; letter-spacing: -0.6pt; color: #fff; }
+  h2 { font-size: 16pt; margin: 0 0 4mm 0; padding: 0 0 2.5mm 0; color: #fff;
+       border-bottom: 1.5pt solid #6366f1; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 7mm 0 2mm 0; page-break-after: avoid; color: #a5b4fc; }
+  h4 { font-size: 10.5pt; margin: 5mm 0 1.5mm 0; color: #fbbf24;
+       page-break-after: avoid; }
+  p  { margin: 0 0 3mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+  li { margin: 0 0 1.8mm 0; }
+  b, strong { color: #fff; }
+  em { color: #c7cbd3; }
+
+  code { font-family: Consolas, monospace; font-size: 9.5pt; color: #a5b4fc;
+         background: #16181e; padding: 0.4mm 1.4mm; border-radius: 1mm; }
+
+  /* the paste blocks: the whole point of the document */
+  .paste { font-family: Consolas, monospace; font-size: 9pt; color: #dfe3e9;
+           background: #0f1117; border: 0.4pt solid #2a2f39;
+           border-left: 3pt solid #22c55e; padding: 3mm 3.5mm; margin: 2mm 0 4mm 0;
+           border-radius: 1.5mm; white-space: pre-wrap; page-break-inside: avoid;
+           line-height: 1.5; }
+  .paste.small { font-size: 8.5pt; }
+  .len { font-size: 8.5pt; color: #6b7480; margin: 0 0 1mm 0; }
+
+  .page { page-break-after: always; }
+  .last { page-break-after: auto; }
+  .lead { font-size: 12pt; color: #a5b4fc; font-weight: 600; margin: 0 0 4mm 0; }
+
+  .box { border: 0.4pt solid #262b33; border-left: 3.5pt solid #6b7480;
+         background: #101218; padding: 3mm 3.5mm; margin: 4mm 0;
+         page-break-inside: avoid; border-radius: 1.5mm; }
+  .box.good { border-left-color: #22c55e; background: #0c1410; }
+  .box.warn { border-left-color: #ef4444; background: #150e0e; }
+  .box.note { border-left-color: #6366f1; background: #0e0f1a; }
+  .box.money { border-left-color: #f59e0b; background: #14100a; }
+  .box .t { font-weight: 700; display: block; margin-bottom: 1.8mm;
+            font-size: 11pt; color: #fff; }
+
+  table { border-collapse: collapse; width: 100%; margin: 3mm 0 4mm 0; font-size: 9.5pt; }
+  th { background: #1c1f27; color: #fff; text-align: left; padding: 2mm;
+       font-size: 9pt; border-bottom: 1pt solid #6366f1; }
+  td { border-bottom: 0.4pt solid #23262e; padding: 2mm; vertical-align: top;
+       color: #d4d8de; }
+  tbody tr:nth-child(even) td { background: #0d0f14; }
+  table.tight td, table.tight th { padding: 1.4mm 2mm; font-size: 9pt; }
+  td.m { font-family: Consolas, monospace; font-size: 8.5pt; }
+
+  .cover { padding-top: 34mm; page-break-after: always; }
+  .cover .sub { font-size: 14pt; color: #9aa3ad; margin-top: 3mm; line-height: 1.5; }
+  .cover .meta { margin-top: 18mm; font-size: 10pt; color: #6b7480;
+                 border-top: 0.4pt solid #262b33; padding-top: 5mm; }
+
+  .toc { font-size: 11pt; }
+  .toc td { border-bottom: 0.3pt dotted #2b2f38; padding: 2.2mm 2mm; }
+  .toc td.n { width: 11mm; font-weight: 700; color: #6366f1; }
+  .toc tbody tr:nth-child(even) td { background: transparent; }
+
+  .yes { color: #22c55e; font-weight: 700; }
+  .no  { color: #ef4444; font-weight: 700; }
+  .meh { color: #f59e0b; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Kresker Launch Playbook</h1>
+  <div class="sub">67 platforms, in the right order, with copy you can paste<br>
+  straight into the forms.</div>
+
+  <div class="box good" style="margin-top:14mm">
+    <span class="t">How to use this</span>
+    Section 4 is the one you will keep open while filling in forms &mdash; every
+    description length a directory might ask for, written once. Sections 6 to 9 tell you
+    what each kind of site wants and which ones are worth real effort.
+    <br><br>
+    Every product fact in here was checked against your actual code, not assumed. Section
+    5 lists what you must <b>not</b> claim, and why it matters more than it sounds.
+  </div>
+
+  <div class="box warn">
+    <span class="t">Read section 2 before you submit anything</span>
+    Three of these platforms are <b>one-shot</b>: Product Hunt, Hacker News and BetaList
+    give you a single launch and you cannot redo it. Doing them today would waste them.
+    The directories are the opposite &mdash; permanent, no launch moment, and worth
+    starting immediately.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written:</strong> 2 September 2026</div>
+    <div><strong>Source list:</strong> your &ldquo;SaaS Launch Platforms&rdquo; sheet,
+    67 entries</div>
+  </div>
+</div>
+
+<div class="page">
+<h2>What's inside</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>The 60-second version</td></tr>
+<tr><td class="n">2</td><td>Order of attack &mdash; and what to delay</td></tr>
+<tr><td class="n">3</td><td>Two platforms to skip entirely, and why</td></tr>
+<tr><td class="n">4</td><td><b>Your copy blocks</b> &mdash; paste-ready, every length</td></tr>
+<tr><td class="n">5</td><td>Your verified facts, and what never to claim</td></tr>
+<tr><td class="n">6</td><td>AI directories (18 sites) &mdash; start here</td></tr>
+<tr><td class="n">7</td><td>Startup directories (13 sites)</td></tr>
+<tr><td class="n">8</td><td>Review sites (13 sites)</td></tr>
+<tr><td class="n">9</td><td>Communities and publishing (12 sites)</td></tr>
+<tr><td class="n">10</td><td>Product Hunt playbook &mdash; for later</td></tr>
+<tr><td class="n">11</td><td>Show HN playbook &mdash; for later</td></tr>
+<tr><td class="n">12</td><td>How to write listing copy that gets accepted</td></tr>
+<tr><td class="n">13</td><td>Before you start: the four things to prepare</td></tr>
+<tr><td class="n">14</td><td>Tracker</td></tr>
+</table>
+
+<div class="box note" style="margin-top:8mm">
+<span class="t">Why directory listings are worth the tedium</span>
+They do three jobs at once, and only the first is obvious.
+<br><br>
+<b>1. Direct visitors.</b> Modest but real, and free.
+<br>
+<b>2. Links to your site.</b> Search engines treat a link roughly as a vote. This is the
+single biggest reason established competitors outrank you &mdash; they have collected
+votes for years. Every listing is one vote.
+<br>
+<b>3. Corroboration for AI assistants.</b> Before ChatGPT or Claude recommends a tool, it
+looks for the tool being mentioned somewhere other than its own website. A product that
+exists nowhere but its own domain reads as unverified. This is the part most people miss,
+and it is why the AI directories in section 6 come first.
+</div>
+</div>
+
+<!-- ============================================ 1 -->
+<div class="page">
+<h2>1. The 60-second version</h2>
+
+<table>
+<tr><th style="width:28mm">When</th><th>What</th><th style="width:26mm">Effort</th></tr>
+
+<tr><td><b>This week</b></td>
+<td><b>18 AI directories</b> (section 6). Highest value per minute: they rank for
+&ldquo;AI dubbing tool&rdquo;, send real traffic, and are the corroboration AI
+assistants look for.</td>
+<td>4&ndash;6 hours</td></tr>
+
+<tr><td><b>This week</b></td>
+<td><b>AlternativeTo</b> specifically. List yourself against HeyGen, ElevenLabs, Rask AI,
+Dubverse, VoiceCheap. People search &ldquo;HeyGen alternative&rdquo; with a credit card
+in hand.</td>
+<td>30 min</td></tr>
+
+<tr><td><b>Next week</b></td>
+<td><b>13 startup directories</b> (section 7) and <b>13 review sites</b> (section 8).
+Mechanical, low individual value, real cumulative value.</td>
+<td>4&ndash;5 hours</td></tr>
+
+<tr><td><b>Ongoing</b></td>
+<td><b>Communities</b> (section 9). Reddit, Indie Hackers, Dev.to. Not submissions &mdash;
+participation. Slower, and the highest quality traffic of anything here.</td>
+<td>weekly</td></tr>
+
+<tr><td><b>When ready</b></td>
+<td><b>Product Hunt, Show HN, BetaList</b> (sections 10&ndash;11). One shot each. Needs a
+demo video, social accounts, and a free tier someone can actually judge you on.</td>
+<td>a real week</td></tr>
+
+<tr><td><b>Never</b></td>
+<td><b>AppSumo and the 4 other lifetime-deal sites.</b> Section 3 explains why these would
+lose you money on every sale.</td>
+<td>&mdash;</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">The single most useful thing you can do first</span>
+Make <b>one 1200&times;630 pixel image</b> and <b>one 30&ndash;60 second screen recording</b>
+of a real dub being made. Almost every form asks for both. Making them once and reusing
+them turns each submission from twenty minutes into four.
+</div>
+
+<div class="box note">
+<span class="t">A realistic expectation</span>
+Directory listings will not transform your traffic next week. What they do is build the
+foundation that makes everything else work: the votes that let you rank, and the
+third-party mentions that let an AI recommend you with confidence. Think of it as
+groundwork with a long tail, not a campaign with a spike.
+<br><br>
+The one exception is AI directories, where a listing on the biggest two can send
+meaningful traffic within days, because their own search traffic is enormous relative to
+how new they are.
+</div>
+</div>
+
+<!-- ============================================ 2 -->
+<div class="page">
+<h2>2. Order of attack &mdash; and what to delay</h2>
+<p class="lead">The sheet lists 67 sites as one job. They are not one job, and doing them in
+the wrong order wastes the three that matter most.</p>
+
+<h3>Permanent listings &mdash; do these now</h3>
+<p>Directories, review sites and AI tool lists are <b>permanent</b>. You submit once, the
+page exists forever, and nothing is lost by doing it early. There is no launch moment to
+time, no audience to warm up, no single day where you need everything perfect.</p>
+
+<p>They also improve on their own: as you add reviews and screenshots later, the same page
+gets better. Starting early is strictly better than starting late.</p>
+
+<h3>One-shot launches &mdash; delay these</h3>
+<p>Product Hunt, Hacker News and BetaList give you <b>one</b> attempt. A weak launch is not
+a neutral event that you can retry next month &mdash; it is your one shot, spent.</p>
+
+<div class="box warn">
+<span class="t">Why today would be the wrong day for Product Hunt</span>
+<b>Your free tier is one minute, once, ever</b> &mdash; with a 60-second maximum per
+video. On launch day a few thousand people arrive within hours, try the product, and get
+sixty seconds. Sixty seconds is not enough to judge whether the dub sounds good, and that
+is the only thing they came to find out.
+<br><br>
+Compare: HeyGen gives 3 videos a month. Someone comparing you on launch day will conclude
+you are the limited option, and that conclusion lands in the comments where everyone
+reads it.
+<br><br>
+<b>No demo video.</b> Every Product Hunt launch that works has one. Yours is a product
+where the output is <em>audio</em> &mdash; nobody can evaluate it from screenshots.
+<br><br>
+<b>No social accounts.</b> Product Hunt expects a maker profile with real presence, and
+commenters check.
+<br><br>
+<b>Payments went live days ago</b> and have not yet completed a successful real
+transaction end to end.
+</div>
+
+<div class="box good">
+<span class="t">What to fix first, then launch</span>
+<b>1.</b> A free tier someone can form an opinion from. Even 3 minutes instead of 1
+changes the launch-day story completely.<br>
+<b>2.</b> A 30&ndash;60 second video: real video in, Telugu or Hindi out, same voice.
+This is your strongest asset and you do not have it yet.<br>
+<b>3.</b> X, LinkedIn and YouTube accounts with your logo.<br>
+<b>4.</b> One real paid transaction, by you, proving the money path.
+<br><br>
+That is maybe a week of work. Then Product Hunt is worth doing properly.
+</div>
+
+<h3>Communities &mdash; start slowly, now</h3>
+<p>Reddit, Indie Hackers, Dev.to and the maker communities are not submission forms. They
+are places where posting a link and leaving gets you removed. But they are also where the
+best traffic comes from, because someone who finds you in an answer to their own question
+arrives already convinced.</p>
+<p>Start now, but as a participant: answer questions about dubbing, share what you have
+built and what broke. Section 9.</p>
+</div>
+
+<!-- ============================================ 3 -->
+<div class="page">
+<h2>3. Two platforms to skip entirely, and why</h2>
+
+<div class="box money">
+<span class="t">Skip: AppSumo, Dealify, PitchGround, StackSocial, SaasGang (numbers 63&ndash;67)</span>
+These are <b>lifetime deal</b> platforms. Someone pays once, around &#8377;2,000 to
+&#8377;5,000, and gets your product forever.
+<br><br>
+That model works for software where an extra customer costs you nothing &mdash; a note-taking
+app, a form builder. <b>It is the wrong model for you</b>, because every single dub burns
+real, metered GPU time. Your dubbing runs on a rented graphics card that bills by the hour
+whether you charge for it or not.
+<br><br>
+So a lifetime customer who dubs 30 minutes a month is a customer you pay for, every month,
+forever, on a single payment you already spent. Sell a hundred of those and you have
+bought yourself a permanent monthly bill and no recurring revenue to cover it.
+<br><br>
+<b>AppSumo also takes a large revenue share</b> and its audience is specifically hunting
+for one-time payments &mdash; so it is a poor source of the subscribers you actually want.
+<br><br>
+There is a version of this that could work later: a <em>capped</em> lifetime deal, where
+the buyer gets a fixed number of minutes forever rather than unlimited use. That is a
+different product and a decision to make deliberately, not a form to fill in this week.
+</div>
+
+<div class="box note">
+<span class="t">Be selective on review sites too, at first</span>
+G2, Capterra, Software Advice, GetApp, TrustRadius and the rest (section 8) are built around
+<b>customer reviews</b>. A listing with zero reviews ranks poorly and converts poorly.
+<br><br>
+They are still worth claiming &mdash; they carry real search authority, and claiming your
+profile stops someone else controlling it. But do not expect traffic until you have
+reviews, and do not spend a whole day perfecting them before you have customers to ask.
+<br><br>
+They also skew towards business software buyers, while your customers are creators and
+educators. Claim the profiles, then move on.
+</div>
+
+<h3>Where your effort actually pays</h3>
+<table class="tight">
+<tr><th style="width:44mm">Group</th><th style="width:20mm">Sites</th><th>Verdict</th></tr>
+<tr><td>AI directories</td><td>18</td><td><span class="yes">Highest value.</span> Do these first, properly.</td></tr>
+<tr><td>AlternativeTo</td><td>1</td><td><span class="yes">Do it carefully.</span> Comparison searches convert.</td></tr>
+<tr><td>Startup directories</td><td>13</td><td><span class="meh">Worth the tedium.</span> Cumulative link value.</td></tr>
+<tr><td>Review sites</td><td>13</td><td><span class="meh">Claim, then wait.</span> Needs reviews to work.</td></tr>
+<tr><td>Communities</td><td>12</td><td><span class="yes">Best traffic quality.</span> Slowest. Start now anyway.</td></tr>
+<tr><td>One-shot launches</td><td>5</td><td><span class="meh">Delay.</span> Section 2.</td></tr>
+<tr><td>Lifetime deals</td><td>5</td><td><span class="no">Skip.</span> Loses money per sale.</td></tr>
+</table>
+</div>
+
+<!-- ============================================ 4 -->
+<div class="page">
+<h2>4. Your copy blocks</h2>
+<p class="lead">Every length a form might ask for. Written once, checked against your code.
+This is the section to keep open while submitting.</p>
+
+<h4>Product name</h4>
+<div class="paste">Kresker</div>
+
+<h4>Tagline / one-liner</h4>
+<div class="len">51 characters. Product Hunt allows 60; most directories 50&ndash;80.</div>
+<div class="paste">Dub your video into 43 languages, in your own voice</div>
+
+<div class="len">Alternatives, if a field is shorter or you want a different angle:</div>
+<div class="paste">Dub any video into 43 languages, keep your own voice     (55)
+AI video dubbing that keeps the original speaker's voice (56)
+Dub videos into 43 languages, including 14 Indian ones   (54)
+Reach every viewer in their own language, in your voice  (55)</div>
+
+<h4>Short description &mdash; under 100 characters</h4>
+<div class="len">79 characters. For compact cards and "in one line" fields.</div>
+<div class="paste">Upload a video, pick a language, get it dubbed in the original speaker's voice.</div>
+
+<h4>Medium description &mdash; around 160 characters</h4>
+<div class="len">160 characters. This is also the right length for a meta description.</div>
+<div class="paste">Kresker dubs video into 43 languages and keeps each speaker's own voice. Upload
+an MP4, pick your languages, download the finished file. One free minute, no card.</div>
+
+<h4>Standard description &mdash; 300 to 500 characters</h4>
+<div class="len">The most commonly requested size. Use this as your default.</div>
+<div class="paste">Kresker is a web-based AI dubbing tool. Upload an MP4, pick from 43 languages, and
+get back a finished video with the translation spoken in the original speaker's own
+cloned voice.
+
+It handles multiple speakers separately, keeps the background music and effects, and
+delivers an MP4 with the dubbed track set as default and tagged with the language. It
+can also produce an audio-only track you add to an existing YouTube video, so the same
+video reaches viewers in their own language without a re-upload.
+
+14 of the 43 languages are Indian, including Odia, Assamese, Nepali and Sinhala. Start
+free with one minute, no card required.</div>
+</div>
+
+<div class="page">
+<h2>4. Copy blocks, continued</h2>
+
+<h4>Full description &mdash; for the big text boxes</h4>
+<div class="paste small">WHAT IT DOES
+Kresker translates and dubs video into 43 languages. It clones each speaker's voice
+from your own footage, so the translation is spoken in their voice rather than a
+generic synthetic one.
+
+HOW IT WORKS
+1. Upload an MP4 (up to 30 minutes on paid plans)
+2. Pick your target languages, up to 8 at once
+3. Kresker separates speech from background, clones each speaker, translates, and
+   re-speaks it in the new language
+4. Download a finished MP4 for each language
+
+There is nothing to configure. The language is the only choice you make.
+
+WHAT MAKES IT DIFFERENT
+Most dubbing tools assume you will upload a second video to a second channel for
+each language. Kresker can instead give you an audio-only track that attaches to
+your existing YouTube video: same link, same view count, same comments. A viewer
+whose device is set to Hindi simply hears Hindi.
+
+It also has unusual depth in Indian languages: 14 of the 43, including Odia,
+Assamese, Nepali, Sinhala, Punjabi and Urdu, which most competitors do not support.
+
+LANGUAGES (43)
+Indian: Telugu, Hindi, Tamil, Kannada, Malayalam, Bengali, Marathi, Gujarati,
+Punjabi, Urdu, Odia, Assamese, Nepali, Sinhala
+Global: English, Spanish, French, German, Italian, Portuguese, Dutch, Swedish,
+Danish, Norwegian, Finnish, Polish, Czech, Hungarian, Romanian, Greek, Russian,
+Ukrainian, Turkish, Arabic, Persian, Hebrew, Chinese, Japanese, Korean,
+Vietnamese, Thai, Indonesian, Malay
+
+DETAILS
+- Runs on our servers, not in your browser: close the tab and come back
+- Background music and effects are preserved, not flattened
+- Multiple speakers are detected and cloned separately
+- Output is an MP4 with the dub as the default audio track, tagged by language
+- Processing takes roughly 5 to 18 times the length of the video
+- Results are kept 24 hours on the free plan, 7 days on paid plans
+
+PRICING
+Free: 1 minute, no card required
+Starter: Rs 299/month, 10 minutes
+Creator: Rs 999/month, 50 minutes
+Pro: Rs 1,499/month, 120 minutes
+Annual plans and minute top-ups available. Prices exclude 18% GST.</div>
+
+<h4>Categories</h4>
+<div class="len">Pick whichever of these the site offers, in this order.</div>
+<div class="paste">Video  ·  Artificial Intelligence  ·  Audio  ·  Marketing  ·  Productivity
+Also fits: Video Editing, Localization, Content Creation, Education</div>
+
+<h4>Tags / keywords</h4>
+<div class="paste">video dubbing, AI dubbing, video translation, voice cloning, text to speech,
+localization, YouTube tools, multilingual, Indian languages, content creation,
+video editing, subtitles, audio translation, creator tools</div>
+
+<h4>Pricing field</h4>
+<div class="len">Most sites want a dropdown plus a starting price.</div>
+<div class="paste">Model:          Freemium
+Starting price: Rs 299/month  (approx US$3.50)
+Free tier:      Yes, 1 minute, no card required
+If USD only:    From $3.50/month</div>
+
+<h4>Links</h4>
+<div class="paste">Website:  https://kresker.com
+Pricing:  https://kresker.com/pricing
+Contact:  https://kresker.com/contact</div>
+
+<div class="box note">
+<span class="t">Use the apex domain, never www</span>
+Always write <code>https://kresker.com</code>, not <code>www.kresker.com</code>. The www
+version now redirects to the plain one, and a listing that links to the redirect passes
+slightly less value and looks inconsistent across sites.
+</div>
+</div>
+
+<!-- ============================================ 5 -->
+<div class="page">
+<h2>5. Your verified facts, and what never to claim</h2>
+<p class="lead">Every number here came from your code. The second table is the more
+important one.</p>
+
+<h3>True, and safe to state anywhere</h3>
+<table class="tight">
+<tr><th style="width:52mm">Claim</th><th>Detail</th></tr>
+<tr><td>43 target languages</td><td>14 Indian, 29 rest of world. Same on every plan.</td></tr>
+<tr><td>Keeps the speaker's voice</td><td>Each speaker is cloned from your own footage.</td></tr>
+<tr><td>Multiple speakers</td><td>Detected and cloned separately.</td></tr>
+<tr><td>Background preserved</td><td>Speech is separated from music and effects, and the background is mixed back under the dub.</td></tr>
+<tr><td>Up to 8 languages per job</td><td>One press starts all of them.</td></tr>
+<tr><td>Web-based</td><td>Nothing to install. Runs on our servers, so closing the tab is safe.</td></tr>
+<tr><td>MP4 in, MP4 out</td><td>Dub set as the default audio track and tagged with the language.</td></tr>
+<tr><td>YouTube audio track</td><td>An audio-only file you add to an existing video.</td></tr>
+<tr><td>Speed</td><td>Roughly 5 to 18 times the video's length.</td></tr>
+<tr><td>Video length</td><td>Up to 30 minutes on Creator and Pro; 10 on Starter; 60 seconds on free.</td></tr>
+<tr><td>Free tier</td><td>1 minute, no card. Results kept 24 hours.</td></tr>
+<tr><td>Prices</td><td>&#8377;299 / &#8377;999 / &#8377;1,499 per month, plus 18% GST.</td></tr>
+</table>
+
+<div class="box warn">
+<span class="t">NEVER claim these. They are not in your product.</span>
+<table class="tight" style="margin:0">
+<tr><td style="width:34mm"><b>Lip-sync</b></td>
+<td>You do not have it. Not in the code anywhere. HeyGen's whole pitch is lip-sync, so it
+is tempting to match &mdash; do not. It is the first thing a reviewer will test.</td></tr>
+<tr><td><b>Subtitle export</b><br>(SRT / VTT files)</td>
+<td>Not a customer feature. The option exists in the underlying engine and is deliberately
+switched off. Nobody can download a subtitle file today.</td></tr>
+<tr><td><b>An API</b></td>
+<td>There is no public API and no API documentation. Several forms ask &ldquo;API
+available?&rdquo; &mdash; answer <b>no</b>.</td></tr>
+<tr><td><b>&ldquo;3 videos a month<br>free&rdquo;</b></td>
+<td>This figure came from a report you were given and it is wrong. It is one minute,
+once, ever.</td></tr>
+<tr><td><b>Real-time dubbing</b></td>
+<td>Processing takes 5&ndash;18&times; the video length. That is fine and normal &mdash;
+just do not call it real-time.</td></tr>
+</table>
+</div>
+
+<div class="box note">
+<span class="t">Why being strict about this pays off</span>
+Two reasons beyond honesty.
+<br><br>
+<b>Directory listings get scraped.</b> Whatever you write on the big AI directories gets
+copied into dozens of smaller lists, and into the training and grounding data that AI
+assistants use. A wrong claim propagates and becomes very hard to correct.
+<br><br>
+<b>Reviewers test the headline claim first.</b> If your listing says lip-sync, the first
+thing a roundup writer does is check the lips. Failing that check publicly is worse than
+never claiming it, and it colours everything else they write about you.
+<br><br>
+You have two genuinely distinctive things &mdash; the YouTube audio track and 14 Indian
+languages. Lead with those instead. They are true, they are checkable, and almost nobody
+else can say them.
+</div>
+</div>
+
+<!-- ============================================ 6 -->
+<div class="page">
+<h2>6. AI directories &mdash; start here (18 sites)</h2>
+<p class="lead">Best value per minute of anything in the sheet. Budget 4&ndash;6 hours for
+all of them, and spend the first hour on the top two.</p>
+
+<h3>Do these two properly, then reuse</h3>
+<table class="tight">
+<tr><th style="width:46mm">Site</th><th>Why it matters</th></tr>
+<tr><td><b>There's An AI For That</b><br><span class="len">theresanaiforthat.com</span></td>
+<td>The largest AI tool directory, with very high search traffic. Being listed here is
+close to a requirement for being taken seriously as an AI tool. Free submission, paid
+fast-track available.</td></tr>
+<tr><td><b>Futurepedia</b><br><span class="len">futurepedia.io</span></td>
+<td>The other one people actually browse. Strong category pages that rank on their
+own.</td></tr>
+</table>
+
+<h3>Then work through the rest</h3>
+<div class="paste small">Toolify            toolify.ai            AI Tools Club     aitoolsclub.com
+FutureTools        futuretools.io        AIWore            aiwore.com
+Aixploria          aixploria.com         AI Scout          aiscout.net
+AI Tool Hunt       aitoolhunt.com        AIDirectory.io    aidirectory.io
+Insidr.ai          insidr.ai             AIToolNet         aitoolnet.com
+AI Tools Arena     aitoolsarena.com      AITools.fyi       aitools.fyi
+TopAI.tools        topai.tools           SaaS AI Tools     saasaitools.com
+EasyWithAI         easywithai.com        AllThingsAI       allthingsai.com</div>
+
+<h3>What every one of them asks for</h3>
+<table class="tight">
+<tr><th style="width:38mm">Field</th><th>Use</th></tr>
+<tr><td>Name</td><td>Kresker</td></tr>
+<tr><td>URL</td><td><code>https://kresker.com</code></td></tr>
+<tr><td>Tagline</td><td>The 51-character one from section 4</td></tr>
+<tr><td>Short description</td><td>The 160-character one</td></tr>
+<tr><td>Long description</td><td>The 300&ndash;500 one</td></tr>
+<tr><td>Category</td><td>Video, or Audio if no Video option</td></tr>
+<tr><td>Pricing</td><td>Freemium</td></tr>
+<tr><td>Screenshot / thumbnail</td><td>Your 1200&times;630 image</td></tr>
+<tr><td>Video</td><td>Optional on most, and a real advantage where offered</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">Three things that make these go faster</span>
+<b>1. Make the image first.</b> Every single one wants it. You already have
+<code>og.png</code> on your site &mdash; check it reads clearly at thumbnail size, and
+remake it if the text is too small.
+<br><br>
+<b>2. Use a password manager or a notes file.</b> Each site needs an account. You will
+create 18 of them. Doing this without a system is where people give up around number six.
+<br><br>
+<b>3. Do them in one sitting.</b> The copy is identical, so the work is almost entirely
+account creation and pasting. Broken into 18 separate sessions it feels endless; done in
+one afternoon it is genuinely finished.
+</div>
+
+<div class="box money">
+<span class="t">On paying for featured placement</span>
+Most of these offer to skip the queue or feature you, typically $20&ndash;$100.
+<b>Do not pay yet.</b> Submit everywhere free, wait two or three weeks, then look at which
+ones actually sent you visitors. Pay only on those. Without that data you are guessing,
+and most of these send close to nothing.
+</div>
+</div>
+
+<!-- ============================================ 7 -->
+<div class="page">
+<h2>7. Startup directories (13 sites)</h2>
+<p class="lead">Lower value each, real value together. Two deserve actual thought; the rest
+are pasting.</p>
+
+<h3>The two worth care</h3>
+<table class="tight">
+<tr><th style="width:40mm">Site</th><th>Why</th></tr>
+<tr><td><b>AlternativeTo</b><br><span class="len">alternativeto.net</span></td>
+<td><b>The most valuable single listing in the whole sheet after the top AI
+directories.</b> Huge traffic from comparison searches, and those searchers are far along
+in deciding. List yourself as an alternative to <b>HeyGen, ElevenLabs, Rask AI, Dubverse,
+VoiceCheap</b>. Someone searching &ldquo;HeyGen alternative&rdquo; is already sold on the
+idea and shopping on price and features &mdash; which is exactly where you win.</td></tr>
+<tr><td><b>Submit.co</b><br><span class="len">submit.co</span></td>
+<td>Not really a directory &mdash; a curated list of 100+ places to submit. Use it as a
+checklist to find sites your sheet does not have.</td></tr>
+</table>
+
+<h3>The rest</h3>
+<div class="paste small">Startup Stash      startupstash.com       StartupLister    startuplister.com
+Startup Buffer     startupbuffer.com      Startup Ranking  startup-ranking.com
+Killer Startups    killerstartups.com     Favird           favird.com
+StartUp88          startup88.com          SaaS Directory   saasdir.com
+StartupBase        startupbase.io         GrowthList       growthlist.co
+dir.directory      dir.directory</div>
+
+<div class="box note">
+<span class="t">What to expect, honestly</span>
+Most of these send almost no direct traffic. Their value is the link and the mention, which
+feed the two things from the introduction: search ranking, and the corroboration AI
+assistants look for.
+<br><br>
+Budget about ten minutes each and do not agonise over the wording. Paste the standard
+description, pick the closest category, move on. This is volume work, not craft.
+</div>
+
+<!-- ============================================ 8 -->
+</div>
+<div class="page">
+<h2>8. Review sites (13 sites)</h2>
+<p class="lead">High authority, and they need customers before they do anything for you.
+Claim the profiles now; expect results later.</p>
+
+<h3>Claim these first</h3>
+<table class="tight">
+<tr><th style="width:36mm">Site</th><th>Why</th></tr>
+<tr><td><b>G2</b></td>
+<td>The biggest name and the strongest search authority. Claim your profile so you control
+it, then ask your first real customers for reviews. Three or four honest reviews changes
+this page from dead weight into a working asset.</td></tr>
+<tr><td><b>Capterra</b>, <b>GetApp</b>,<br><b>Software Advice</b></td>
+<td>All three are Gartner-owned and often share one submission. Doing one frequently
+populates the others.</td></tr>
+<tr><td><b>SaaSHub</b>, <b>SaaSWorthy</b></td>
+<td>Lighter weight, faster approval, and both have alternative-comparison pages that rank
+&mdash; the same benefit as AlternativeTo on a smaller scale.</td></tr>
+</table>
+
+<h3>The rest, when you have time</h3>
+<div class="paste small">TrustRadius     trustradius.com      GoodFirms      goodfirms.co
+Crozdesk        crozdesk.com         Clutch         clutch.co
+Software Suggest softwaresuggest.com  DesignRush     designrush.com
+FinancesOnline  financesonline.com</div>
+
+<div class="box warn">
+<span class="t">Two warnings about this group</span>
+<b>They will call you.</b> Several of these sell advertising and treat a free listing as a
+sales lead. Expect emails and calls about paid placement. A free listing is entirely
+fine &mdash; you do not need to buy anything, and you should not this early.
+<br><br>
+<b>Never write your own reviews or ask friends to.</b> These sites verify reviewers, and
+being caught gets your listing removed permanently. Ask real customers, and ask them for
+an honest review rather than a good one.
+</div>
+
+<div class="box note">
+<span class="t">Their audience is not quite yours</span>
+This group serves business software buyers &mdash; someone choosing a tool for a company of
+fifty. Your customers are creators, educators and small teams. So these matter mainly for
+their search authority and for looking established, rather than as a traffic source. Claim
+them, do not over-invest.
+</div>
+</div>
+
+<!-- ============================================ 9 -->
+<div class="page">
+<h2>9. Communities and publishing (12 sites)</h2>
+<p class="lead">The best traffic here, and the only group where a submission form is the
+wrong approach.</p>
+
+<div class="box warn">
+<span class="t">The rule for every site in this section</span>
+<b>Posting a link and leaving gets you removed.</b> These are communities with people who
+have seen a thousand launches. They can tell instantly whether you are participating or
+advertising, and they are unforgiving about the second one.
+<br><br>
+The approach that works: be useful about your subject first, mention your product when it
+is genuinely the answer to someone's question. Slower, and it is the only version that
+works.
+</div>
+
+<h3>Where to spend your time</h3>
+<table class="tight">
+<tr><th style="width:36mm">Where</th><th>How</th></tr>
+<tr><td><b>Reddit</b><br><span class="len">r/SaaS, r/startups,<br>r/alphaandbetausers,<br>r/roastmystartup</span></td>
+<td>Read each subreddit's rules first &mdash; several ban product links outright, and some
+have a dedicated day for them. <b>r/roastmystartup</b> is the best starting point: you are
+explicitly invited to post, and honest criticism now is cheaper than after launch. Also
+look for subreddits about YouTube, video editing and language learning, where your product
+answers a real question.</td></tr>
+
+<tr><td><b>Indie Hackers</b></td>
+<td>Post genuine progress, including the difficult parts. &ldquo;We went live with payments
+and the first real transaction failed&rdquo; is a post people read and respond to. A launch
+announcement is not.</td></tr>
+
+<tr><td><b>Dev.to</b></td>
+<td>Write a real technical article, not a launch post. You have an unusually good story:
+how voice cloning across 43 languages actually works, or what breaks when you dub Indian
+languages. Genuine technical writing earns links for years.</td></tr>
+
+<tr><td><b>HackerNoon</b></td>
+<td>Same as Dev.to but with editorial review. Worth it for one strong article.</td></tr>
+
+<tr><td><b>GrowthHackers</b></td>
+<td>Marketing-focused. Share what you learn about acquisition, once you have learned
+something.</td></tr>
+</table>
+
+<h3>Maker communities &mdash; low effort, do them once</h3>
+<div class="paste small">Makers.dev       makers.dev         Wip              wip.chat
+Makerlog         getmakerlog.com    Build In Public   buildinpublic.com
+SideProjectors   sideprojectors.com ProductRant       productrant.com</div>
+<p>Small audiences. Create a profile, post what you are building, and check back
+occasionally. Ten minutes each and no expectations.</p>
+
+<div class="box good">
+<span class="t">Your strongest community angle</span>
+Do not lead with &ldquo;I built an AI dubbing tool&rdquo; &mdash; everyone has seen twenty
+of those. Lead with the thing nobody else is talking about:
+<br><br>
+<em>&ldquo;You can add a Telugu audio track to your existing YouTube video. Same link,
+same view count. Viewers whose phone is set to Telugu hear Telugu automatically. Most
+people do not know YouTube supports this.&rdquo;</em>
+<br><br>
+That is genuinely useful information, it is true, and your product happens to be how you
+do it. That post gets upvoted; a launch announcement does not.
+</div>
+</div>
+
+<!-- ============================================ 10 -->
+<div class="page">
+<h2>10. Product Hunt playbook &mdash; for later</h2>
+<p class="lead">Do not launch until the four items in section 2 are done. When you do, here
+is the copy and the mechanics.</p>
+
+<h4>Name</h4>
+<div class="paste">Kresker</div>
+
+<h4>Tagline &mdash; 60 character limit, and it decides everything</h4>
+<div class="len">This is the only text most people read. 51 characters.</div>
+<div class="paste">Dub your video into 43 languages, in your own voice</div>
+
+<h4>Description &mdash; 260 character limit</h4>
+<div class="paste">Upload a video, pick from 43 languages, and get it back dubbed in the original
+speaker's own voice. Multiple speakers, background music kept. Or get an audio track
+for your existing YouTube video, so the same upload reaches every language.</div>
+
+<h4>First comment &mdash; write this before launch day</h4>
+<div class="len">The maker's comment. It goes up with the post and sets the whole tone.</div>
+<div class="paste small">Hi Product Hunt.
+
+I built Kresker because a creator I know had 40,000 subscribers in English and
+none in Telugu, which is the language his own family speaks. The tools he tried
+either replaced his voice with something generic, or wanted him to upload a whole
+second video to a second channel and start again from zero views.
+
+So Kresker does two things differently.
+
+It clones each speaker's voice from your own footage, so the dub sounds like you
+rather than a narrator. And it can hand you an audio-only track that attaches to
+your EXISTING YouTube video. Same link, same view count, same comments. A viewer
+whose phone is set to Hindi just hears Hindi. Most people do not know YouTube
+supports this.
+
+43 languages, and 14 of them are Indian, including Odia, Assamese, Nepali and
+Sinhala. Those are barely served by anyone, and they are real audiences.
+
+What it does NOT do, so nobody is surprised: no lip-sync, and no subtitle file
+export yet. It dubs audio and keeps your background music. Processing takes
+roughly 5 to 18 times the length of your video.
+
+Free to try, no card. I will be here all day and I would genuinely rather hear
+what is wrong with it than what is good. Ask me anything.</div>
+
+<div class="box good">
+<span class="t">Why that comment works</span>
+It opens with a <b>specific person and problem</b>, not a feature list. It states what the
+product cannot do <em>before</em> anyone asks &mdash; which buys enormous goodwill and
+stops the top comment being &ldquo;does it do lip-sync?&rdquo; answered by a stranger. And
+it invites criticism, which is what the audience there responds to.
+</div>
+
+<h3>Mechanics</h3>
+<table class="tight">
+<tr><th style="width:34mm">Thing</th><th>Detail</th></tr>
+<tr><td><b>Day</b></td><td>Tuesday to Thursday. Launches begin at 00:01 Pacific, so in
+India that is around 12:30&ndash;13:00 the same day. Avoid Monday and the weekend.</td></tr>
+<tr><td><b>Assets</b></td><td>Thumbnail 240&times;240, gallery images 1270&times;760, and a
+video. The video matters most &mdash; your output is audio, so it cannot be judged from a
+screenshot.</td></tr>
+<tr><td><b>Before launch</b></td><td>Have a maker profile with a real photo and some
+history. A day-old account launching a product reads as a throwaway.</td></tr>
+<tr><td><b>On the day</b></td><td>Reply to <b>every</b> comment, quickly. Engagement is
+most of what the ranking responds to, and it is the part entirely under your control.</td></tr>
+<tr><td><b>Do not</b></td><td>Ask for upvotes anywhere, publicly or privately. Product Hunt
+detects and penalises it. Share the link and let people decide.</td></tr>
+</table>
+
+<div class="box note">
+<span class="t">BetaList, if you want a smaller rehearsal first</span>
+BetaList is designed for products before launch and builds a waitlist rather than a spike.
+It is a reasonable way to collect early users and test whether your description lands,
+without spending the Product Hunt attempt. Submit there a few weeks ahead.
+</div>
+</div>
+
+<!-- ============================================ 11 -->
+<div class="page">
+<h2>11. Show HN playbook &mdash; for later</h2>
+<p class="lead">Hacker News is the highest-risk and highest-reward item on the list.
+Ruthless audience, enormous traffic if it lands.</p>
+
+<h4>Title &mdash; the whole game</h4>
+<div class="len">No marketing language. State what it is, flatly.</div>
+<div class="paste">Show HN: Kresker – dub video into 43 languages, keeping the speaker's voice</div>
+
+<div class="len">Alternative, leading with the more technically interesting angle:</div>
+<div class="paste">Show HN: Add a dubbed audio track to your existing YouTube video</div>
+
+<h4>The post body</h4>
+<div class="paste small">I built a tool that dubs video into 43 languages and keeps each speaker's own
+voice rather than substituting a synthetic one.
+
+The part I found most interesting to build: instead of producing a second video
+for each language, it can output an audio-only track you attach to your existing
+YouTube upload. Same URL, same view count. YouTube plays the track matching the
+viewer's language setting. Very few creators seem to know this feature exists.
+
+How it works: separate speech from background, diarise and clone each speaker
+from their own audio, translate, re-speak in the cloned voice, then mix the
+original background back under it. Runs on one GPU, queued, roughly 5-18x
+realtime depending on how many separate lines there are.
+
+14 of the 43 languages are Indian. Odia, Assamese, Nepali and Sinhala were the
+hard ones and are barely supported anywhere else.
+
+No lip-sync, and no subtitle export yet. Free tier is one minute, no card.
+
+Happy to go into detail on any part of the pipeline. Criticism welcome.</div>
+
+<div class="box warn">
+<span class="t">What gets you destroyed on Hacker News</span>
+<b>Marketing language.</b> &ldquo;Revolutionary&rdquo;, &ldquo;game-changing&rdquo;,
+&ldquo;seamless&rdquo;. Instant loss of credibility with that audience.
+<br><br>
+<b>Overclaiming.</b> They will test the thing and post exactly what they find. If you say
+43 languages, someone will try Assamese and report back publicly.
+<br><br>
+<b>Hiding limitations.</b> Stating up front that there is no lip-sync earns respect.
+Having it discovered in a comment does the opposite.
+<br><br>
+<b>A dead product.</b> Show HN requires something people can actually use immediately.
+Your free tier being one minute is a genuine risk here &mdash; this audience will try it
+before commenting, and sixty seconds may not be enough to form a view.
+</div>
+
+<div class="box good">
+<span class="t">Why you have a better story than most</span>
+Hacker News rewards technical substance, and you have real substance: speaker diarisation,
+cross-lingual voice cloning, background separation and remixing, a GPU queue that bills by
+the hour, and a genuinely under-known YouTube feature. Write about the engineering and the
+product follows. Write about the product and it will not.
+</div>
+</div>
+
+<!-- ============================================ 12 -->
+<div class="page">
+<h2>12. How to write listing copy that gets accepted</h2>
+
+<h3>The rules that matter</h3>
+<table class="tight">
+<tr><th style="width:44mm">Rule</th><th>Why</th></tr>
+
+<tr><td><b>First sentence says what it is</b></td>
+<td>Not why it is exciting. &ldquo;Kresker dubs video into 43 languages&rdquo; beats
+&ldquo;Kresker unlocks global audiences&rdquo;. Reviewers skim the first line to pick a
+category; if they cannot tell what you do, you get the wrong one or get rejected.</td></tr>
+
+<tr><td><b>Numbers instead of adjectives</b></td>
+<td>&ldquo;43 languages&rdquo;, &ldquo;up to 30 minutes&rdquo;, &ldquo;&#8377;299/month&rdquo;
+are checkable. &ldquo;Fast&rdquo;, &ldquo;powerful&rdquo; and &ldquo;world-class&rdquo; are
+noise, and AI systems reading your listing cannot do anything with them.</td></tr>
+
+<tr><td><b>Say what it does not do</b></td>
+<td>Counter-intuitive and it works. It builds trust, it prevents the wrong customers
+signing up and churning, and it stops a reviewer discovering the gap themselves.</td></tr>
+
+<tr><td><b>Lead with what is unusual</b></td>
+<td>&ldquo;AI video dubbing&rdquo; describes forty products. &ldquo;Adds a dubbed audio
+track to your existing YouTube video&rdquo; describes one.</td></tr>
+
+<tr><td><b>Same wording everywhere</b></td>
+<td>Use the blocks in section 4 unchanged. Consistency across many sites is itself a signal
+&mdash; to search engines and to AI assistants cross-checking facts. Rewriting each time
+creates small contradictions that undermine both.</td></tr>
+
+<tr><td><b>No exclamation marks</b></td>
+<td>They read as advertising. One is forgivable; three gets you skimmed past.</td></tr>
+</table>
+
+<h3>Before and after</h3>
+<div class="box warn">
+<span class="t">Weak</span>
+<em>&ldquo;Kresker is a revolutionary AI-powered platform that unlocks global audiences
+with seamless, world-class video dubbing! Reach millions of new viewers and grow your
+channel like never before!&rdquo;</em>
+<br><br>
+Nothing checkable. Could describe any of forty tools. Three exclamation marks. An AI
+assistant reading this learns nothing it could repeat.
+</div>
+
+<div class="box good">
+<span class="t">Strong</span>
+<em>&ldquo;Kresker dubs video into 43 languages and keeps each speaker's own voice. Upload
+an MP4, pick your languages, download the finished file. It can also produce an audio-only
+track for your existing YouTube video, so the same upload reaches viewers in their own
+language. 14 of the 43 languages are Indian. Free tier: 1 minute, no card.&rdquo;</em>
+<br><br>
+Six checkable facts. One clear differentiator. Reads as information, which is what both a
+reviewer and an AI assistant can actually use.
+</div>
+
+<div class="box note">
+<span class="t">One thing to remember about your own copy</span>
+Your existing site description is already good: <em>&ldquo;Kresker dubs your video into
+another language in one click, keeping the original speaker's voice.&rdquo;</em> Short,
+concrete, no hype. Where a form auto-fills from your website, leave it alone.
+</div>
+</div>
+
+<!-- ============================================ 13 -->
+<div class="page">
+<h2>13. Before you start: four things to prepare</h2>
+<p class="lead">Two hours of preparation saves about ten hours of submissions.</p>
+
+<table>
+<tr><th style="width:11mm">#</th><th>Prepare</th><th>Why</th></tr>
+
+<tr><td>1</td><td><b>One 1200&times;630 image</b></td>
+<td>Every single site asks for a thumbnail or social image. You already have
+<code>og.png</code> &mdash; open it, shrink it to thumbnail size, and check the text is
+still readable. If not, remake it with bigger type and fewer words.</td></tr>
+
+<tr><td>2</td><td><b>A 30&ndash;60 second screen recording</b></td>
+<td>Your output is <em>audio</em>. It cannot be judged from a screenshot, which makes this
+the single highest-value asset you can make. Real video in, Telugu or Hindi out, original
+voice audible. No narration needed &mdash; just show it.</td></tr>
+
+<tr><td>3</td><td><b>Social accounts</b></td>
+<td>X, LinkedIn, YouTube, with the right name and logo. Many forms ask, several require at
+least one, and Product Hunt effectively requires them. They also feed the branded search
+work from the SEO plan.</td></tr>
+
+<tr><td>4</td><td><b>A notes file with everything</b></td>
+<td>All the blocks from section 4 in one plain text file, plus the login you used for each
+site. You are creating 40+ accounts. Without a system this is where it stops being
+finished.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">Then: the order</span>
+<b>Day 1</b> &mdash; prepare the four things above.<br>
+<b>Day 2</b> &mdash; the 18 AI directories, in one sitting. Plus AlternativeTo, carefully.<br>
+<b>Day 3</b> &mdash; the 13 startup directories. Fast, mechanical.<br>
+<b>Day 4</b> &mdash; claim the review sites. Do not perfect them.<br>
+<b>Ongoing</b> &mdash; one community post a week. Start with r/roastmystartup.<br>
+<b>Later</b> &mdash; fix the free tier, make the video, then Product Hunt.
+</div>
+
+<h2 style="margin-top:10mm">14. Tracker</h2>
+<p>Copy this into a spreadsheet. The last two columns are the ones that decide where you
+spend money later.</p>
+<div class="paste small">Site | URL | Submitted | Approved | Live URL | Visitors | Worth paying?</div>
+
+<div class="box note">
+<span class="t">Come back to this in three weeks</span>
+The whole point of the last two columns. Most of these 67 sites will send you nothing;
+three or four will send almost everything. You cannot predict which, and nobody's advice
+including mine can tell you &mdash; it varies by product.
+<br><br>
+So record it. In three weeks, look at the list, and put any money and any further effort
+only into the ones that actually worked. That single habit is worth more than the other
+sixty listings put together.
+</div>
+
+<div style="margin-top:12mm; border-top:0.4pt solid #262b33; padding-top:5mm;
+     font-size:9.5pt; color:#6b7480">
+Every product fact in this document was taken from your codebase on 2 September 2026:
+the 43-language list from <code>frontend/src/lib/format.ts</code>, prices and limits from
+the plan table, and the absence of lip-sync and subtitle export confirmed by searching the
+whole repository. If any of it changes, this document is wrong &mdash; the facts sheet in
+section 5 is the part to re-check.
+</div>
+</div>
+
+</body>
+</html>

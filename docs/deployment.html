@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kresker — Deployment Handbook</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 9.6pt; line-height: 1.5; color: #14171a; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 2mm 0; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm 0; padding-bottom: 1.2mm;
+       border-bottom: 1.6pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 6mm 0 1.5mm 0; page-break-after: avoid; color: #0b3d6b; }
+  h4 { font-size: 9.8pt; margin: 3.5mm 0 1mm 0; page-break-after: avoid; }
+  p  { margin: 0 0 2.2mm 0; }
+  ul, ol { margin: 0 0 2.2mm 0; padding-left: 5mm; }
+  li { margin: 0 0 1.2mm 0; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 8.8pt;
+              background: #f2f4f6; padding: 0.3mm 1mm; border-radius: 1mm; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.1pt;
+        background: #f6f8fa; border: 0.4pt solid #d5dbe0; border-left: 2.4pt solid #6b7d8f;
+        padding: 2mm 2.5mm; margin: 1.5mm 0 2.5mm 0; white-space: pre-wrap;
+        overflow-wrap: break-word; page-break-inside: avoid; line-height: 1.42; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm 0; font-size: 8.5pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.3mm 1.6mm;
+       font-weight: 600; font-size: 8.2pt; }
+  td { border-bottom: 0.4pt solid #dfe4e8; padding: 1.3mm 1.6mm; vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.m, th.m { font-family: Consolas, monospace; font-size: 8pt; }
+  .box { border: 0.5pt solid #c8ced4; border-left: 3pt solid #14171a;
+         background: #f7f9fa; padding: 2.5mm 3mm; margin: 2.5mm 0; page-break-inside: avoid; }
+  .warn { border-left-color: #a8321a; background: #fdf4f2; }
+  .good { border-left-color: #0a7a3d; background: #f2faf5; }
+  .note { border-left-color: #1a5fa8; background: #f2f7fd; }
+  .plain { border-left-color: #7a5a1a; background: #fdfaf2; }
+  .cover { text-align: left; padding-top: 30mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #4a5560; margin-top: 1mm; }
+  .cover .meta { margin-top: 14mm; font-family: Consolas, monospace; font-size: 9pt;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 4mm; }
+  .newpage { page-break-before: always; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; font-size: 9.4pt; }
+  .toc td.n { width: 9mm; font-family: Consolas, monospace; color: #4a5560; }
+  .small { font-size: 8.2pt; color: #4a5560; }
+  .card { border: 0.5pt solid #c8ced4; border-radius: 1.5mm; padding: 3mm 3.5mm;
+          margin: 3mm 0; page-break-inside: avoid; }
+  .card h3 { margin-top: 0; }
+  .kv { font-size: 8.6pt; }
+  .kv b { display: inline-block; min-width: 36mm; color: #0b3d6b; }
+  .tag { display: inline-block; font-size: 7.4pt; font-weight: 700; padding: 0.4mm 1.4mm;
+         border-radius: 1mm; vertical-align: 1px; letter-spacing: 0.2pt; }
+  .live { background: #0a7a3d; color: #fff; }
+  .inert { background: #7a5a1a; color: #fff; }
+  .todo { background: #a8321a; color: #fff; }
+  .ascii { font-family: Consolas, monospace; font-size: 7.6pt; line-height: 1.35;
+           background: #f6f8fa; border: 0.4pt solid #d5dbe0; padding: 3mm;
+           white-space: pre; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Kresker — Deployment Handbook</h1>
+  <div class="sub">Where every piece runs, where the data lives, what all 71 API
+  endpoints do, and exactly what is still missing before this can face the public</div>
+  <div class="meta">
+    Project &nbsp;&nbsp;&nbsp; Kresker — video dubbing, 43 languages<br>
+    Branch &nbsp;&nbsp;&nbsp;&nbsp; compliance/dpdp<br>
+    Written &nbsp;&nbsp;&nbsp; 27 August 2026<br>
+    Source &nbsp;&nbsp;&nbsp;&nbsp; Every fact read out of the code and the deployment
+    scripts. Where something<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; is not in the
+    codebase, this document says so rather than describing an intention.
+  </div>
+
+  <div class="box warn" style="margin-top:12mm">
+    <b>Read section 11 first if you are about to deploy.</b> The application is
+    feature-complete and verified — 807 backend checks and 458 frontend checks, all
+    passing — but three things needed to serve the public are <i>not in this
+    repository at all</i>: TLS termination, a web server for the built frontend, and a
+    process supervisor. They are listed with what each one needs.
+  </div>
+</div>
+
+<h2>Contents</h2>
+<table class="toc">
+  <tr><td class="n">1</td><td>The shape of the system, in one picture</td></tr>
+  <tr><td class="n">2</td><td>What a single dub actually does, request by request</td></tr>
+  <tr><td class="n">3</td><td>The processes — what runs, where, and how it starts</td></tr>
+  <tr><td class="n">4</td><td>The GPU box: the expensive part, and how it turns itself off</td></tr>
+  <tr><td class="n">5</td><td>The database — engine, tables, migrations, backup</td></tr>
+  <tr><td class="n">6</td><td>File storage: uploads, outputs, R2, retention</td></tr>
+  <tr><td class="n">7</td><td>Every API endpoint (71), what it does and who may call it</td></tr>
+  <tr><td class="n">8</td><td>External services and what each one costs us</td></tr>
+  <tr><td class="n">9</td><td>Configuration: every environment variable</td></tr>
+  <tr><td class="n">10</td><td>Security posture as deployed</td></tr>
+  <tr><td class="n">11</td><td>What is NOT ready — the honest gap list</td></tr>
+  <tr><td class="n">12</td><td>Deploying, and rolling back</td></tr>
+  <tr><td class="n">13</td><td>Costs</td></tr>
+</table>
+
+<h2 class="newpage">1 &nbsp; The shape of the system, in one picture</h2>
+
+<p>Four tiers. The unusual one is the third: the GPU is a machine that is
+<b>switched off most of the time</b> and is started by an upload, which is the single
+biggest cost decision in the design.</p>
+
+<div class="ascii">
+  BROWSER                    YOUR MACHINE / SERVER                     AWS ap-south-1
+  ------------------------   ---------------------------------------   ------------------
+
+  React SPA           HTTPS   +---------------------------------+
+  (Vite build,      ------->  |  uvicorn : FastAPI              |
+   dist/ static)              |    + dub-worker      (thread)   |
+                              |    + gpu-watchdog    (thread)   |
+  vs_session cookie           |                                 |      +----------------+
+  + X-CSRF-Token              |  SQLite  data/live.db  (WAL)    |      | g4dn.xlarge    |
+                              |  Files   data/uploads           |      | i-041b48c5...  |
+                              |          data/outputs           |      |                |
+                              |          data/mail              |      | Docker         |
+                              +---------------------------------+      |  9276383fe31e  |
+                                    |            |                     |  :3900         |
+                       ssh -L 3900  |            | aws ec2             |                |
+                       (tunnel)     +------------+ start/stop-instances|  gemini-proxy  |
+                                    |                                  +----------------+
+                                    v                                          |
+                              127.0.0.1:3900  ==== the tunnel IS the link ====--+
+                                                                               |
+                              Razorpay   Resend   Google OAuth                 v
+                              (payments) (email)  (sign-in)          Amazon Translate
+                                                                     Amazon Bedrock
+                              Cloudflare R2  (video delivery, OFF by default)
+</div>
+
+<div class="box note">
+  <b>The one thing to understand about the GPU link.</b> The backend never talks to the
+  box's public address. It opens an SSH tunnel and then talks to
+  <code>http://127.0.0.1:3900</code>, which is the local end of that tunnel. This is
+  deliberate: the box's public IP changes on every start, and the engine on port 3900
+  <b>accepts no credentials at all</b> — a plain GET returns 200 to anyone who can
+  reach it. The tunnel plus a security-group rule locked to one address is the only
+  thing protecting it.
+</div>
+
+<h2>2 &nbsp; What a single dub actually does, request by request</h2>
+
+<table>
+  <tr><th style="width:7mm">#</th><th style="width:52mm">Step</th><th>What happens</th></tr>
+  <tr><td>1</td><td class="m">POST /api/uploads</td>
+      <td>Session and CSRF checked, then the <b>email-confirmed</b> gate, then the rate
+      limit. <b>The GPU is started here</b>, before a single byte is read
+      (<code>gpu.ensure_running(block=False)</code>) so the ~6-minute warm-up runs
+      underneath the upload instead of after it. The file is streamed to
+      <code>data/uploads/</code> and <code>ffprobe</code> measures the real duration —
+      never the client's claim. Quota is checked against that measurement.</td></tr>
+  <tr><td>2</td><td class="m">POST /api/jobs</td>
+      <td>One request, up to 8 languages. Charges the minute ledger for the
+      <b>total</b> and creates every job row in one transaction, so a partial failure
+      cannot charge for three and queue two.</td></tr>
+  <tr><td>3</td><td>the worker claims it</td>
+      <td>The <code>dub-worker</code> thread takes the oldest queued job under a lock
+      plus a transaction, using a guarded <code>UPDATE ... WHERE state='queued'</code>
+      and checking <code>rowcount</code>.</td></tr>
+  <tr><td>4</td><td>engine: upload → transcribe</td>
+      <td><code>POST /dub/upload</code>, then the <b>streaming</b> transcribe endpoint.
+      Per-read timeout of 900 s, not a total: the clone-building tail goes quiet for
+      minutes and a total timeout cannot tell "working" from "wedged".</td></tr>
+  <tr><td>5</td><td>engine: translate → generate</td>
+      <td>Translation and the per-line voice generation. Refuses to render if no
+      segment carries a <code>profile_id</code> (every line would use the stock voice)
+      or if translation covered fewer lines than there are segments.</td></tr>
+  <tr><td>6</td><td>download and verify</td>
+      <td>Refuses to download unless <code>engine.has_track()</code> is true —
+      <code>/dub/download</code> otherwise returns the <i>original</i> audio, and that
+      has shipped as a finished dub before.</td></tr>
+  <tr><td>7</td><td>store and stamp</td>
+      <td>Written to <code>data/outputs/&lt;job&gt;.mp4</code>, optionally uploaded to
+      R2, ISO-639-2 audio track tag applied, <code>output_expires_at</code> set from
+      the plan's retention, "your dub is ready" emailed once
+      (<code>notified_done_at</code> makes a retry free).</td></tr>
+  <tr><td>8</td><td class="m">GET /api/jobs/{id}/download</td>
+      <td>Mints a short-lived signed token, 307-redirects to <code>/dl/{token}</code>,
+      which either streams from local disk or redirects again to a presigned R2 URL.</td></tr>
+  <tr><td>9</td><td>the box turns itself off</td>
+      <td>10 minutes after the last job finishes, if nothing is queued and no upload is
+      in flight. See section 4.</td></tr>
+</table>
+
+<h2 class="newpage">3 &nbsp; The processes — what runs, where, and how it starts</h2>
+
+<div class="box warn">
+  <b>The worker is not a separate service.</b> One <code>uvicorn</code> process
+  contains the API, the dub worker and the GPU watchdog as daemon threads. This is fine
+  for one machine and is <b>the single hardest limit on scaling</b>: a second process on
+  the same database would requeue jobs the first one is actively running. See section 11.
+</div>
+
+<h3>3.1 &nbsp; The API process</h3>
+<p><code>app/main.py</code>'s startup handler runs, in order: <code>db.init_db()</code>,
+<code>billing.ensure_tables()</code>, <code>notify.ensure_tables()</code>,
+<code>site.ensure_tables()</code>, <code>worker.start()</code>,
+<code>gpu.start_watchdog()</code>. So the process holds:</p>
+<ul>
+  <li>the FastAPI app;</li>
+  <li>a daemon thread <code>dub-worker</code> — claims jobs, drives the engine, and every
+      ~300 idle seconds also runs the retention sweep and the billing sweep;</li>
+  <li>a daemon thread <code>gpu-watchdog</code> — first pass after 45 s, then every 60 s;</li>
+  <li>transient <code>gpu-warmup</code> threads, and the <code>ssh</code> child process
+      holding the tunnel.</li>
+</ul>
+
+<h3>3.2 &nbsp; The three ways it gets started</h3>
+
+<table>
+  <tr><th style="width:36mm">Script</th><th style="width:26mm">Purpose</th><th>Command and notes</th></tr>
+  <tr><td class="m">backend/run.ps1</td><td>Local, fake engine</td>
+      <td><code>uvicorn app.main:app --host 127.0.0.1 --port 8080</code>. Sets
+      <code>VS_ENGINE_MODE=fake</code> and <code>VS_COOKIE_INSECURE=1</code>. Uses
+      <code>data/app.db</code>. <span class="small">Note: the script's default port is
+      8080 while the README says 8099.</span></td></tr>
+  <tr><td class="m">backend/go_live.ps1</td><td>The real pipeline</td>
+      <td>Starts the instance, waits for SSH, checks <code>/sysinfo</code>, starts the
+      container if needed, reports <code>gemini-proxy</code>, opens the tunnel in its
+      own minimised window, probes the mail key, then
+      <code>uvicorn app.main:app --host 127.0.0.1 --port 8099</code> against
+      <code>data/live.db</code>.</td></tr>
+  <tr><td class="m">backend/stop_live.ps1</td><td>Stop paying</td>
+      <td>Kills every <code>ssh</code> process, then
+      <code>aws ec2 stop-instances</code>.</td></tr>
+</table>
+
+<div class="box plain">
+  <b>Both start scripts bind to <code>--host 127.0.0.1</code>.</b> As configured,
+  nothing is reachable from off the machine. That is correct for development and is one
+  of the things that has to change for production — along with the reverse proxy that
+  would then be in front of it.
+</div>
+
+<h3>3.3 &nbsp; The watchdog, which is deliberately outside the API</h3>
+<p><code>install_watchdog.ps1</code> registers a Windows scheduled task,
+<b>"VoiceStudio GPU watchdog"</b>, every 5 minutes, running
+<code>pythonw.exe backend/watchdog.py</code>. It exists because the in-process watchdog
+dies with the API — and an API crash that leaves a ₹47/hour machine running is exactly
+the failure worth a second mechanism.</p>
+<p>Two details in that script were learned the hard way and are worth not re-discovering:
+it registers via <b>XML</b> because <code>schtasks /tr</code> silently splits the command
+on the first space (the path contains one, so every run failed while the task reported
+Ready), and it uses <b>pythonw.exe</b> because a console program under
+<code>InteractiveToken</code> pops a visible window every five minutes.</p>
+<p><code>watchdog.py</code> refuses to run if the database file does not exist — an empty
+database is indistinguishable from an idle one, and it would stop a box that was busy.</p>
+
+<h3>3.4 &nbsp; The frontend</h3>
+<p>React 18 + Vite 6 + Tailwind 4. <code>npm run build</code> emits
+<code>frontend/dist/</code>. In development the Vite dev server runs on <b>5173</b> and
+proxies <code>/api</code>, <code>/dl</code>, <code>/robots.txt</code>,
+<code>/sitemap.xml</code>, <code>/db</code>, <code>/docs</code> and
+<code>/openapi.json</code> to the backend — same-origin on purpose, so the session
+cookie works with no CORS and no <code>SameSite</code> exemption.</p>
+
+<div class="box warn">
+  <b>Nothing in this repository serves <code>frontend/dist</code>.</b> The backend mounts
+  only its own <code>app/static</code> operator pages. In production the built files need
+  a web server or a CDN in front, and that configuration does not exist yet. See
+  section 11.
+</div>
+
+<h3>3.5 &nbsp; Build output, after the load-time work</h3>
+<table>
+  <tr><th>Metric</th><th>Before</th><th>After</th><th>How</th></tr>
+  <tr><td>JS on first paint</td><td>664 KB in one chunk</td><td><b>275 KB</b> across 2 files</td>
+      <td>Route-level <code>lazy()</code> for auth, dashboard, admin and legal; the
+      landing page stays eager</td></tr>
+  <tr><td>Chunks</td><td>1</td><td>32</td><td>Rollup cuts at each dynamic import</td></tr>
+  <tr><td>Framework caching</td><td>evicted on every deploy</td><td><code>react-vendor</code> is its own 161 KB chunk</td>
+      <td>A code change no longer invalidates React in returning visitors' caches</td></tr>
+</table>
+<p class="small">Base UI is deliberately <i>not</i> in a manual chunk. Naming it produced
+a 227 KB chunk on the critical path and made the total larger, because naming a package
+pulls its whole graph in and defeats the per-subpath tree-shaking the five separate
+imports were getting for free.</p>
+
+<h2 class="newpage">4 &nbsp; The GPU box</h2>
+
+<div class="card">
+  <h3>The machine</h3>
+  <div class="kv">
+    <b>Instance</b> <code>i-041b48c591cb86e19</code><br>
+    <b>Type</b> g4dn.xlarge, root 150 GiB gp3<br>
+    <b>Region</b> ap-south-1 (Mumbai), availability zone ap-south-1c<br>
+    <b>AWS profile</b> <code>videotrans</code>, account <code>959689755912</code><br>
+    <b>Golden AMI</b> <code>ami-09583800297a6f720</code> — <i>voicestudio-golden-20260823</i><br>
+    <b>Base AMI</b> <code>ami-0eb5a4f0d81f671e3</code> — Deep Learning OSS Nvidia PyTorch 2.7, Ubuntu 22.04<br>
+    <b>Snapshot</b> <code>snap-0c003e3c8bf8dab1f</code><br>
+    <b>Security group</b> <code>sg-0dfc3932e7d0896a4</code><br>
+    <b>Engine</b> Docker container <code>9276383fe31e</code>, listening on <b>:3900</b><br>
+    <b>Also on the box</b> <code>gemini-proxy</code> systemd unit — ASR and translation
+    both route through it<br>
+    <b>Cost</b> <b>₹47/hour</b> while running
+  </div>
+</div>
+
+<h3>4.1 &nbsp; Starting</h3>
+<p><code>gpu.ensure_running()</code>. Triggered by an upload, non-blocking so the
+customer never waits on a boot. It tests whether the <b>engine answers</b>, not whether
+we own the tunnel — a tunnel opened by hand in another window is deliberately tolerated.
+Then: <code>start-instances</code> → poll for <code>running</code> (up to 600 s) → wait
+for SSH (180 s) → open the tunnel → poll <code>/sysinfo</code> (up to 420 s), and if it
+does not answer, <code>docker start</code> the <b>existing</b> container once.</p>
+
+<div class="box note">
+  <b>A running instance is not a running application.</b> The container does not reliably
+  come back on boot, so the readiness gate is "<code>/sysinfo</code> answers", not "the
+  instance is running". Nothing is ever rebuilt or edited — only started.
+</div>
+
+<h3>4.2 &nbsp; Stopping</h3>
+<p><code>gpu.maybe_stop()</code> runs from both watchdogs and refuses while
+<code>hold_reason()</code> returns anything. All four conditions are answered <b>from the
+database only</b>, deliberately, so the same logic can move into a Lambda unchanged:</p>
+<ol>
+  <li>no job in <code>claimed / preparing / transcribing / translating / rendering / exporting</code>;</li>
+  <li>no job <code>queued</code>;</li>
+  <li>no upload accepted in the last <b>20 minutes</b> that has not become a job;</li>
+  <li>the last work finished at least <b>10 minutes</b> ago.</li>
+</ol>
+<p>Ten minutes rather than five because a boot costs about six minutes of GPU time either
+way — so shutting down just before the next job arrives is the most expensive thing the
+watchdog can do.</p>
+
+<h3>4.3 &nbsp; The network rule that actually matters</h3>
+<div class="box warn">
+  The engine on :3900 takes no credentials. Once the box holds its instance role,
+  whoever can reach that port can drive Amazon Translate and Bedrock on our bill.
+  <code>aws_lock_ip.ps1</code> restricts 3900, 3000 and 22 to the operator machine's
+  current <code>/32</code> and patches the <code>aws:SourceIp</code> condition on the
+  IAM policy. <b>It must be re-run after every stop/start</b>, because the public IP
+  changes. The group previously allowed two ISP pool ranges — about 9,200 addresses.
+</div>
+<p>The box's IAM role <code>OmniVoiceTranslateRole</code> grants
+<code>translate:TranslateText</code> plus Bedrock invoke on five pinned models (Mistral
+Large 3, DeepSeek v3.2, Kimi K2.5, Gemma-3-12b-it, Qwen3-235B), both statements
+conditioned on the box's source IP.</p>
+
+<h2 class="newpage">5 &nbsp; The database</h2>
+
+<div class="card">
+  <div class="kv">
+    <b>Engine</b> SQLite, stdlib <code>sqlite3</code>, no ORM<br>
+    <b>File</b> <code>backend/data/live.db</code> in production use;
+      <code>app.db</code> for fake-mode development<br>
+    <b>Journal</b> WAL, <code>foreign_keys=ON</code>, <code>busy_timeout=30000</code><br>
+    <b>Connections</b> one per thread (<code>threading.local()</code>)<br>
+    <b>Writes</b> serialised through a process-wide <code>RLock</code>; reads are not
+      locked<br>
+    <b>Postgres</b> <span class="tag inert">FUTURE</span> <code>postgres_schema.sql</code>
+      exists and is held column-for-column against the SQLite schema by a test, but
+      <b>nothing connects to Postgres</b>
+  </div>
+</div>
+
+<p>SQLite allows exactly one writer, which is why the write lock exists: a background
+worker plus web requests would otherwise collide as <i>database is locked</i> under load.</p>
+
+<h3>5.1 &nbsp; Migrations</h3>
+<p><code>db.init_db()</code> runs on <b>every startup</b>: apply <code>schema.sql</code>
+(idempotent, <code>CREATE TABLE IF NOT EXISTS</code>) → apply an additive list of
+<code>ALTER TABLE ADD COLUMN</code> steps, skipping any column already present → create
+migrated-column indexes → seed the plans and the singleton <code>gpu_state</code> row.</p>
+<p>There is <b>no version table and no down-migration</b>, deliberately: the interesting
+case is a database arriving from somewhere else, and that database has no idea which
+migrations it has seen. Idempotent-by-inspection handles it; a version counter does not.</p>
+<p>One migration is worth naming because it protects existing customers:
+<code>email_verified_at</code> is backfilled to each user's creation time, because adding
+a NULL column would otherwise have locked every existing account out of uploading on the
+next restart.</p>
+
+<h3>5.2 &nbsp; The 21 tables</h3>
+<table>
+  <tr><th style="width:34mm">Table</th><th>What it is for</th></tr>
+  <tr><td class="m">users</td><td>Accounts. scrypt <code>password_hash</code>, role, lifetime-free-trial stamp, reset and confirmation token <i>hashes</i>, <code>google_sub</code></td></tr>
+  <tr><td class="m">sessions</td><td>One row per sign-in. Stores only the token's SHA-256, plus the CSRF value, IP, user agent, expiry</td></tr>
+  <tr><td class="m">plans</td><td>The price list: interval, price in paise, minutes, max video length, retention days</td></tr>
+  <tr><td class="m">subscriptions</td><td>Who is on what, with period bounds, grace window and auto-renew</td></tr>
+  <tr><td class="m">payments</td><td>Real money only. <code>provider_payment_id</code> UNIQUE makes a replayed webhook harmless; a refund is a negative row</td></tr>
+  <tr><td class="m">checkout_sessions</td><td>Every checkout started, and whether it was paid</td></tr>
+  <tr><td class="m">webhook_events</td><td>Idempotency record. <code>event_id</code> UNIQUE, so a provider retry is free</td></tr>
+  <tr><td class="m">webhook_rejects</td><td>Every webhook <i>refused</i>, with why — a run of signature failures is either a bad secret or somebody probing</td></tr>
+  <tr><td class="m">uploads</td><td>The stored file plus what ffprobe actually found, never the client's claim</td></tr>
+  <tr><td class="m">jobs</td><td>One row per dub: state, percent, engine ids, preset version + fingerprint, output path and R2 key, minutes quoted, retention and deletion stamps</td></tr>
+  <tr><td class="m">job_segments</td><td><b>The transcript and translation — the system of record.</b> Nothing ever re-queries the engine for it</td></tr>
+  <tr><td class="m">job_events</td><td>The progress log. This is what makes progress survive a page refresh</td></tr>
+  <tr><td class="m">job_artifacts</td><td>Raw engine responses, the delivery check, the R2 report</td></tr>
+  <tr><td class="m">usage_ledger</td><td><b>Append-only.</b> Quota is <code>SUM(minutes_charged)</code>, never a counter, so a refund is a compensating row and the original charge is never edited</td></tr>
+  <tr><td class="m">admin_audit</td><td><b>Append-only.</b> Every admin <i>write</i>, with before/after JSON and a reason</td></tr>
+  <tr><td class="m">admin_access_log</td><td>Which admin <i>read</i> whose personal data. Separate from the audit because reads are high-volume and would bury the twelve rows that move money</td></tr>
+  <tr><td class="m">consent_records</td><td><b>Append-only DPDP consent ledger.</b> Withdrawal is a new row, never an UPDATE — an UPDATE destroys the evidence that consent existed</td></tr>
+  <tr><td class="m">inbox_messages</td><td>Contact form <b>and</b> every data-rights request, in one table on purpose: splitting them makes it possible to answer one inbox and not the other</td></tr>
+  <tr><td class="m">gpu_state</td><td>Singleton. Desired state and the timestamps the idle logic reads. Never the authority for what the box is actually doing</td></tr>
+  <tr><td class="m">emails</td><td>Every message sent, with ok/error, so "did we tell them?" is a query</td></tr>
+  <tr><td class="m">app_settings</td><td>Runtime settings an admin can change without a deploy. Today: maintenance mode, with its reason and who set it</td></tr>
+</table>
+
+<h3>5.3 &nbsp; Backup and moving installations</h3>
+<p><code>app/portability.py</code> exports the database as JSONL per table, plus copies of
+both schema files and a manifest. The manifest holds a fingerprint of the <b>live</b>
+column layout (not of the schema file, so drift is detectable), per-table row counts,
+order-independent digests, and <b>sums</b> — total minutes charged and total cash —
+because a partial restore can produce the right row count with the wrong contents.</p>
+<ul>
+  <li><b>No secret ever enters the archive.</b> Keys are reported by name and by whether
+      they are set.</li>
+  <li><b>Sessions are skipped</b> — carrying them means carrying live credentials in a
+      file that gets copied around. Everyone signs in again.</li>
+  <li><code>restore()</code> refuses to touch an existing file.</li>
+  <li>The archive is the <b>database only</b>. Finished videos on local disk have to be
+      copied separately; with R2 on they do not move at all.</li>
+</ul>
+<div class="box warn">
+  <b>Gap:</b> four tables are missing from the export list —
+  <code>consent_records</code>, <code>inbox_messages</code>,
+  <code>admin_access_log</code>, <code>app_settings</code>. A move would lose the
+  consent ledger and the rights-request inbox. Both are DPDP evidence.
+</div>
+
+<h2 class="newpage">6 &nbsp; File storage</h2>
+
+<pre>data/                        (VS_DATA_DIR, default backend/data)
+  uploads/                   uploaded source videos
+  outputs/                   finished dubs, &lt;job_id&gt;.mp4
+  mail/                      the file-backend outbox
+  export/                    migration archives
+  live.db  live.db-wal  live.db-shm
+  secret.key                 signs download and stream tokens; ACL-locked to the owner
+  watchdog.log</pre>
+
+<p><b>Paths are stored relative to the data directory</b>, in POSIX form. Rows used to
+hold <code>C:\video translator\backend\data\outputs\&lt;job&gt;.mp4</code>; restore that
+into a Linux container and nothing errors at restore time — downloads simply 410 later,
+one customer at a time.</p>
+
+<h3>6.1 &nbsp; Cloudflare R2 <span class="tag inert">OFF BY DEFAULT</span></h3>
+<p>Enabled only when <code>VS_R2_ENABLED=1</code> <b>and</b> all four credentials are
+present in <code>%USERPROFILE%\.secrets\r2.env</code>. Keys are
+<code>dubs/&lt;job_id&gt;/dubbed_&lt;lang&gt;.mp4</code>. Downloads are presigned URLs,
+300 s by default. An upload failure never raises — the local copy stays deliverable.</p>
+<p class="small">Why it matters commercially: egress from R2 is free at any volume, which
+is what makes "unlimited downloads" cost nothing beyond storage. Until it is switched on,
+every download is served from the origin machine's bandwidth.</p>
+
+<h3>6.2 &nbsp; Retention</h3>
+<table>
+  <tr><th>Plan</th><th>Output kept</th><th>Enforced by</th></tr>
+  <tr><td>Free</td><td>24 hours</td><td rowspan="2"><code>worker.sweep_expired()</code>, run when the queue is empty and at least 300 s since the last sweep. Deletes the local file, the R2 object and the cached renditions, then stamps the row</td></tr>
+  <tr><td>Paid</td><td>7 days</td></tr>
+</table>
+<div class="box warn">
+  Two gaps. The sweeper's own comment relies on "an R2 lifecycle rule is the backstop" —
+  <b>no such rule exists</b>. And nothing sweeps <code>uploads/</code>: source videos are
+  not on a retention timer anywhere in this code.
+</div>
+
+<h2 class="newpage">7 &nbsp; Every API endpoint</h2>
+<p><b>71 routes.</b> 64 in the routers, 7 at the app level. Everything under
+<code>/api/admin</code> answers <b>404, not 403</b>, to a non-admin — so a signed-in
+stranger cannot even confirm the admin surface exists.</p>
+
+<table>
+  <tr><th style="width:9mm">M</th><th style="width:56mm">Path</th><th style="width:18mm">Access</th><th>What it does</th></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>Authentication — 11 routes</b></td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/register</td><td>public</td><td>Create an account. <b>Issues no session</b> — the address must be confirmed first. Records signup consent</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/login</td><td>public</td><td>Sign in. 403 <code>email_not_confirmed</code> until confirmed, checked <i>after</i> the password so it is not an account-enumeration oracle</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/logout</td><td>session</td><td>Revokes the session server-side, which is what makes it a real logout</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/verify</td><td>token</td><td>Spend a confirmation link. No session needed — the link is opened from a mail client</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/verify/request</td><td>public</td><td>Another link, for somebody who cannot sign in to ask. Answers identically whether or not the address exists</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/verify/resend</td><td>session</td><td>The signed-in variant</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/reset/request</td><td>public</td><td>Password reset link. Non-enumerating</td></tr>
+  <tr><td>POST</td><td class="m">/api/auth/reset/confirm</td><td>token</td><td>Set a new password and revoke every existing session</td></tr>
+  <tr><td>GET</td><td class="m">/api/auth/google/start</td><td>public</td><td>Redirect to Google. Authorization Code + PKCE S256, state sealed in a signed cookie. 404 when unconfigured</td></tr>
+  <tr><td>GET</td><td class="m">/api/auth/google/callback</td><td>public</td><td>Validate state, exchange the code server-to-server, read identity from Google's userinfo, find-or-create the user, set the session</td></tr>
+  <tr><td>GET</td><td class="m">/api/auth/me</td><td>session</td><td>Identity, CSRF token, confirmation flag and current entitlement</td></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>Dubbing — 9 routes</b></td></tr>
+  <tr><td>POST</td><td class="m">/api/uploads</td><td>session</td><td><b>Starts the GPU.</b> Streams the file, probes it with ffprobe, checks quota and length</td></tr>
+  <tr><td>POST</td><td class="m">/api/jobs</td><td>session</td><td>Queue 1–8 dubs in one atomic request, charging the total</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs</td><td>session</td><td>The caller's jobs plus entitlement. One poll drives a whole batch's progress</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs/{id}</td><td>owner</td><td>Detail, including the transcript and translation</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs/{id}/events</td><td>owner</td><td>Progress since <code>after_id</code>, so a poll never re-downloads history</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs/{id}/formats</td><td>owner</td><td>What the download menu offers: video, m4a, mp3, wav</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs/{id}/download-token</td><td>owner</td><td>Mints a signed token. 300 s for a download, 7200 s for playback — a <code>&lt;video&gt;</code> re-fetches a range on every seek</td></tr>
+  <tr><td>GET</td><td class="m">/api/jobs/{id}/download</td><td>owner</td><td>307 to <code>/dl/{token}</code></td></tr>
+  <tr><td>DELETE</td><td class="m">/api/jobs/{id}/video</td><td>owner</td><td>Delete the output early, on request</td></tr>
+  <tr><td>GET</td><td class="m">/dl/{token}</td><td>token</td><td>Serves the file, or redirects to a presigned R2 URL. Re-checks retention at serve time. Supports Range, which is what makes the scrub bar work</td></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>Billing — 7 routes</b></td></tr>
+  <tr><td>GET</td><td class="m">/api/billing/plans</td><td>public</td><td>The price list the pricing page renders</td></tr>
+  <tr><td>POST</td><td class="m">/api/billing/checkout</td><td>session</td><td>Creates an order (annual) or a subscription (monthly)</td></tr>
+  <tr><td>POST</td><td class="m">/api/billing/webhook</td><td>signature</td><td>Verifies the signature <i>before</i> touching the payload; idempotent by event id; every rejection is recorded</td></tr>
+  <tr><td>GET</td><td class="m">/api/billing/me</td><td>session</td><td>Entitlement, subscription and payment history</td></tr>
+  <tr><td>POST</td><td class="m">/api/billing/cancel</td><td>session</td><td>Stop auto-renew, keeping access to the end of the period</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/billing</td><td>admin</td><td>Provider status, live-vs-test, recent payments</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/billing/sweep</td><td>admin</td><td>Force the renewal-reminder and expiry sweep</td></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>Privacy / DPDP — 7 routes</b></td></tr>
+  <tr><td>GET</td><td class="m">/api/privacy/notice</td><td>public</td><td>The live notice: version, purposes, recipients, retention, grievance contact. The legal pages render from this rather than hard-coding it</td></tr>
+  <tr><td>POST</td><td class="m">/api/contact</td><td>public</td><td>Contact form → the admin inbox. Unauthenticated by necessity, so rate limited</td></tr>
+  <tr><td>POST</td><td class="m">/api/privacy/request</td><td>public</td><td>Exercise a right (ss.11–13). Starts the statutory clock; logged, never auto-executed</td></tr>
+  <tr><td>GET</td><td class="m">/api/privacy/consent</td><td>session</td><td>Current state and the full ledger</td></tr>
+  <tr><td>POST</td><td class="m">/api/privacy/consent</td><td>session</td><td>Grant or withdraw an optional purpose — a new ledger row either way</td></tr>
+  <tr><td>GET</td><td class="m">/api/privacy/export</td><td>session</td><td>The principal's own data. Deliberately omits password and token hashes: they are credentials, of no use to the person, and a new place to leak from</td></tr>
+  <tr><td>POST</td><td class="m">/api/privacy/erase</td><td>session</td><td>Close the account. Destroys personal data, anonymises the financial spine. Needs the password unless the account is Google-only (it has none)</td></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>Admin — 26 routes</b> <span class="small" style="color:#ccc">all 404 to a non-admin</span></td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/overview</td><td>admin</td><td>Users, jobs, minutes, revenue at a glance</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/users</td><td>admin</td><td>Account list. Logged to the access log</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/users/{id}/jobs</td><td>admin</td><td>One account's jobs</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/users/{id}/grant</td><td>admin + password</td><td>Grant a plan manually. Audited with a reason</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/users/{id}/revoke</td><td>admin + password</td><td>Revoke it. Audited</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/jobs/{id}/refund</td><td>admin + password</td><td>Refund minutes as a compensating ledger row</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/sessions</td><td>admin</td><td>Live sessions</td></tr>
+  <tr><td>DELETE</td><td class="m">/api/admin/sessions/{id}</td><td>admin</td><td>Kill one</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/gpu</td><td>admin</td><td>Actual vs desired state, tunnel, hold reason, idle windows</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/gpu/start</td><td>admin</td><td>Warm the box by hand</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/gpu/stop</td><td>admin</td><td>Stop it, subject to the same hold conditions</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/storage</td><td>admin</td><td>Whether R2 is configured and enabled — reported separately on purpose</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/mail</td><td>admin</td><td>The outbox. Subject and kind only; bodies contain live reset URLs</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/limits</td><td>admin</td><td>Rate-limit buckets and current occupancy</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/portability</td><td>admin</td><td>Readiness: blockers and warnings, not a score</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/export</td><td>admin</td><td>Write a migration archive</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/audit</td><td>admin</td><td>The write audit</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/access-log</td><td>admin</td><td>Who read whose personal data</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/preset</td><td>admin</td><td>The pinned pipeline preset and its fingerprint</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/inbox</td><td>admin</td><td>Enquiries and rights requests, with deadline counts</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/inbox/{id}</td><td>admin</td><td>Mark handled, with a note of what was done</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/users/{id}/consent</td><td>admin</td><td>One principal's consent ledger</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/dpdp</td><td>admin</td><td>The compliance checklist — see section 11</td></tr>
+  <tr><td>GET/POST</td><td class="m">/api/admin/maintenance</td><td>admin</td><td>Take the public site off and back on, with a reason. Admins still see the real site</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/seo</td><td>admin</td><td>robots.txt and sitemap status</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/db</td><td>admin</td><td>Table list and row counts</td></tr>
+  <tr><td>GET</td><td class="m">/api/admin/db/table/{name}</td><td>admin</td><td>Browse one table</td></tr>
+  <tr><td>POST</td><td class="m">/api/admin/db/query</td><td>admin</td><td>Read-only SQL. Logged to the access log</td></tr>
+
+  <tr><td colspan="4" style="background:#e8edf2"><b>App level — 7 routes</b></td></tr>
+  <tr><td>GET</td><td class="m">/api/health</td><td>public / admin</td><td><b>Two payloads.</b> Strangers get up/mode/reachable/state/maintenance. Admins additionally get the engine URL, preset fingerprint, storage status and job counts — all of which used to be public</td></tr>
+  <tr><td>GET</td><td class="m">/api/site</td><td>public</td><td>Maintenance state, public page list, and whether to draw the Google button. Reachable <i>during</i> maintenance, which is how the app tells "we turned it off" from "the API is down"</td></tr>
+  <tr><td>GET</td><td class="m">/robots.txt</td><td>public</td><td>Generated, because the Sitemap line must be absolute. Serves <code>Disallow: /</code> on a non-https origin so staging cannot get indexed</td></tr>
+  <tr><td>GET</td><td class="m">/sitemap.xml</td><td>public</td><td>Generated from the public page list</td></tr>
+  <tr><td>GET</td><td class="m">/</td><td>public</td><td>The hand-written operator console (not the customer site)</td></tr>
+  <tr><td>GET</td><td class="m">/db</td><td>admin</td><td>Database browser shell</td></tr>
+  <tr><td>GET</td><td class="m">/static/db.html</td><td>admin</td><td>Registered <i>before</i> the static mount, or Starlette would serve the admin page straight off disk</td></tr>
+</table>
+
+<h2 class="newpage">8 &nbsp; External services</h2>
+
+<table>
+  <tr><th style="width:30mm">Service</th><th style="width:18mm">State</th><th style="width:34mm">Used for</th><th>Notes</th></tr>
+  <tr><td><b>AWS EC2</b></td><td><span class="tag live">LIVE</span></td><td>Starting and stopping the GPU box</td><td>Via the <code>aws</code> CLI with profile <code>videotrans</code>, not boto3 — the CLI is already configured and a second credential path is one more thing to get wrong. On whenever the engine mode is real</td></tr>
+  <tr><td><b>Amazon Translate<br>Amazon Bedrock</b></td><td><span class="tag live">LIVE</span></td><td>Translation and the slot-fit cascade</td><td>Called <b>from the box</b>, not from this backend, using the instance role. Five models pinned</td></tr>
+  <tr><td><b>Gemini</b> (via <code>gemini-proxy</code>)</td><td><span class="tag live">LIVE</span></td><td>ASR and translation both route through it</td><td>A systemd unit on the box. The backend only <i>reports</i> its health; it has no configuration for it</td></tr>
+  <tr><td><b>Resend</b></td><td><span class="tag inert">NEEDS KEY</span></td><td>Confirmation, reset, dub-ready, renewal and DPDP emails</td><td>Default backend is <code>file</code> — writes to <code>data/mail</code> and emails nobody. <code>go_live.ps1</code> selects Resend, probes for the key, and falls back to <code>file</code> with a red warning rather than refusing to start</td></tr>
+  <tr><td><b>Razorpay</b></td><td><span class="tag inert">TEST MODE</span></td><td>Checkout, subscriptions, webhooks</td><td>With no keys it mints its own order ids and signs its own webhooks, so the whole flow — signature verification, idempotency, the subscription write — is exercisable without a live account. Test mode is reported everywhere it could be mistaken for real money</td></tr>
+  <tr><td><b>Google OAuth</b></td><td><span class="tag inert">NEEDS KEYS</span></td><td>"Continue with Google"</td><td>Inert unless both id and secret are present; the endpoints then 404 and the button is never drawn. Scopes <code>openid email profile</code> only — no refresh token</td></tr>
+  <tr><td><b>Cloudflare R2</b></td><td><span class="tag inert">OFF</span></td><td>Video delivery</td><td>Needs <code>VS_R2_ENABLED=1</code> plus four credentials. Falls back to local disk</td></tr>
+  <tr><td><b>Amazon SES</b></td><td><span class="tag inert">UNUSED</span></td><td>Alternative mail backend</td><td>Implemented, not selected by any script</td></tr>
+</table>
+
+<h2>9 &nbsp; Configuration</h2>
+
+<h3>9.1 &nbsp; Must be set before production</h3>
+<table>
+  <tr><th style="width:44mm">Variable</th><th>Why, and what happens if you forget</th></tr>
+  <tr><td class="m">VS_PRODUCTION=1</td><td><b>No script sets this.</b> Without it <code>/docs</code>, <code>/redoc</code> and <code>/openapi.json</code> publish the entire route map — every admin, billing and privacy endpoint with request shapes — and HSTS is never sent</td></tr>
+  <tr><td class="m">VS_PUBLIC_BASE_URL</td><td>Every emailed link is built from it. Behind a proxy the request's own host is the loopback address, so confirmation links would point at the server's <code>127.0.0.1</code> and every new signup would be stuck. Startup prints a warning if mail is live and this is unset</td></tr>
+  <tr><td class="m">VS_COOKIE_INSECURE</td><td><b>Must be UNSET.</b> Both start scripts set it to 1 because they serve over plain http on localhost, where a Secure cookie is never stored. Leaving it set in production means the session cookie is not Secure</td></tr>
+  <tr><td class="m">VS_GRIEVANCE_NAME<br>VS_GRIEVANCE_EMAIL</td><td>DPDP s.13(1) requires the grievance contact to be published. Both default to empty, deliberately, so shipping without them is loud</td></tr>
+  <tr><td class="m">VS_NOTICE_VERSION</td><td>The default contains the word <code>draft</code> and the readiness check fails on it</td></tr>
+  <tr><td class="m">VS_REQUIRE_SIGNUP_CONSENT=1</td><td>Until then the API accepts a registration without consent and the requirement is enforced only by the client</td></tr>
+  <tr><td class="m">VS_DEPLOYMENT</td><td>Otherwise two installations are indistinguishable in an archive manifest — precisely when you need to tell them apart</td></tr>
+  <tr><td class="m">VS_MAIL_BACKEND<br>+ a real key</td><td>The default emails nobody, silently</td></tr>
+  <tr><td class="m">VS_GPU_INSTANCE_ID<br>VS_AWS_PROFILE …</td><td>The defaults point at the <i>original</i> AWS account. A new deployment that forgets them drives the old account's resources while appearing to be configured</td></tr>
+  <tr><td class="m">VS_TRUSTED_PROXIES</td><td>Only if a reverse proxy is added. Empty is the safe default — but empty <i>behind</i> a proxy means every rate limit and every audited IP is the proxy's address</td></tr>
+</table>
+
+<h3>9.2 &nbsp; Safe defaults, no action needed</h3>
+<p class="small"><code>VS_DATA_DIR</code> · <code>VS_ENGINE_PORT</code> ·
+<code>VS_STREAM_READ_TIMEOUT_S</code> (900, per-read not total) ·
+<code>VS_CONNECT_TIMEOUT_S</code> (30) · <code>VS_RENDER_TIMEOUT_S</code> (7200) ·
+<code>VS_GPU_IDLE_MINUTES</code> (10) · <code>VS_UPLOAD_GRACE_MINUTES</code> (20) ·
+<code>VS_GPU_BOOT_TIMEOUT_S</code> (600) · <code>VS_GPU_APP_TIMEOUT_S</code> (420) ·
+<code>VS_R2_PREFIX</code> (dubs) · <code>VS_MAX_UPLOAD_BYTES</code> (4 GiB) ·
+<code>VS_DOWNLOAD_TOKEN_TTL_S</code> (300) · <code>VS_STREAM_TOKEN_TTL_S</code> (7200) ·
+<code>VS_MANDATE_CEILING_PAISE</code> (₹15,000) · <code>VS_BILLING_GRACE_DAYS</code> (7) ·
+<code>VS_MAX_ORPHAN_RECOVERIES</code> (2) · <code>VS_RIGHTS_RESPONSE_DAYS</code> (30) ·
+<code>VS_BRAND</code> (Kresker) · <code>VS_FIRST_USER_IS_ADMIN</code> (1) ·
+<code>VS_SSH_*</code> · <code>VS_EXPORT_ROOT</code></p>
+
+<h2 class="newpage">10 &nbsp; Security posture as deployed</h2>
+
+<table>
+  <tr><th style="width:32mm">Control</th><th>As implemented</th></tr>
+  <tr><td>Session</td><td>Server-side table. The browser gets <code>sid.raw</code>; only <code>sha256(raw)</code> is stored. Cookie <code>vs_session</code>: httpOnly, Secure (unless opted out), SameSite=lax, 7 days. Compared with <code>hmac.compare_digest</code></td></tr>
+  <tr><td>CSRF</td><td>A per-session random value compared against the <code>X-CSRF-Token</code> header on every mutation. Two independent defences, because SameSite behaviour varies by browser</td></tr>
+  <tr><td>Passwords</td><td>scrypt, n=2^14, r=8, 128 MiB maxmem passed explicitly (OpenSSL's default of 32 MB refused the cost outright). Parameters stored in the hash, so the cost can be raised later without invalidating anyone</td></tr>
+  <tr><td>Response headers</td><td>CSP (<code>script-src 'self'</code>, <code>frame-ancestors 'none'</code>, <code>object-src 'none'</code>, <code>base-uri 'none'</code>), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, COOP. HSTS only when production <i>and</i> https</td></tr>
+  <tr><td>Rate limits</td><td>16 buckets, in-process sliding window, 429 with Retry-After. Login is limited per IP <b>and</b> per account: per IP alone lets one attacker work through many accounts, per account alone lets a botnet work through one</td></tr>
+  <tr><td>Client IP</td><td><code>X-Forwarded-For</code> honoured only from a peer in the trusted list. Otherwise the header hands the caller control of their own rate-limit key and makes audited IPs forgeable</td></tr>
+  <tr><td>Authorization</td><td>Ownership is scoped inside the query, not checked after. Admin routes answer 404. Money-moving admin actions demand the password again</td></tr>
+  <tr><td>Errors</td><td>Full traceback logged, a 12-hex reference disclosed. A non-string, non-flat-dict exception detail becomes "request failed" so an internal object cannot serialise itself into a response</td></tr>
+  <tr><td>Uploads</td><td>4 GiB cap enforced while streaming; type and duration from ffprobe, never from the client; an unreadable file is deleted rather than left on disk</td></tr>
+</table>
+
+<div class="box good">
+  <b>Verified, not asserted.</b> 807 backend checks across 18 suites and 458 frontend
+  checks, all passing. Response headers have their own suite because nothing else can
+  catch them — an HTTP client does not enforce a CSP, so a policy that would leave the
+  admin browser rendering with every button dead passes every other test.
+</div>
+
+<h2>11 &nbsp; What is NOT ready</h2>
+
+<h3>11.1 &nbsp; Missing infrastructure — not in this repository at all</h3>
+<table>
+  <tr><th style="width:38mm">Gap</th><th>What is needed</th></tr>
+  <tr><td><b>TLS termination</b> <span class="tag todo">BLOCKER</span></td><td>Both scripts run plain HTTP on <code>127.0.0.1</code> with no certificate options. There is no nginx, Caddy, Dockerfile, compose file or systemd unit anywhere in the tree. Something has to terminate TLS and forward to the API — and then <code>VS_TRUSTED_PROXIES</code> must name it</td></tr>
+  <tr><td><b>Serving the frontend</b> <span class="tag todo">BLOCKER</span></td><td>Nothing serves <code>frontend/dist</code>. The backend mounts only its own operator pages. Needs a web server or CDN, with SPA fallback so a refresh on <code>/app</code> does not 404</td></tr>
+  <tr><td><b>Process supervision</b> <span class="tag todo">BLOCKER</span></td><td>The API is started by an interactive PowerShell script. Nothing restarts it if it exits</td></tr>
+  <tr><td><b>Database backups</b> <span class="tag todo">HIGH</span></td><td>The export tool exists but nothing schedules it, and four DPDP tables are outside it</td></tr>
+  <tr><td><b>R2 lifecycle rule</b> <span class="tag inert">MEDIUM</span></td><td>The retention sweeper's own comment relies on one as a backstop</td></tr>
+</table>
+
+<h3>11.2 &nbsp; Scaling limits, stated plainly</h3>
+<ul>
+  <li><b>Exactly one worker.</b> Startup treats every active job as abandoned and requeues
+      it — correct for one process, and wrong the moment there are two: worker B starting
+      would requeue what worker A is running. That deployment needs a lease first.</li>
+  <li><b>One writer.</b> SQLite plus a process-wide write lock. Fine for one machine; the
+      Postgres schema exists for when it is not.</li>
+  <li><b>In-process state that will not survive scaling out:</b> the rate-limit windows,
+      the SSH tunnel handle, the AWS describe cache.</li>
+</ul>
+
+<h3>11.3 &nbsp; Compliance</h3>
+<p>The admin panel's DPDP checklist reports six items and currently fails several: the
+grievance contact is unpublished, the notice version is a draft, the public base URL is
+not https, and signup consent is not enforced server-side. Two items marked
+<b>LEGAL REVIEW</b> need a lawyer rather than a developer: the 30-day rights-response
+default, and the retention basis and period for payment records.</p>
+<div class="box warn">
+  <b>One real bug in the checklist itself.</b> It tests <code>VS_COOKIE_SECURE=1</code>,
+  but the application reads <code>VS_COOKIE_INSECURE</code>. So the check can never pass,
+  and setting <code>VS_COOKIE_SECURE=1</code> alongside <code>VS_COOKIE_INSECURE=1</code>
+  would report "Secure" while the cookie is not. Worth fixing before the checklist is
+  trusted as evidence.
+</div>
+
+<h3>11.4 &nbsp; Licensing</h3>
+<p>The interface font, <b>Century Gothic Pro</b>, is a commercial Adobe/Monotype face and
+the copy in <code>public/fonts/</code> is <b>not licensed for web distribution</b>. Before
+this is public: buy a webfont licence, or swap the <code>@font-face</code> source for an
+open geometric alternative (Questrial, Jost, Outfit). Nothing outside that one block names
+a font, so the swap is a single edit.</p>
+
+<h2 class="newpage">12 &nbsp; Deploying, and rolling back</h2>
+
+<h3>12.1 &nbsp; Today's procedure</h3>
+<pre># 1. Verify before anything moves. Both must be zero failures.
+cd backend;  .\_verify_all.ps1                 # 18 suites, 807 checks
+cd frontend; npx tsc -b --force && npm run build
+             python _verify_ui.py http://localhost:5176   # 458 checks
+
+# 2. Confirm the tuned pipeline is untouched. This fingerprint must not change.
+python -c "from app import preset; print(preset.preset_only_fingerprint())"
+#   853a9e63a12b31be7026f27e52dff6b929e1eb9c8e1bf15fe793a16453356992
+git diff --name-only -- pipeline _box_src backup backend/app/preset.py   # must be empty
+
+# 3. Archive the database before touching it.
+POST /api/admin/export        # then copy data/uploads and data/outputs separately
+
+# 4. Bring the pipeline up.
+cd backend; .\go_live.ps1
+
+# 5. Re-lock the box's security group. The public IP changed when it started.
+.\aws_lock_ip.ps1 -Apply
+
+# 6. When finished, stop paying.
+.\stop_live.ps1</pre>
+
+<h3>12.2 &nbsp; Rolling back</h3>
+<ul>
+  <li><b>Code:</b> git. The preset fingerprint is the check that the pipeline came back
+      identical.</li>
+  <li><b>Schema:</b> there are no down-migrations. Every step is additive, so an older
+      binary tolerates a newer database — an extra column is ignored. The reverse is not
+      true, so roll code back before data.</li>
+  <li><b>Data:</b> restore an archive into a <i>new</i> file; restore refuses to overwrite.
+      Then compare the manifest's totals, not just its row counts.</li>
+  <li><b>Emergency:</b> maintenance mode, from the admin panel. The public gets a 503 with
+      Retry-After; admins still see the real site; robots.txt and the sitemap keep serving,
+      because a 503 there makes Google drop the site.</li>
+</ul>
+
+<h2>13 &nbsp; Costs</h2>
+<table>
+  <tr><th style="width:34mm">Item</th><th style="width:26mm">Cost</th><th>Notes</th></tr>
+  <tr><td>GPU box (g4dn.xlarge)</td><td><b>₹47 / hour</b></td><td>The dominant cost, and the only one that scales with usage. Stopped 10 minutes after the last job. A boot costs ~6 minutes of GPU time, which is why the idle window is not shorter</td></tr>
+  <tr><td>EBS root, 150 GiB gp3</td><td>per month, always</td><td>Charged whether the instance runs or not</td></tr>
+  <tr><td>Amazon Translate / Bedrock</td><td>per character / per token</td><td>Called from the box under its instance role</td></tr>
+  <tr><td>Cloudflare R2</td><td>storage only</td><td><b>Egress is free at any volume</b> — this is what makes unlimited downloads viable. Currently off, so downloads use the origin's bandwidth</td></tr>
+  <tr><td>Resend</td><td>per email</td><td>Free tier is generous at this stage</td></tr>
+  <tr><td>Razorpay</td><td>% per transaction</td><td>No fixed cost</td></tr>
+</table>
+
+<div class="box note">
+  <b>The batch cap exists for this table.</b> The dubs run one after another on a single
+  GPU, so a batch is a queue whose wall-clock length is the language count times the
+  video length. 43 languages in one press would hold the box for hours and take a 43×
+  charge from one click. The cap is 8, enforced server-side.
+</div>
+
+<p class="small" style="margin-top:8mm">End of document. Every fact above was read from
+the code or the deployment scripts on 27 August 2026. Anything absent from the codebase is
+labelled as such rather than described as an intention.</p>
+
+</body>
+</html>

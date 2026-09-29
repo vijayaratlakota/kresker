@@ -1,0 +1,1809 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dubbing Website - Backend Plan v2</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 9.4pt; line-height: 1.45; color: #14171a; margin: 0; }
+  h1 { font-size: 21pt; margin: 0 0 2mm 0; letter-spacing: -0.4pt; }
+  h2 { font-size: 14pt; margin: 9mm 0 2mm 0; padding-bottom: 1.2mm;
+       border-bottom: 1.6pt solid #14171a; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm 0; page-break-after: avoid; color: #0b3d6b; }
+  h4 { font-size: 9.6pt; margin: 3.5mm 0 1mm 0; page-break-after: avoid; }
+  p  { margin: 0 0 2mm 0; }
+  ul, ol { margin: 0 0 2mm 0; padding-left: 5mm; }
+  li { margin: 0 0 1mm 0; }
+  code, kbd { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt;
+              background: #f2f4f6; padding: 0.3mm 1mm; border-radius: 1mm; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8pt;
+        background: #f6f8fa; border: 0.4pt solid #d5dbe0; border-left: 2.4pt solid #6b7d8f;
+        padding: 2mm 2.5mm; margin: 1.5mm 0 2.5mm 0; white-space: pre-wrap;
+        overflow-wrap: break-word; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5mm 0 3mm 0;
+          font-size: 8.3pt; }
+  th { background: #14171a; color: #fff; text-align: left; padding: 1.3mm 1.6mm;
+       font-weight: 600; font-size: 8.1pt; }
+  td { border-bottom: 0.4pt solid #dfe4e8; padding: 1.2mm 1.6mm; vertical-align: top; }
+  tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #f7f9fa; }
+  td.m, th.m { font-family: Consolas, monospace; font-size: 7.9pt; }
+  .box { border: 0.5pt solid #c8ced4; border-left: 3pt solid #14171a;
+         background: #f7f9fa; padding: 2.5mm 3mm; margin: 2.5mm 0; page-break-inside: avoid; }
+  .warn { border-left-color: #a8321a; background: #fdf4f2; }
+  .good { border-left-color: #0a7a3d; background: #f2faf5; }
+  .note { border-left-color: #1a5fa8; background: #f2f7fd; }
+  .cover { text-align: left; padding-top: 26mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #4a5560; margin-top: 1mm; }
+  .cover .meta { margin-top: 12mm; font-family: Consolas, monospace; font-size: 9pt;
+                 border-top: 0.5pt solid #c8ced4; padding-top: 4mm; }
+  .cover .meta div { margin-bottom: 1.4mm; }
+  .newpage { page-break-before: always; }
+  .toc td { border-bottom: 0.3pt dotted #c8ced4; font-size: 9.2pt; }
+  .toc td.n { width: 9mm; font-family: Consolas, monospace; color: #4a5560; }
+  .small { font-size: 8pt; color: #4a5560; }
+  .tag { display: inline-block; font-family: Consolas, monospace; font-size: 7.4pt;
+         padding: 0.3mm 1.4mm; border-radius: 1mm; background: #e3e8ec; }
+  .tag.p1 { background: #0a7a3d; color: #fff; }
+  .tag.p2 { background: #1a5fa8; color: #fff; }
+  .tag.p3 { background: #7a5a1a; color: #fff; }
+  .tag.new { background: #a8321a; color: #fff; }
+  .flow { font-family: Consolas, monospace; font-size: 7.8pt; line-height: 1.5; }
+  .val { font-family: Consolas, monospace; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Dubbing Website &mdash; Backend Plan v2</h1>
+  <div class="sub">Decisions locked. One-click dubbing only, Cloudflare R2 delivery,
+  Razorpay subscriptions, and a pipeline that is never touched.</div>
+
+  <div class="box good" style="margin-top:9mm">
+    <strong>The one rule this whole design is built around.</strong> The dubbing pipeline is
+    finished and tuned over several days of measured work. This plan <strong>does not modify a
+    single line of it, and does not change a single one of its settings</strong>. The website
+    drives VoiceStudio through the same HTTP calls, in the same order, with the same values
+    &mdash; now written down exactly, in section 2, and enforced in code as a locked preset
+    the browser cannot influence. Every new piece of software described here lives
+    <em>outside</em> the GPU box.
+  </div>
+
+  <div class="box warn">
+    <strong>One thing needs your attention before launch, and it is not in the new code.</strong>
+    A live Google API key is committed to this repository's history and pushed to
+    <code>origin/main</code>. The repository is private, so this is not a public disclosure, but
+    the key must be rotated and the file removed from tracking before anything is built on top.
+    Details and remediation in section 8.2.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written</strong>&nbsp;&nbsp;2026-08-24</div>
+    <div><strong>Supersedes</strong>&nbsp;&nbsp;docs/website_backend_plan.html (2026-08-22)</div>
+    <div><strong>Scope</strong>&nbsp;&nbsp;Backend only: API, database, auth, payments, storage, GPU lifecycle, security, migration, deployment</div>
+    <div><strong>Existing asset</strong>&nbsp;&nbsp;VoiceStudio 0.4.2 on EC2 g4dn.xlarge, container <code>omnivoice</code>, ap-south-1, port 3900</div>
+    <div><strong>Status</strong>&nbsp;&nbsp;Plan for review. No application code written yet.</div>
+  </div>
+</div>
+
+<h2>Contents</h2>
+<table class="toc">
+<tr><td class="n">1</td><td>What changed since v1, and the decisions now locked</td></tr>
+<tr><td class="n">2</td><td>The golden preset: how "one click, defaults except language" is enforced</td></tr>
+<tr><td class="n">3</td><td>Plans, quota, and what each tier costs to serve</td></tr>
+<tr><td class="n">4</td><td>Delivering the video: Cloudflare R2 and a Worker</td></tr>
+<tr><td class="n">5</td><td>The job state machine</td></tr>
+<tr><td class="n">6</td><td>GPU on demand</td></tr>
+<tr><td class="n">7</td><td>Database design</td></tr>
+<tr><td class="n">8</td><td>Security, in detail</td></tr>
+<tr><td class="n">9</td><td>Payments with Razorpay</td></tr>
+<tr><td class="n">10</td><td>Your own access to the database</td></tr>
+<tr><td class="n">11</td><td>Moving everything to another AWS account</td></tr>
+<tr><td class="n">12</td><td>Repository, CI and deployment</td></tr>
+<tr><td class="n">13</td><td>Monitoring and failure modes</td></tr>
+<tr><td class="n">14</td><td>Build order and effort</td></tr>
+<tr><td class="n">15</td><td>What it costs to run</td></tr>
+<tr><td class="n">16</td><td>What must be verified before code is written</td></tr>
+</table>
+
+<h2 class="newpage">1. What changed since v1, and the decisions now locked</h2>
+
+<p>v1 ended with eight open questions. Seven are now answered, and the answers change the
+design in three material ways: the job becomes a state machine with optional human pauses,
+quota becomes a per-tier minutes ledger, and the entire pipeline configuration becomes a
+server-side locked preset rather than anything a request can influence.</p>
+
+<h3>1.1 Your decisions</h3>
+<table>
+<tr><th>Question from v1</th><th>Decision</th><th>Consequence in this plan</th></tr>
+<tr><td>Who are the users?</td><td><strong>India first, international too.</strong> UPI, debit and credit cards.</td><td>Razorpay. UPI Autopay for Indian recurring, cards for both. See section 9 &mdash; there is a cap that affects your annual Pro price.</td></tr>
+<tr><td>Longest video allowed?</td><td><strong>30 minutes.</strong></td><td>Sets timeouts, the per-job storage ceiling, and the stuck-job watchdog. Section 3.1 notes why the per-video cap must actually be <code>min(30, minutes_left)</code>.</td></tr>
+<tr><td>Can the user edit before rendering?</td><td><strong>No.</strong> No editing of transcript, translation or speakers. Every job is one click.</td><td>The largest simplification in this document. It deletes an entire state machine, and with it the riskiest unverified assumption in the plan. See 5.2.</td></tr>
+<tr><td>What the user receives</td><td><strong>The dubbed video only.</strong> Dubbed audio is the default and only track; the original speech is not included.</td><td>Already true of the locked preset &mdash; confirmed in 2.4, not a change.</td></tr>
+<tr><td>Downloads</td><td><strong>Unlimited, for 7 days &mdash; then the file is deleted.</strong></td><td>Served from Cloudflare R2 through a Worker, so repeat downloads cost nothing. Section 4. The 7-day window is a privacy decision as much as a cost one; section 5.8.</td></tr>
+<tr><td>Free tier?</td><td><strong>Yes &mdash; 60 seconds, once per account, for life.</strong> It runs immediately, on the same queue as a paid job.</td><td>Abuse controls move into Phase 1. Section 3.4 explains why the free tier is the most expensive thing per minute, and why delaying it to save money would cost more than it saves.</td></tr>
+<tr><td>Plans and prices</td><td>Starter &#8377;299, Creator &#8377;999, Pro &#8377;1,499 monthly. 20% off annual. <strong>Monthly recurs by mandate; annual is a one-time payment.</strong></td><td>Section 3.1 for the tiers, 9.2 for why annual is billed as a one-off and what that costs.</td></tr>
+<tr><td>Settings exposed to the user</td><td><strong>Language only.</strong> Everything else is the tuned default.</td><td>Section 2. This is a security property as much as a product one.</td></tr>
+<tr><td>Database access for you</td><td><strong>Required</strong>, plus an <strong>admin dashboard</strong>.</td><td>SSM tunnel and a read-only role for reading (10.1). A private admin panel for the things that must be auditable rather than hand-typed &mdash; granting subscriptions, refunding a bad dub's minutes, seeing earnings and who is signed in, and dubbing without a limit yourself (10.2).</td></tr>
+<tr><td>Retention</td><td><strong>Rendered videos deleted after 7 days</strong>, stated to the user on their first download, with a countdown on the dashboard. They can delete one sooner themselves. Sources deleted as soon as the job ends.</td><td>Sections 5.6 and 5.8. The job record itself is kept forever, so history is always complete even when a file is gone.</td></tr>
+</table>
+
+<h3>1.2 What is new in this document versus v1</h3>
+<table>
+<tr><th></th><th>New material</th></tr>
+<tr><td><span class="tag new">new</span></td><td><strong>The golden preset, written out on the wire.</strong> v1 said "we send the same requests"; it did not know what they were. Section 2 now lists every field and value, including three defaults that silently produce a broken dub if left alone.</td></tr>
+<tr><td><span class="tag new">new</span></td><td><strong>The row-identity rule.</strong> VoiceStudio maps a render request onto its stored segments <em>positionally</em>, so sending a different number of rows silently shifts every later line onto the wrong slot. With editing removed this is no longer a product risk, but it remains a hard rule for the worker. Section 5.4.</td></tr>
+<tr><td><span class="tag new">new</span></td><td><strong>Cloudflare R2 for delivery.</strong> Finished videos leave AWS once and are then served free, however many times they are downloaded. Section 4.</td></tr>
+<tr><td><span class="tag new">new</span></td><td><strong>Razorpay's UPI Autopay ceiling against your annual Pro price.</strong> Section 9.2.</td></tr>
+<tr><td><span class="tag new">new</span></td><td><strong>A committed live API key.</strong> Section 8.2.</td></tr>
+</table>
+
+<h2 class="newpage">2. The golden preset: how "one click, defaults except language" is enforced</h2>
+
+<p>You asked for a single click, with every option at its tuned default and only the target
+language chosen by the user. That requirement and the "do not disturb the pipeline"
+requirement are the same requirement, and they are satisfied by the same mechanism.</p>
+
+<h3>2.1 The mechanism</h3>
+<div class="box good">
+The API accepts <strong>exactly two</strong> pipeline-relevant inputs from a client:
+<code>target_lang</code>, and optionally <code>source_lang</code> when the user overrides
+auto-detection. Everything else is a constant in the worker's source, loaded from a versioned
+<strong>preset file</strong>. There is no request field, query parameter, header, cookie or
+database column through which a browser can change a pipeline setting. An unknown key in a job
+creation request is rejected, not ignored.
+</div>
+<p>Two things follow. First, the output cannot drift because of the website, since the website
+has no vocabulary for expressing a different configuration. Second, the engine cannot be
+manipulated through our API, which removes a whole class of attack: no client can ask the GPU
+box to run an expensive quality tier, disable a guard, or point a path somewhere it should not
+go.</p>
+
+<h3>2.2 The call sequence, in order</h3>
+<p>Read out of <code>pipeline/voicestudio_dub.py</code> and the backend routers in
+<code>backup/voicestudio_golden_20260823/</code>. Port 3900, no authentication of any kind
+&mdash; which is why section 8.4 exists.</p>
+<table>
+<tr><th>#</th><th class="m">Call</th><th>Purpose and the rule attached to it</th></tr>
+<tr><td>0</td><td class="m">GET /sysinfo</td><td>Readiness gate. Poll for HTTP 200 after the instance starts.</td></tr>
+<tr><td>1</td><td class="m">POST /dub/upload</td><td>multipart: <code>video</code>, <code>job_id</code>, <code>input_type=video</code>. Returns 202 <code>{job_id, task_id}</code>. <strong>Always send a freshly generated <code>job_id</code></strong> &mdash; reusing one makes transcribe answer 409.</td></tr>
+<tr><td>2</td><td class="m">wait for prep</td><td>Poll <code>GET /dub/history</code> until the row's <code>job_data</code> carries <code>vocals_path</code>. Calling transcribe earlier returns "Job not found".</td></tr>
+<tr><td>3</td><td class="m">GET /dub/transcribe-stream/{job}</td><td><strong>Must be the SSE endpoint, not <code>POST /dub/transcribe</code>.</strong> The automatic speaker-cloning step lives inside this stream. The POST returns coarse blocks with <code>speaker_clones: []</code>, and the render then synthesises in the engine's default voice &mdash; no cloning at all. Use a <strong>per-read</strong> timeout of 900 s, not a total one, and keep whatever segments arrived if it stalls.</td></tr>
+<tr><td>4</td><td class="m">translation</td><td>See the open item in section 16.1 &mdash; which of two translation paths produced your approved output is the one thing this plan cannot yet state, and it must be settled before the worker is written.</td></tr>
+<tr><td>5</td><td class="m">POST /dub/generate/{job}</td><td>Body in 2.3. Returns <code>{task_id}</code> immediately.</td></tr>
+<tr><td>6</td><td class="m">GET /tasks/stream/{task}?after_seq=N</td><td>Progress. <code>after_seq</code> makes it resumable across a worker restart, which is what lets progress survive a deployment.</td></tr>
+<tr><td>6b</td><td class="m">GET /dub/tracks/{job}</td><td><strong>The real completion signal.</strong> The tuned driver polls this rather than trusting the stream, because it is the only evidence that output actually exists.</td></tr>
+<tr><td>7</td><td class="m">GET /dub/download/{job}</td><td>Query in 2.3. Streams the muxed MP4.</td></tr>
+<tr><td>8</td><td class="m">POST /tasks/cancel/{task}</td><td>Cancel. <code>POST /dub/abort/{job}</code> additionally kills in-flight subprocesses.</td></tr>
+<tr><td>9</td><td class="m">DELETE /dub/history/{job}</td><td>Remove the user's media from the shared box once the output is safely in R2.</td></tr>
+</table>
+
+<h3>2.3 The pinned values</h3>
+<p>Three of these differ from VoiceStudio's own server defaults. Sending nothing does not fail
+&mdash; it silently produces a different, worse dub. That is why the preset is explicit about
+every field rather than relying on any default.</p>
+<pre>POST /dub/generate/{job_id}
+{
+  "segments":       [ ... every row, in order, including emptied ones ... ],
+  "segment_ids":    [ ... stable ids, parallel to segments ... ],
+  "language_code":  "&lt;target&gt;",        // ISO 639-1, for ffmpeg metadata
+  "slot_fit":       "time_stretch",
+  "timing_strategy":"strict_slot",     // server default is "concise"      &lt;-- MUST SEND
+  "overflow_budget_s": 0.0,
+  "voice_match":    "consistent",      // server default is "per_line"     &lt;-- MUST SEND
+  "num_step":       16,
+  "guidance_scale": 2.0,
+  "speed":          1.0,
+  "fit_options": {
+    "gap_guard_s":         0.12,
+    "audio_rate_cap":      1.25,
+    "max_audio_only_rate": 1.25,
+    "video_slow_cap":      1.0,
+    "allow_video_retime":  false
+  }
+}
+
+GET /dub/download/{job_id}
+    ?preserve_bg=true
+    &amp;default_track=&lt;target&gt;           // server default is "original"     &lt;-- MUST SEND
+    &amp;include_tracks=&lt;target&gt;                                            &lt;-- MUST SEND
+    // burn_subs and dual are omitted entirely (both default false)</pre>
+
+<h3>2.4 The three traps</h3>
+<div class="box warn">
+<strong>1. <code>default_track</code> defaults to <code>"original"</code>.</strong> Omitting it
+does not error. The endpoint returns the video with its <em>original</em> audio, and this has
+already shipped once: a delivered file measured byte-identical to the source while every
+artifact reported a clean run. <strong>The worker must refuse to download a job that reports no
+rendered track, rather than passing the original off as a dub</strong>, and must verify the
+downloaded file's audio track language before marking the job done.
+<br><br>
+<strong>2. <code>timing_strategy</code> defaults to <code>"concise"</code>, and
+<code>smart_fit</code> is worse than either.</strong> The tuned value is
+<code>strict_slot</code>. With <code>smart_fit</code> plus a non-zero overflow budget, per-line
+overruns accumulate so every later line lands after the mouth that speaks it; with
+<code>allow_video_retime</code> the renderer is permitted to slow the picture down to
+accommodate long audio. Together those are the reported "video going fast, audio slow" drift.
+<br><br>
+<strong>3. <code>voice_match</code> defaults to <code>"per_line"</code>.</strong> The tuned
+value is <code>consistent</code>. A per-line reference is cut from that line's own separated
+vocals, so it carries separation residue that the cloner reproduces as a breathy hiss at the
+line's onset: measured at 5 of 15 renders for <code>per_line</code> against 1 of 15 for
+<code>consistent</code>.
+</div>
+
+<h3>2.5 What the worker must never do</h3>
+<table>
+<tr><th>Never</th><th>Why</th></tr>
+<tr><td>Set any <code>OMNIVOICE_*</code> environment variable on the container</td><td>The container's environment is fixed at create time and holds only three variables. Adding one permanently requires <code>docker rm</code>, which destroys the in-place-patched backend. Every tuned value is a module default and must stay one.</td></tr>
+<tr><td>Reload or restart the app while a render is running</td><td>Module defaults are read once at import. A reload mid-render abandons the job and leaves half-written segment files.</td></tr>
+<tr><td>Run two jobs at once on the box</td><td>One GPU, one pinned thread. The queue serialises strictly; section 7 does this with <code>FOR UPDATE SKIP LOCKED</code>.</td></tr>
+<tr><td>Re-render into a job directory that already holds <code>seg_&lt;lang&gt;_*.wav</code></td><td>The renderer reuses an existing per-line wav rather than regenerating, so stale clips ship silently. Park them first; keep <code>seg_ref_*.wav</code> and <code>voice_speaker_*.wav</code>, which derive from the source audio and save minutes.</td></tr>
+<tr><td>Leave <code>HF_TOKEN</code> unattended</td><td>Without a valid token, diarization degrades silently to a gap heuristic that merges every character into one voice with no cloning. The token needs an expiry alarm, not just a value.</td></tr>
+<tr><td>Introduce any identifier containing <code>leadin</code></td><td>A guarded invariant counts occurrences in <code>dub_generate.py</code> and must stay at 5. Name things <code>onset</code>, <code>snap</code>, <code>run</code>, <code>bridge</code>.</td></tr>
+</table>
+
+<h3>2.6 The preset is versioned, hashed, and recorded per job</h3>
+<p>The preset lives in one file, carries a version string, and the worker writes both the
+version and a SHA-256 of the exact payload it sent into the job's row. Three things this buys,
+all of which matter more than they look:</p>
+<ul>
+<li><strong>Provenance.</strong> When a customer says a dub is worse than last month's, you can
+prove whether the configuration changed, rather than arguing about it.</li>
+<li><strong>Rollback.</strong> A preset change is a one-line revert with an audit trail, not an
+archaeology exercise.</li>
+<li><strong>A regression test with teeth.</strong> One known-good source video, rendered
+nightly, compared against a stored reference. The pipeline is your entire product advantage;
+it deserves a canary that shouts before a customer does.</li>
+</ul>
+
+<h2 class="newpage">3. Plans, quota, and what each tier costs to serve</h2>
+
+<h3>3.1 The tiers</h3>
+<table>
+<tr><th class="m">code</th><th>Name</th><th class="m">Monthly</th><th class="m">Annual (&minus;20%)</th><th class="m">Minutes / period</th><th class="m">Max single video</th><th class="m">Downloads</th></tr>
+<tr><td class="m">free</td><td>Free</td><td class="m">&#8377;0</td><td class="m">&mdash;</td><td class="m">1 &mdash; <strong>lifetime</strong>, never resets</td><td class="m">60 s</td><td class="m">24 h</td></tr>
+<tr><td class="m">starter</td><td>Starter</td><td class="m">&#8377;299</td><td class="m">&#8377;2,870</td><td class="m">10</td><td class="m">10 min</td><td class="m">7 days, unlimited</td></tr>
+<tr><td class="m">creator</td><td>Creator</td><td class="m">&#8377;999</td><td class="m">&#8377;9,590</td><td class="m">50</td><td class="m">30 min</td><td class="m">7 days, unlimited</td></tr>
+<tr><td class="m">pro</td><td>Pro</td><td class="m">&#8377;1,499</td><td class="m">&#8377;14,390</td><td class="m">120</td><td class="m">30 min</td><td class="m">7 days, unlimited</td></tr>
+</table>
+<div class="box note">
+<strong>The annual column is a one-time payment, not a mandate.</strong> Monthly plans recur on a UPI
+Autopay or card mandate; annual plans are charged once as an ordinary order and do not auto-renew.
+Section 9.2 explains the regulatory reason and the renewal-reminder work it makes necessary.
+</div>
+<div class="box note">
+<strong>The per-video cap has to be <code>min(30, minutes_left)</code>, not a flat 30.</strong>
+Starter's whole monthly allowance is 10 minutes, so a Starter subscriber can never dub anything
+longer than 10 minutes however the limit is written. Advertising "up to 30 minutes" on that tier
+would be a promise the quota cannot keep, and the failure would land <em>after</em> the user has
+uploaded a large file. Compute the ceiling from the remaining balance and show it on the upload
+screen before a byte is transferred.
+</div>
+
+<h3>3.2 Quota is a ledger, not a counter</h3>
+<pre>minutes_used  = SUM(usage_ledger.minutes_charged) since current_period_start
+minutes_left  = plan.minutes_per_period - minutes_used</pre>
+<p>Billing is on <strong>video duration as measured by <code>ffprobe</code></strong>, decided
+before any work starts, so the user knows the cost in advance and a slow render never costs them
+more. Checked twice: when the upload URL is requested, so a large upload fails early, and again
+at job creation, because time passes. <strong>A failed job writes no usage row</strong> &mdash;
+nobody pays for our bugs. A ledger rather than a decrementing counter because a counter cannot
+be reconciled when something half-fails, and cannot be explained to a customer who disputes a
+charge.</p>
+<p>Retention applies to <em>files</em>, never to the record. Rendered videos are kept
+<strong>7 days</strong> for subscribers and <strong>24 hours</strong> on free; source videos are
+deleted <strong>as soon as the job ends</strong>, because nothing re-runs from them. The job row,
+transcript and translation are kept <strong>forever</strong>, so the user's history stays complete
+even after a file is gone. Full breakdown in section 5.6, and the deletion machinery in 5.8. Less stored media is less to leak and a
+smaller bill; the numbers live in the <code>plans</code> table so they change without a
+deployment.</p>
+
+<h3>3.3 What each tier costs us</h3>
+<p>Derived from the measured pipeline timings: roughly <strong>6 minutes of fixed boot and model
+load, plus 1.6 minutes of GPU per minute of video</strong>. At <code>g4dn.xlarge</code>
+on-demand and about &#8377;88 to the dollar.</p>
+<table>
+<tr><th>Tier</th><th class="m">Quota</th><th class="m">GPU cost / month</th><th class="m">Google + Gemini</th><th class="m">Total variable</th><th class="m">Revenue</th><th class="m">Gross margin</th></tr>
+<tr><td>Starter</td><td class="m">10 min</td><td class="m">&#8377;17&ndash;36</td><td class="m">&#8377;4&ndash;15</td><td class="m">&#8377;21&ndash;51</td><td class="m">&#8377;299</td><td class="m">83&ndash;93%</td></tr>
+<tr><td>Creator</td><td class="m">50 min</td><td class="m">&#8377;72</td><td class="m">&#8377;18&ndash;73</td><td class="m">&#8377;90&ndash;145</td><td class="m">&#8377;999</td><td class="m">85&ndash;91%</td></tr>
+<tr><td>Pro</td><td class="m">120 min</td><td class="m">&#8377;168</td><td class="m">&#8377;44&ndash;176</td><td class="m">&#8377;212&ndash;344</td><td class="m">&#8377;1,499</td><td class="m">77&ndash;86%</td></tr>
+</table>
+<p>A single 30-minute video costs about <strong>&#8377;53&ndash;86</strong> all in. Against fixed
+infrastructure of &#8377;4,000&ndash;7,500 per month (section 15), break-even is roughly
+<strong>4&ndash;6 Pro subscribers or 16&ndash;25 Starter</strong>. The margins are healthy; the
+fixed floor is what needs the first few customers.</p>
+
+<h3>3.4 The free tier is the expensive one, per minute</h3>
+<div class="box warn">
+A 60-second free trial needs about <strong>6 minutes of boot for 1.6 minutes of work</strong>. Boot
+is nearly <strong>80%</strong> of the bill, so a trial costs roughly
+<strong>&#8377;6&ndash;7</strong> &mdash; against &#8377;53&ndash;86 for a 30-minute paid job that
+is thirty times longer. A thousand trials is about &#8377;6,500, close to a full month of fixed
+infrastructure.
+<br><br>
+<strong>The way to bound that is lifetime scope, not delay:</strong>
+<ol>
+<li><strong>One 60-second trial per verified account, for life</strong> &mdash; not 90 seconds every
+month. A recurring free allowance is a standing invitation to churn through disposable email
+addresses, and it turns a one-off acquisition cost into a subscription we pay on the user's behalf
+indefinitely. Lifetime scope makes the spend finite and predictable per person.</li>
+<li><strong>The trial runs immediately, starting a box if none is warm</strong> &mdash; same queue,
+same priority and same wait as a paying job. No separate free lane.</li>
+</ol>
+</div>
+
+<div class="box warn">
+<strong>Do not make free jobs wait for a paying job to bring a box up.</strong> It saves about
+&#8377;5 and it costs the customer.
+<br><br>
+The trial is the only chance to prove the output is worth paying for. Somebody deciding whether to
+subscribe will not come back in a few hours to look at a preview &mdash; they will close the tab and
+try a competitor, and that abandonment never shows up in the metrics as a lost sale. Worse, a queued
+trial hides the single most persuasive property of the whole product: that one click turns a video
+into a finished dub in minutes with nothing to configure. Concealing that from every prospective
+customer to save five rupees inverts the entire purpose of having a free tier.
+<br><br>
+The right way to book it is <strong>customer acquisition cost, paid once per person</strong>, judged
+against a &#8377;299 Starter subscription rather than against the cost of a paid render. On that
+framing even a 5% conversion rate returns roughly twenty times the spend, and the trial has to be
+fast for the conversion to happen at all.
+</div>
+
+<div class="box good">
+<strong>Batching still helps &mdash; as upside, not as policy.</strong> When a trial lands while a box
+is already warm, because a paying job is running or another trial arrived inside the ten-minute idle
+window, the boot is already paid for and the marginal cost drops to about
+<strong>&#8377;1&ndash;2</strong>. At any real volume that will happen often, and the ten-minute
+shutdown delay in section 6.2 makes bursts of trials share one boot with nobody being asked to wait.
+The difference is that we take the saving when it appears rather than manufacturing it by holding
+people in a queue.
+</div>
+
+<div class="box note">
+<strong>Because a trial now starts a real boot, verification is the only thing bounding abuse.</strong>
+Require a verified email before the first free job runs. Keep a hard daily ceiling on free jobs
+across all accounts so a bad day is bounded regardless. Rate-limit new-account creation per IP and
+per device. Store the lifetime entitlement as a flag on the user row and never on a period counter
+&mdash; the entire point is that it does not reset, so it must not live in anything that
+<code>current_period_start</code> can roll over.
+</div>
+
+<h2 class="newpage">4. Delivering the video: Cloudflare R2 and a Worker</h2>
+
+<p>The finished video has to reach the user, on demand, as many times as they like, for thirty days.
+Doing that from S3 is the single most expensive recurring line item in the whole design, because AWS
+charges for every gigabyte that leaves it. This section removes that charge almost entirely.</p>
+
+<h3>4.1 One correction to the brief, and it is the whole saving</h3>
+<div class="box warn">
+<strong>A Cloudflare Worker in front of S3 saves nothing.</strong> AWS bills egress on every byte
+that leaves S3 &mdash; including bytes going to Cloudflare. Putting a Worker in the middle means
+paying S3 egress <em>and</em> Cloudflare request charges, which is worse than serving from S3
+directly.
+<br><br>
+<strong>The saving comes from where the file lives, not from what serves it.</strong> Cloudflare R2
+charges <strong>nothing for egress, ever</strong>, including through the Workers API. So the design
+is: put the finished video <em>in R2</em>, and use a Worker to check permission and stream it. The
+Worker is the doorman; R2 is the reason the bill drops.
+<br><br>
+<strong>And never serve downloads from the GPU box.</strong> That was the other option in the brief
+and it is the worst of the three: the box would have to be running for every download &mdash;
+&#8377;47 an hour, defeating the entire auto-shutdown design in section 6 &mdash; it would still pay
+AWS egress per download, and it would expose a machine that has no authentication of any kind.
+Downloads are served from R2 and only from R2.
+</div>
+
+<h3>4.2 Where each byte goes, and what it costs</h3>
+<p>The important insight is that a video only has to leave AWS <strong>once</strong>. After that it
+lives outside AWS and can be served for free forever.</p>
+<pre class="flow">
+  browser  --upload-->  R2                     free      (ingress is never charged)
+  R2       --pull---->  the box                free      (R2 egress free, AWS ingress free)
+  the box  --push---->  R2                     PAID once <-- the only transfer charge
+  R2       --serve-->   browser, 1st download  free
+  R2       --serve-->   browser, 50th download free
+</pre>
+<table>
+<tr><th>Route</th><th class="m">Per 30-min video (~350 MB)</th><th>Notes</th></tr>
+<tr><td><strong>Everything in S3</strong></td><td class="m">&#8377;3.30 &times; every download</td><td>AWS egress from Mumbai is about $0.109/GB. Three downloads is &#8377;10; a user who re-downloads ten times over the month costs &#8377;33.</td></tr>
+<tr><td><strong>Everything in R2</strong></td><td class="m">&#8377;3.30 once, then &#8377;0</td><td>One charge to get the file out of AWS. Every download after that is free, forever, however many.</td></tr>
+</table>
+<p>At 500 videos a month averaging three downloads each, S3 costs roughly
+<strong>&#8377;4,950 a month</strong> in egress and R2 costs about <strong>&#8377;1,650</strong>
+&mdash; and the gap widens with every extra download, which is exactly what "unlimited downloads"
+invites.</p>
+<div class="box note">
+<strong>Be honest about what is not saved.</strong> That &#8377;3.30 to get the video out of AWS is
+unavoidable. The file is produced on a machine inside AWS and has to leave. No CDN, Worker or
+storage choice removes it. What R2 removes is the second and every subsequent transfer.
+</div>
+
+<h3>4.3 R2's actual prices, and one trap</h3>
+<table>
+<tr><th>Item</th><th class="m">Standard</th><th class="m">Free each month</th></tr>
+<tr><td>Storage</td><td class="m">$0.015 / GB-month</td><td class="m">10 GB-month</td></tr>
+<tr><td>Class A operations (writes)</td><td class="m">$4.50 / million</td><td class="m">1 million</td></tr>
+<tr><td>Class B operations (reads)</td><td class="m">$0.36 / million</td><td class="m">10 million</td></tr>
+<tr><td><strong>Egress</strong></td><td class="m"><strong>free</strong></td><td class="m">&mdash;</td></tr>
+</table>
+<p><span class="small">Source: <a href="https://developers.cloudflare.com/r2/pricing/">Cloudflare R2
+pricing</a>. Content was rephrased for compliance with licensing restrictions.</span></p>
+<p>At your scale the operations are effectively free: one write per video and one read per download,
+against a million and ten million free. Storage is the only real line. 500 videos a month at 350 MB,
+each kept <strong>7 days</strong>, is about 41 GB-month &mdash; roughly
+<strong>&#8377;40 a month</strong> after the free allowance.</p>
+<p>For comparison, the same traffic held for 30 days was about 170 GB-month and
+<strong>&#8377;210</strong>. So the shorter window takes roughly <strong>&#8377;170 a month</strong>
+off the bill &mdash; worth having, but it is a side effect. The reason for 7 days is that holding a
+customer's video longer than they need it is a liability, not a feature (5.8).</p>
+<div class="box warn">
+<strong>Do not use the Infrequent Access storage class here, even though it looks cheaper.</strong>
+It is $0.01/GB instead of $0.015, but it adds a <strong>$0.01/GB retrieval fee</strong> and a
+<strong>30-day minimum storage duration</strong>. A retrieval fee is a per-download charge by another
+name, so it would quietly undo the thing this entire section exists to achieve.
+<br><br>
+<strong>The minimum duration is now the bigger objection.</strong> Against a 7-day retention window
+you would be billed 30 days of storage for every object deleted on day 7 &mdash; over four times the
+storage you actually use, and that is before the per-download fee. The shorter the retention, the
+worse Infrequent Access gets. Standard storage, no retrieval fee, unlimited reads.
+</div>
+
+<h3>4.4 S3 is dropped entirely</h3>
+<p>Once outputs live in R2, there is nothing left for S3 to do. Uploads can go straight to R2 as
+well, using its S3-compatible presigned URLs, and the box pulls the source from R2 for free.
+That removes a whole AWS service from the design.</p>
+<table>
+<tr><th>Consequence</th><th>Detail</th></tr>
+<tr><td><strong>The upload path gets cheaper too</strong></td><td>Browser to R2 is free (inbound traffic is never charged), and R2 to the box is free in both directions. Under the old design the source video was uploaded to S3 and then pulled to the box, which was free only because both sat in the same region.</td></tr>
+<tr><td><strong>Migration gets easier, not harder</strong></td><td>This was a hard requirement, and moving storage outside AWS <em>helps</em> it. When you move AWS accounts, the videos do not move at all &mdash; the bucket is not in AWS. One less thing in the runbook in section 11.</td></tr>
+<tr><td><strong>One more vendor to hold secrets</strong></td><td>The honest cost. Cloudflare becomes a second place credentials live: R2 access keys and the Worker's signing secret. Both go in the inventory in 8.1.</td></tr>
+<tr><td><strong>No NAT gateway either way</strong></td><td>Keep the box on a public IP with no inbound rules, as section 8.5 already requires. Sending the output through a NAT gateway would add a data-processing charge on top of egress, for no benefit.</td></tr>
+</table>
+
+<h3>4.5 How the Worker stays a doorman and not an open proxy</h3>
+<div class="box warn">
+<strong>The R2 bucket is private and has no public URL.</strong> If the Worker simply streamed any
+object whose name it was given, it would be a public index of every customer's video. So the Worker
+never makes an access decision of its own &mdash; it only verifies one our API already made.
+</div>
+<pre>1. Browser asks our API:      GET /api/jobs/{id}/download
+2. Our API checks, in order:   valid session?
+                               does this job belong to this user?
+                               is the job done?
+                               is it still inside its 7 days?
+                               has the user deleted it themselves?
+3. Our API returns a token:    HMAC-signed, ~5 minutes, naming ONE object key
+4. Browser calls the Worker:   GET https://dl.yoursite.com/{token}
+5. The Worker verifies:        signature valid? not expired?
+                               ...then streams that one object from R2
+</pre>
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td>The token names exactly one object key</td><td>A leaked token cannot be edited to fetch a different video &mdash; the key is inside the signed payload.</td></tr>
+<tr><td>The signing secret is a Worker secret binding</td><td>Never in the Worker's source, never in git, never sent to the browser.</td></tr>
+<tr><td>The Worker holds no R2 credentials</td><td>It reaches the bucket through a Cloudflare binding, so there is no access key to steal even if the Worker code leaks.</td></tr>
+<tr><td>Tokens are short-lived but downloads are not</td><td>A five-minute token starts a download; the stream itself can run as long as it needs. Expiry limits who can <em>start</em> a download, not how slow the connection is.</td></tr>
+<tr><td>The Worker logs no token</td><td>A token is a credential. Same rule as presigned URLs in 8.9.</td></tr>
+<tr><td>Unlimited downloads, but rate limited</td><td>Unlimited is a product promise, not an invitation. A per-user ceiling of a few dozen download-starts an hour costs nothing to add and stops a script hammering it.</td></tr>
+</table>
+<div class="box good">
+<strong>Why this is also better for the user.</strong> Cloudflare serves from a location near them
+rather than from Mumbai, so an overseas customer gets a noticeably faster download &mdash; and since
+you are selling internationally (section 9.3), that matters. The cheaper option is also the faster
+one, which is not usually how this goes.
+</div>
+
+<h2 class="newpage">5. The job state machine</h2>
+
+<h3>5.1 There is only one path</h3>
+<pre class="flow">queued -> preparing -> transcribing -> translating -> rendering -> exporting -> done
+                                                                              \-> failed
+                                                                              \-> cancelled</pre>
+<p>No human input after the upload. The user picks a language, presses one button, and either watches
+live progress or closes the tab and gets an email. Every job is identical in shape, which is what
+makes the whole system predictable.</p>
+
+<h3>5.2 What removing editing bought</h3>
+<div class="box good">
+<strong>This is the largest simplification in the document, and it removes more than a feature.</strong>
+Earlier drafts let paying users check and correct the transcript, the translation and the speaker
+assignments before rendering. That is gone: no editing of any kind.
+<table style="margin-top:2.5mm">
+<tr><th>Deleted</th><th>Why it mattered</th></tr>
+<tr><td>Two <code>awaiting_*</code> states and the whole pause-and-continue lifecycle</td><td>A one-shot job is a function. A pausable job is a state machine with timeouts, cleanup and partial-work billing.</td></tr>
+<tr><td>Releasing and re-acquiring the GPU mid-job</td><td><strong>The riskiest unverified assumption in the plan.</strong> It required a render to continue across an instance stop &mdash; something I reasoned about from the code but never observed. That risk is now simply gone.</td></tr>
+<tr><td>Five review endpoints, a row-count validator, edit revisions, the respeak re-run</td><td>Roughly 4&ndash;5 developer days.</td></tr>
+<tr><td>A second GPU boot per reviewed job</td><td>About &#8377;5 a job, and two boots meant two chances to fail.</td></tr>
+<tr><td>Review reminder emails, abandoned-job cleanup, a paused-job cap</td><td>Support surface and moving parts, all for jobs that never finished.</td></tr>
+</table>
+</div>
+<div class="box note">
+<strong>What you give up, stated plainly, so the decision is on the record.</strong> Placement
+accuracy measures about 75% per line on real video. Without editing, a customer whose video has a
+few wrong lines &mdash; usually a name, a brand or industry jargon, which no translator handles
+reliably &mdash; has no way to fix it themselves. Their only options are to accept it or ask you.
+That is a real trade, and it is the right one for launching: the product stays simple, and if
+customers ask for editing you will have the evidence to justify building it properly rather than
+guessing now.
+</div>
+
+<h3>5.3 Every state</h3>
+<table>
+<tr><th class="m">state</th><th>Meaning</th><th>Moved on by</th><th>GPU busy?</th></tr>
+<tr><td class="m">queued</td><td>Accepted and validated, waiting for the box</td><td>Worker claiming it</td><td>No</td></tr>
+<tr><td class="m">preparing</td><td>Instance starting, then upload and voice/music separation</td><td>Worker</td><td>Yes</td></tr>
+<tr><td class="m">transcribing</td><td>Speech recognition, speaker detection, voice cloning</td><td>Worker</td><td>Yes</td></tr>
+<tr><td class="m">translating</td><td>Translation and length fitting</td><td>Worker</td><td>See 16.1</td></tr>
+<tr><td class="m">rendering</td><td>Speaking the new lines, watermark, mixing</td><td>Worker</td><td>Yes</td></tr>
+<tr><td class="m">exporting</td><td>Mux, pull from the box, push to R2, verify the audio track</td><td>Worker</td><td>Yes</td></tr>
+<tr><td class="m">done</td><td>Video in R2, minutes recorded, email sent</td><td>&mdash;</td><td>No</td></tr>
+<tr><td class="m">failed</td><td>Error recorded, <strong>no quota charged</strong></td><td>&mdash;</td><td>No</td></tr>
+<tr><td class="m">cancelled</td><td>User cancelled, <strong>no quota charged</strong></td><td>&mdash;</td><td>No</td></tr>
+</table>
+<p>The box is busy for one continuous stretch from <code>preparing</code> to
+<code>exporting</code>, then released. It is never handed back and forth, and it never waits on a
+person.</p>
+
+<h3>5.4 The row-identity rule still applies to the worker</h3>
+<div class="box warn">
+Removing editing removes the <em>product</em> risk here, not the <em>engineering</em> one.
+VoiceStudio maps a render request onto its own stored segments <strong>by position</strong>:
+<pre>job["seg_order"] = [seg_ids[k] if k &lt; len(seg_ids) else f"seg_{k}"
+                    for k in range(len(req.segments))]</pre>
+So sending a different number of rows than the box has stored shifts every later line onto a
+different slot. <strong>This has already happened on this project</strong> &mdash; 140 rows sent
+against 144 stored, and the finished video had the original Hindi speaking underneath the Telugu,
+because a model asked to fill a slot far longer than its words fills the surplus with the reference
+audio it was conditioned on.
+<br><br>
+So the worker must, without exception:
+<ul>
+<li><strong>Send every row</strong>, in the original order, including any with empty text.</li>
+<li><strong>Always send <code>segment_ids</code></strong>, so the mapping is explicit by stable id
+rather than implicit by position.</li>
+<li><strong>Assert the count before sending.</strong> If the number of rows it is about to send does
+not match the number the box reported at transcription, it fails the job loudly rather than
+rendering something wrong. Cheap, and it catches the class of bug that has already cost this
+project once.</li>
+</ul>
+</div>
+
+<h3>5.5 The user's library</h3>
+<p>Every job a user starts belongs to them permanently and appears in their dashboard &mdash;
+finished, failed or cancelled. The tables behind it are in section 7.</p>
+<table>
+<tr><th class="m">GET /api/jobs</th><th>Returns</th></tr>
+<tr><td class="m">?status=&amp;page=</td><td>Newest first, paginated. Per row: title from the original filename, source and target language, duration, minutes charged, state, timestamps, thumbnail, and a <code>capabilities</code> object saying which buttons are live &mdash; <code>can_download</code> (finished, still inside its 7 days, not user-deleted) and <code>can_cancel</code> (still running). Plus <code>expires_at</code>, which the dashboard renders as the countdown described in 5.8.</td></tr>
+</table>
+<p>The UI must never infer a button from the state name alone. A job in state <code>done</code> whose
+video has passed 7 days is still <code>done</code>, but <code>can_download</code> is false. The
+server decides this in one place so the dashboard and the API cannot disagree.</p>
+<p><strong>Access control is the same rule as everywhere else</strong> (8.4): the user id comes from
+the session and goes <em>inside</em> the query, never into a comparison afterwards. Another user's
+job id returns 404, not 403.</p>
+
+<h3>5.6 What is kept, and for how long</h3>
+<table>
+<tr><th>What</th><th>Where</th><th>Lives for</th><th>Why</th></tr>
+<tr><td><strong>The record</strong> &mdash; job row, segments, transcript, translation, events, usage</td><td>Postgres</td><td><strong>Forever</strong>, until the account is deleted</td><td>It is text. A whole job is a few hundred kilobytes, so keeping it costs effectively nothing and it is the entire history feature.</td></tr>
+<tr><td><strong>The dubbed video</strong></td><td><strong>Cloudflare R2</strong></td><td><strong>7 days</strong>, unlimited downloads <span class="small">(24 hours on free)</span>, or until the user deletes it</td><td>Section 4 for delivery, 5.8 for the countdown, the first-download notice and self-service delete. Repeat downloads are free, so "unlimited" costs nothing beyond storage.</td></tr>
+<tr><td><strong>The source video</strong></td><td>R2</td><td><strong>Deleted as soon as the job ends</strong></td><td>Nothing re-runs from it, so there is no reason to hold a customer's source material at all. Cheaper and less liability.</td></tr>
+<tr><td><strong>Working files</strong> &mdash; stems, speaker references, per-line clips</td><td>The GPU box</td><td>Deleted the moment the video is verified in R2</td><td>The box is shared and small. Section 5.7.</td></tr>
+</table>
+<div class="box good">
+<strong>What this means on the dashboard.</strong> They always see every video they ever dubbed, with
+the transcript still readable, because that is text and it is never deleted. For thirty days they can
+download the video as many times as they want, at no cost to you. After thirty days the row stays and
+the download button greys out with a reason. That is more honest than deleting history so every
+button always works.
+</div>
+
+<h3>5.7 Box storage</h3>
+<p>With one job at a time and working files deleted at the end of each, the box only ever needs room
+for a single job &mdash; roughly 2&ndash;3 GB for a 30-minute video. Measured state of the volume,
+from the disk audit of 2026-08-23:</p>
+<pre>/dev/root          146 GB total,  115 GB used,  32 GB free  (79%)
+  docker image        15.2 GB
+  container layer     29.1 GB     grows on its own: model caches, logs, HF downloads
+  docker volume       21.0 GB
+  swapfile            24 GB       added after four out-of-memory kills
+  dub_jobs             5.8 GB     14 leftover test jobs, incl. 534 MB of stale exports</pre>
+<div class="box warn">
+<strong>32 GB free is plenty for the pipeline and uncomfortable for the machine.</strong> The risk is
+not job-sized: the container's writable layer is already 29 GB and grows without anyone asking it to,
+the 24 GB swapfile shares the volume, and <strong>a full disk fails every job rather than one</strong>.
+<br><br>
+<strong>Decision: grow the volume to 250 GB</strong> (+&#8377;803 a month, free space 32 GB &rarr;
+about 132 GB). Costs and sequencing in 15.2. Do the housekeeping either way &mdash; those 5.8 GB of
+test jobs and the stale export directories are free headroom sitting unused.
+</div>
+
+<h3>5.8 Seven-day deletion, and the machinery behind it</h3>
+<div class="box good">
+<strong>DECISION: a dubbed video is deleted seven days after it is rendered.</strong> Downloads are
+unlimited inside that window. The user is told the deletion date on their first download, a countdown
+sits beside the video on the dashboard, and they can delete it sooner themselves. Free-tier outputs
+use the same machinery with a 24-hour window.
+<br><br>
+The reason is <strong>privacy, not cost</strong>. Holding a customer's video after they have collected
+it is a liability that grows quietly &mdash; every extra day is more material to leak, more to hand
+over if someone asks, and more to explain. The &#8377;170 a month it happens to save (4.3) is a side
+effect worth having, not the argument for doing it.
+</div>
+
+<h4>5.8.1 Three mechanisms, deliberately not one</h4>
+<table>
+<tr><th>Mechanism</th><th>Responsible for</th><th>Why it cannot be dropped</th></tr>
+<tr><td><code>expires_at</code> in Postgres</td><td><strong>Access.</strong> <code>can_download</code> goes false the moment it passes, and every download request re-checks it</td><td>Exact and immediate. This is the only clock the API trusts</td></tr>
+<tr><td>A sweeper, every 15 minutes</td><td><strong>Deleting the object</strong> and stamping <code>video_deleted_at</code>, so the dashboard can say why a file is gone</td><td>Keeps the record and reality in agreement, so support never has to guess</td></tr>
+<tr><td>An R2 lifecycle rule on the output prefix</td><td><strong>The guarantee that the bytes actually leave</strong>, even if the sweeper never runs again</td><td>A retention promise that depends on a cron job still working is not a promise</td></tr>
+</table>
+<div class="box warn">
+<strong>Do not build this from the lifecycle rule alone.</strong> Cloudflare acts on object age
+asynchronously and at roughly daily granularity, so the precise moment of deletion is not yours to
+choose &mdash; and worse, the database would not know the object had gone, so the dashboard would
+offer a download button that 404s.
+<br><br>
+<strong>And do not build it from the sweeper alone.</strong> One broken cron job and you are holding
+customer video indefinitely, which is the exact liability the policy exists to remove. Split the
+duties: <strong>the database decides access, the lifecycle rule guarantees disappearance.</strong>
+</div>
+
+<h4>5.8.2 The columns this needs</h4>
+<p>Two of these already exist on <code>jobs</code> in section 7; three are new.</p>
+<pre>output_r2_key        text          the R2 object key                    (exists)
+output_expires_at    timestamptz   set when the render is verified in    (exists)
+                                   R2, from plans.output_retention_days
+download_count       int           already tracked                      (exists)
+
+first_downloaded_at  timestamptz   NEW. Null until the first successful download.
+                                   Drives the one-time notice, and tells you
+                                   whether people collect their videos at all
+output_deleted_at    timestamptz   NEW. When the bytes actually went
+output_deleted_by    text          NEW. 'expiry' | 'user' | 'account_closure'</pre>
+<p>The window itself is <strong>not hardcoded</strong>. It comes from
+<code>plans.output_retention_days</code>, which already exists in section 7 &mdash; so 7 days for paid
+and 1 day for free are data, and changing them later is an UPDATE rather than a deployment.</p>
+<p><code>output_deleted_by</code> is not decoration. "Where did my video go" is a support question that
+should be answerable from a single row without reading logs, and those three answers deserve three very
+different replies.</p>
+
+<h4>5.8.3 What the user is told, and when</h4>
+<table>
+<tr><th>Moment</th><th>What is shown</th></tr>
+<tr><td><strong>First download</strong></td><td>An acknowledgement they have to dismiss, naming an <strong>absolute date and time in their own timezone</strong>: "This video is deleted on 31 August 2026 at 18:40. Downloads are unlimited until then &mdash; keep a copy if you need it."</td></tr>
+<tr><td>Every visit after that</td><td>A small countdown beside the video: "deleted in 6d 4h". Inside the last 24 hours it switches to hours and minutes and changes colour.</td></tr>
+<tr><td>After it is gone</td><td>The job stays in the library with its transcript and translation, marked <em>video deleted</em>. Not removed, not an error &mdash; the history is part of the product.</td></tr>
+</table>
+<div class="box note">
+<strong>Give a date, not a duration.</strong> "Deleted in 7 days" reads as a suggestion; "deleted on 31
+August at 18:40" reads as a fact. Render it from the server's <code>expires_at</code> in the user's
+timezone rather than counting seven days on the client &mdash; a skewed client clock would display a
+deadline that disagrees with the one actually enforced, and the user would be right to be annoyed.
+</div>
+
+<h4>5.8.4 Deleting it yourself</h4>
+<pre>DELETE /api/jobs/{id}/video</pre>
+<ul>
+<li>Scoped by the session's user id <em>inside the query</em>, like everything else in 8.4. Another
+user's job id returns <strong>404, never 403</strong>.</li>
+<li>Removes the R2 object, stamps <code>video_deleted_at</code>, sets <code>deleted_by = 'user'</code>.</li>
+<li><strong>Idempotent.</strong> Called twice, or after expiry already collected the file, it succeeds
+quietly instead of erroring.</li>
+<li>Keeps the job row, transcript and translation. Only the media goes.</li>
+<li>Irreversible, so the UI confirms once and says so plainly. No undelete, no recycle bin.</li>
+</ul>
+<div class="box warn">
+<strong>Deleting a video must not refund minutes.</strong> The quota was consumed by rendering, which
+is where the money actually went; whether the file still exists is irrelevant to that. If deletion
+returned quota, then "render, download, delete, repeat" would be an unlimited free plan. This is the
+same reasoning as 3.2 billing on measured duration at job creation &mdash; the ledger records work
+performed, not files currently held.
+</div>
+
+<h3>5.9 Nobody reaches the container &mdash; and nothing of the customer's stays in it</h3>
+<div class="box warn">
+<strong>The customer's browser and the GPU box are never on the same network path.</strong> This is not
+a preference, it is forced: VoiceStudio has <strong>no authentication of any kind</strong>. A GET to
+port 3900 returns 200 to anyone who can reach it, and the box carries an AWS instance role &mdash; so
+whoever can reach the app can spend money on the account (8.5). Reachability <em>is</em> the
+vulnerability.
+<pre>customer's browser  --HTTPS-->  our API        (public, authenticated, rate limited)
+our API             --------->  the worker     (private)
+the worker          --------->  box :3900      (private subnet, no public IP,
+                                                port open only to the worker's
+                                                security group)</pre>
+There is no route from the internet to the box, and no request the customer can make that reaches it.
+The two things they <em>do</em> touch are our API and a Cloudflare Worker serving R2 (4.5). Neither
+can see the box.
+</div>
+
+<div class="box good">
+<strong>So the container's storage is scratch, and Postgres is the record.</strong> As each stage
+finishes, the worker copies the result <em>out</em> of the engine and into our own database before
+moving on. The engine keeps its working copy; we keep the authoritative one.
+<table>
+<tr><th>Stage finishes</th><th>What the worker copies out</th><th>Lands in</th></tr>
+<tr><td>Transcribe</td><td>Per-line source text, start and end, speaker label, clone profile id</td><td><code>job_segments.source_text</code> and timing columns</td></tr>
+<tr><td>Translate</td><td>Per-line target text, slot seconds, fit verdict</td><td><code>job_segments.translated_text</code></td></tr>
+<tr><td>Render</td><td>The finished video, pushed straight to R2; its key recorded</td><td>R2, plus <code>jobs.output_r2_key</code></td></tr>
+<tr><td>Any stage</td><td>The raw engine responses and the exact payload sent to <code>/dub/generate</code></td><td><code>job_artifacts</code>, for forensics</td></tr>
+<tr><td>Job ends</td><td>&mdash; the box's working files are <strong>deleted</strong> (5.6)</td><td>nothing left behind</td></tr>
+</table>
+<code>job_segments</code> is the system of record for the transcript and the translation (section 7).
+The dashboard, the history page and the admin panel all read from there. None of them ever query the
+box.
+</div>
+
+<div class="box note">
+<strong>One correction to the obvious worry.</strong> Stopping the instance does <em>not</em> destroy
+the container's job folders &mdash; the EBS volume persists, so they survive a stop and start. The
+problem with leaving customer data there is not that it vanishes. It is four other things:
+<ul>
+<li><strong>It is unreachable while the box is off</strong>, and off is the <em>normal</em> state &mdash;
+ten minutes after the last job (6.1). A history page backed by the container would be dead most of the
+day, and waking a GPU to read a line of text would cost &#8377;47 an hour.</li>
+<li><strong>It is undurable.</strong> One instance, one volume. And the container's writable layer is
+already <strong>29 GB and grows on its own</strong> (5.7) &mdash; customer data must not live inside the
+thing we are trying to stop growing.</li>
+<li><strong>It cannot be queried.</strong> "Show this user's jobs", "which job do I refund", "sum the
+minutes charged" are joins across <code>users</code>, <code>jobs</code> and <code>payments</code>.
+Inside the container it is loose files plus a SQLite database, joinable to nothing.</li>
+<li><strong>It would not migrate.</strong> Section 11 moves accounts with <code>pg_dump</code>.
+Anything living only on the box would have to be carried by hand, which is exactly the class of thing
+that gets forgotten.</li>
+</ul>
+</div>
+
+<h2 class="newpage">6. GPU on demand</h2>
+
+<p>This is the part that decides the bill, and the part where a bug is most expensive: either money
+burned on an idle GPU, or a paid render killed halfway.</p>
+
+<h3>6.1 The rule</h3>
+<pre>START  when a job needs the box and no instance is running.
+       Triggered when an upload URL is issued, so the box warms up
+       while the video is still uploading.
+
+STOP   when ALL of these are true:
+         - no job is in preparing, transcribing, translating,
+           rendering or exporting
+         - no job is queued
+         - no job is mid-upload (a presigned upload issued in the
+           last 20 minutes and not yet turned into a job)
+         - the last job step finished at least 10 minutes ago
+         - the instance is actually running</pre>
+<p>Checked every minute by an EventBridge rule invoking a small Lambda, which reads the database and
+calls <code>StopInstances</code>. It lives outside the API deliberately, so an API crash cannot leave
+the GPU running. Because stopping requires the queue to be empty as well as idle, a burst of uploads
+keeps the box up and processes them back to back &mdash; faster for users and cheaper than starting
+and stopping repeatedly.</p>
+<p><strong>The mid-upload condition matters more than it looks.</strong> A user on a slow connection
+uploading a 30-minute video can take many minutes, during which no job exists yet and the queue is
+empty. Without that check the box could start on the first byte, shut down before the upload
+finished, and pay a second boot when the job finally arrived. Tracking issued upload URLs closes the
+gap.</p>
+<div class="box good">
+<strong>With editing removed, the box is never handed back and forth.</strong> It is busy for one
+continuous stretch per job and then released. There is no pausing mid-job, nothing waits on a person,
+and no render has to survive an instance stop. That last point deleted the riskiest unverified
+assumption in this plan &mdash; see 5.2.
+</div>
+
+<div class="box good">
+<strong>DECISION: the GPU comes up at the <em>upload</em> stage, and this is not a place to save
+money.</strong> The instance starts the moment an upload URL is issued &mdash; before the first byte
+arrives &mdash; so the six-minute warm-up runs while the customer's video is still going up. Not after
+the upload completes, not at transcribe, and never part-way through on a progress threshold.
+<br><br>
+<strong>The arithmetic, so the trade is on the record.</strong> Boot costs about six minutes of GPU
+time whenever it happens, so starting early usually costs nothing extra &mdash; it just moves the
+warm-up under the upload instead of after it. The one case where it does cost more is an upload slower
+than the boot: the box finishes warming and then idles until the file lands, and that idle is billed.
+On a slow connection that is a few rupees.
+<br><br>
+<strong>Those few rupees buy the thing the customer is actually paying for.</strong> The alternative
+is a six-minute spinner <em>after</em> they have already waited for their upload, on every single job,
+with nothing happening that they can see. That is the difference between a product that feels instant
+and one that feels broken, and it is not worth trading for small change.
+<br><br>
+<strong>Explicitly closed, so nobody reopens it as an optimisation:</strong>
+<ul>
+<li>Do <strong>not</strong> delay the start to trim idle minutes.</li>
+<li>Do <strong>not</strong> gate the boot on upload progress or an estimated remaining time.</li>
+<li>Do <strong>not</strong> stop the box between stages, including around translate (16.1.1).</li>
+</ul>
+Each of those saves a few rupees per job and costs user-visible waiting. The place to control GPU
+spend is the <em>idle shutdown</em> after work finishes (6.2), not the start.
+</div>
+<div class="box note">
+<strong>The downside is already guarded.</strong> The <code>no job is mid-upload</code> condition in
+the STOP rule is what stops a slow upload turning into a shutdown and a second boot &mdash; which
+would cost more than the idle time it was trying to avoid. That guard is the reason starting this
+early is safe.
+</div>
+
+<h3>6.2 On 10 minutes rather than 5</h3>
+<div class="box note">
+Ten is the right number, and not just for comfort. Every boot costs about <strong>6 minutes of GPU
+time</strong> whether the video is 60 seconds or 30 minutes, so a shutdown that happens just before
+the next job arrives is the most expensive thing the watchdog can do.
+<br><br>
+Holding the box 5 minutes longer costs about <strong>&#8377;4</strong>. A needless extra boot costs
+about <strong>&#8377;5</strong> and makes a user wait two more minutes. So <strong>10 minutes is
+cheaper than 5</strong> whenever a second job arrives within that window, and only more expensive on
+a genuinely quiet day &mdash; roughly &#8377;1,200 a month at the worst case of ten isolated boots a
+day. Put the number in configuration, not in code, so it can be retuned from real arrival data once
+you have some.
+</div>
+
+<h3>6.3 The safety rules</h3>
+<div class="box warn">
+<ul>
+<li><strong>Never stop with work in flight.</strong> The Lambda refuses if any job is in a working
+state. A 30-minute video's render is roughly 17 minutes; killing it wastes the job and the money.</li>
+<li><strong>If the database is unreachable, do nothing</strong> and raise an alarm. Failing to stop
+costs money; stopping wrongly destroys a paying customer's job. The failure mode is deliberately the
+expensive-but-safe one.</li>
+<li><strong>A stuck job must not pin the GPU.</strong> Any job in a working state longer than 90
+minutes &mdash; well clear of a 30-minute video's honest worst case &mdash; is failed, the user is
+told, no quota is charged, and an alert fires.</li>
+<li><strong>A cost alarm independent of all of it.</strong> A CloudWatch alarm on instance
+running-hours per day emails you regardless of what the software believes is true.</li>
+<li><strong>Never run <code>docker stop</code> ourselves.</strong> See 6.4. Stopping the
+<em>instance</em> is the correct action and delivers SIGTERM properly.</li>
+<li><strong>Never serve a download from the box.</strong> It would have to be running for every
+download. Section 4.1.</li>
+</ul>
+</div>
+
+<h3>6.4 The container does not always come back on boot</h3>
+<div class="box warn">
+<strong>The project's own scripts disagree about this.</strong> <code>start_box.ps1</code> says
+VoiceStudio "comes back on its own"; both <code>start_instance.ps1</code> and
+<code>_boot_voicestudio.sh</code> say it "does NOT come back on boot" and start it explicitly. Both
+are correct, under different conditions, and the difference is exactly the one that matters here:
+<pre>restart=unless-stopped
+
+  container was RUNNING when the instance stopped   -> comes back automatically
+  container was explicitly `docker stop`-ped first  -> stays down across every boot</pre>
+So an automated instance start can perfectly well produce a healthy box with no application listening
+on port 3900, and a worker that only polls <code>/sysinfo</code> would wait until its timeout and
+fail a paid job for no real reason.
+<br><br>
+<strong>The worker therefore needs a bounded recovery step, not just a readiness poll:</strong> if
+<code>/sysinfo</code> has not answered within a grace period, run <code>docker start</code> on the
+container over SSM &mdash; never <code>docker stop</code>, never <code>docker rm</code> &mdash; then
+resume polling, and only then give up. This also means <strong>the automated lifecycle must never
+explicitly stop the container</strong>, because doing so once poisons every subsequent boot.
+</div>
+
+<h3>6.5 What the user sees</h3>
+<p>Honest progress rather than a spinner that lies: "Starting the dubbing engine, about 2 minutes",
+then real percentages from the engine's own progress stream. For a 30-minute video the whole thing is
+roughly 55 minutes, so the flow is "we will email you when it is ready", with the page updating live
+if they stay on it. One email per job, at the end.</p>
+
+<h2 class="newpage">7. Database design</h2>
+<p>PostgreSQL on Amazon RDS. Every table has <code>id</code> (UUID), <code>created_at</code> and
+<code>updated_at</code>. Money is stored in integer paise, never floating point. The queue lives
+in this database rather than in a separate service: with exactly one GPU, correctness means
+strict serialisation, and <code>SELECT ... FOR UPDATE SKIP LOCKED</code> gives precisely that in
+about fifteen lines while adding nothing to migrate.</p>
+
+<h3>7.1 Accounts and access</h3>
+<table>
+<tr><th class="m">Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">users</td><td>email (unique, lowercased), password_hash, email_verified_at, status, role, free_job_used_at</td><td><code>free_job_used_at</code> is what makes the free tier once-per-account rather than once-per-month. <code>status</code> allows suspension without deletion.</td></tr>
+<tr><td class="m">sessions</td><td>user_id, token_sha256 (unique), expires_at, absolute_expires_at, revoked_at, ip, user_agent</td><td>Only the hash is stored. Sliding expiry, hard ceiling. Deleting a row logs that device out instantly.</td></tr>
+<tr><td class="m">email_tokens</td><td>user_id, purpose, token_sha256, expires_at, used_at</td><td>Verification and password reset. Single use, enforced by <code>used_at</code>.</td></tr>
+<tr><td class="m">login_attempts</td><td>email, ip, at, success</td><td>Feeds rate limiting and lockout, and gives an audit trail after an incident.</td></tr>
+</table>
+
+<h3>7.2 Work</h3>
+<table>
+<tr><th class="m">Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">uploads</td><td>user_id, r2_key, bytes, content_type, probed_duration_s, probed_codec, probed_has_audio, status</td><td>What <code>ffprobe</code> actually found, never what the client claimed.</td></tr>
+<tr><td class="m">jobs</td><td>user_id, upload_id, source_lang, target_lang, state, attempts, vs_job_id, <strong>preset_version</strong>, <strong>preset_sha256</strong>, <strong>output_r2_key</strong>, minutes_quoted, download_count, error_code, queued_at, finished_at, <strong>output_expires_at</strong>, <strong>first_downloaded_at</strong>, <strong>output_deleted_at</strong>, <strong>output_deleted_by</strong></td><td>The queue lives here. <code>output_expires_at</code> is what <code>can_download</code> is computed from. <code>download_count</code> is for your own reporting only &mdash; it never limits anything, since downloads are unlimited. <code>preset_sha256</code> is the provenance record from 2.6.</td></tr>
+<tr><td class="m">job_segments</td><td>job_id, seg_id, ordinal, start_s, end_s, speaker_label, profile_id, source_text, translated_text, slot_seconds, fit_status</td><td><strong>The system of record for the transcript and translation.</strong> <code>ordinal</code> and <code>seg_id</code> together are what enforce the row-identity rule in 5.4: the render request is rebuilt from this table in <code>ordinal</code> order, so it is structurally incapable of sending a different row count.</td></tr>
+<tr><td class="m">job_artifacts</td><td>job_id, kind, payload (JSONB)</td><td>The raw responses as they came back, the exact payload sent to <code>/dub/generate</code>, and the timing report, so any job's quality can be audited after the fact.</td></tr>
+<tr><td class="m">job_events</td><td>job_id, at, state, percent, detail, vs_seq</td><td>Append-only progress and error history. Drives the progress bar and your debugging. <code>vs_seq</code> stores the box's stream sequence number so a reconnect resumes with <code>after_seq</code> instead of replaying.</td></tr>
+<tr><td class="m">gpu_state</td><td>instance_id, desired_state, last_seen_running_at, last_work_finished_at, updated_at</td><td>One row, locked while start/stop decisions are made so they cannot race.</td></tr>
+</table>
+<div class="box note">
+<strong>Why segments get their own table rather than living in JSONB.</strong> The review feature
+needs per-row updates, per-row revision history, and a cheap integrity check on row count and id
+set. All three are awkward inside a JSON blob and trivial in a table. The raw blobs still go to
+<code>job_artifacts</code> for forensics; <code>job_segments</code> is the working copy.
+</div>
+
+<h3>7.3 Money</h3>
+<table>
+<tr><th class="m">Table</th><th>Key columns</th><th>Notes</th></tr>
+<tr><td class="m">plans</td><td>code, name, interval (month/year), price_paise, currency, minutes_per_period, max_video_minutes, max_concurrent_jobs, allows_review, source_retention_days, output_retention_days, active</td><td>Limits and retention live here, not in code, so a plan changes without a deployment. Monthly and annual are separate rows sharing a <code>code</code> family.</td></tr>
+<tr><td class="m">subscriptions</td><td>user_id, plan_id, provider, provider_subscription_id, status, current_period_start, current_period_end, cancel_at, <strong>auto_renew</strong>, <strong>grace_until</strong></td><td>Status only ever changes from a verified webhook. <strong>Annual rows have no <code>provider_subscription_id</code></strong> and <code>cancel_at</code> is meaningless for them &mdash; they are one-time orders that lapse rather than cancel, so <code>auto_renew</code> is false and the renewal reminders in 9.2 are what keeps them alive.</td></tr>
+<tr><td class="m">payments</td><td>user_id, provider_payment_id (unique), amount_paise, currency, method, status, at</td><td>The unique provider id is what makes a replayed webhook harmless. <code>method</code> records upi / card / netbanking for your own reporting.</td></tr>
+<tr><td class="m">usage_ledger</td><td>user_id, job_id, minutes_charged, at, note</td><td><strong>Append-only.</strong> Quota is computed by summing this, never by decrementing a counter.</td></tr>
+<tr><td class="m">webhook_events</td><td>provider, provider_event_id (unique), received_at, processed_at, signature_ok, payload</td><td>Idempotency: the same event arriving twice is recorded once and acted on once.</td></tr>
+</table>
+
+<h3>7.4 Security records</h3>
+<table>
+<tr><th class="m">Table</th><th>Purpose</th></tr>
+<tr><td class="m">audit_log</td><td>Who did what, when, from where: logins, password changes, plan changes, review submissions, admin actions, deletions. Append-only, never updated.</td></tr>
+</table>
+
+<h2 class="newpage">8. Security, in detail</h2>
+
+<h3>8.1 The secrets inventory</h3>
+<p>You asked specifically that the Google and AWS credentials never leak into any frontend,
+environment or browser. Here is every secret in the system, where it lives, and what it reaches.</p>
+<table>
+<tr><th>Secret</th><th>Lives in</th><th>Reaches</th><th>Never</th></tr>
+<tr><td>Database password</td><td>Secrets Manager, rotated</td><td>API and worker at boot, by IAM role</td><td>Not in code, git, or any client</td></tr>
+<tr><td>Razorpay key_id, key_secret, webhook secret</td><td>Secrets Manager</td><td>API only</td><td>The browser gets an order id and the public <code>key_id</code> only &mdash; never the secret</td></tr>
+<tr><td>SES</td><td>IAM role, no key exists</td><td>API</td><td>&mdash;</td></tr>
+<tr><td>Session and CSRF secret</td><td>Secrets Manager</td><td>API only</td><td>&mdash;</td></tr>
+<tr><td><strong>Cloudflare R2 access keys</strong></td><td>Secrets Manager</td><td>API and worker, for presigning uploads and pushing outputs</td><td><strong>Never in the browser, never in the Worker</strong> &mdash; the Worker reads R2 through a binding, so it needs no key at all</td></tr>
+<tr><td><strong>Download-token signing secret</strong></td><td>Secrets Manager <em>and</em> as a Cloudflare Worker secret binding</td><td>Our API signs with it; the Worker verifies with it</td><td>Never in Worker source, never in git, never sent to the browser. The one secret that exists in two vendors, so rotating it means updating both together</td></tr>
+<tr><td>Cloudflare API token (for Terraform)</td><td>Secrets Manager, scoped to R2 and Workers only</td><td>CI at deploy time</td><td>Not a global account token &mdash; scope it, so a leak cannot touch DNS</td></tr>
+<tr><td><strong>Google service account for Chirp</strong> (<code>/root/gcp_adc.json</code>)</td><td>On the GPU box only, delivered by its own instance profile</td><td>The container, at the path the pipeline already expects</td><td><strong>Never in an AMI, a Docker image, git, our API, or the browser</strong></td></tr>
+<tr><td><strong>Gemini proxy key</strong></td><td>On the GPU box's host process, port 8900</td><td>The container over the Docker bridge at <code>172.17.0.1:8900</code></td><td><strong>Never leaves the box.</strong> Our API has no route to it and no need for one</td></tr>
+<tr><td><strong>HF_TOKEN</strong></td><td>Container environment today; Secrets Manager after rotation</td><td>Diarization</td><td>Anything in a container environment surfaces in logs and diagnostics eventually. Rotate before launch and add an expiry alarm &mdash; an invalid token degrades diarization silently</td></tr>
+<tr><td>AWS credentials in CI</td><td><strong>None exist.</strong> GitHub Actions assumes a role by OIDC</td><td>A short-lived token per run</td><td>No long-lived AWS key to steal</td></tr>
+</table>
+<div class="box good">
+<strong>The frontend receives exactly three kinds of thing:</strong> its own session cookie, its
+own data, and short-lived download tokens naming one object for about five minutes. There is no
+configuration file shipped to the browser containing any key, and no endpoint that returns one.
+Presigned URLs are treated as secrets themselves: never logged, never placed anywhere a referrer
+header could carry them.
+</div>
+
+<h3>8.2 Committed credentials: what was found, and what is done</h3>
+
+<h4>8.2.1 The Gemini API key &mdash; RESOLVED</h4>
+<div class="box good">
+<strong>What it was.</strong> <code>_gemini_key.txt</code> held a live 39-character Google API key
+(<code>AIza...</code>), tracked by git and pushed to <code>origin/main</code> in commit
+<code>48dfa87</code>. It resolved to the key named <strong><code>voicestudio-gemini</code></strong>,
+uid <code>1eec4b95-2caf-4fc1-b785-55f6400ed7fd</code>, in project
+<code>video-template-convertor</code> (number <code>34812724301</code>), owned by
+<code>owner@example.com</code> &mdash; a <em>different</em> project from the
+<code>project-35cd3678-&hellip;</code> the pipeline uses, and restricted to
+<code>generativelanguage.googleapis.com</code>.
+<br><br>
+<strong>Blast radius: none.</strong> Nothing in the project reads it. Both
+<code>gemini_proxy.py</code> and <code>pipeline/gemini_audio.py</code> authenticate with OAuth
+bearer tokens from <code>google.auth.default()</code> &mdash; the box's service account &mdash;
+and the proxy's own header records why: the API-key path returned HTTP 429 "prepayment credits are
+depleted", so the pipeline moved to Vertex AI. The key was legacy from the abandoned AI Studio
+approach. No hardcoded copies exist anywhere in the tree.
+<br><br>
+<strong>Actions taken, 2026-08-24.</strong>
+<ol>
+<li>Value backed up outside the repository at
+<code>%USERPROFILE%\.secrets\gemini_api_key.voicestudio-gemini.dpapi</code>, encrypted with
+Windows DPAPI and scoped to this user and machine. Round trip verified. A README beside it records
+what the key was and why it was revoked.</li>
+<li><code>.gitignore</code> widened from named files to shape-based patterns &mdash;
+<code>*_key.txt</code>, <code>*_token.txt</code>, <code>*_secret.txt</code>, <code>*.dpapi</code>,
+<code>.secrets/</code>. The original leak happened precisely because the ignore list named
+individual files and a new one was simply not on it.</li>
+<li><code>git rm --cached _gemini_key.txt</code>. Untracked, still on disk, now ignored.</li>
+<li><strong>Key deleted in Google Cloud</strong> (<code>deleteTime 2026-08-24T11:01:40Z</code>).
+Revocation verified two ways: gone from the project's active key list, and a live API call now
+returns <code>400 API key not valid</code> rather than the previous <code>403</code> billing
+denial. <span class="small">Google keeps a deleted key undeletable for 30 days, so this is
+reversible until 2026-09-23 via <code>gcloud services api-keys undelete</code>.</span></li>
+<li><strong>No replacement was created.</strong> Nothing consumes it, so a new key would be pure
+liability. Say the word if some path outside this repository needs one.</li>
+</ol>
+<strong>Not done, needs your decision:</strong> the value remains in pushed git history. Purging it
+needs <code>git filter-repo</code> and a force-push, which rewrites history other clones depend
+on. Because the key is now dead, this is tidiness rather than exposure, so I did not do it
+unprompted.
+</div>
+
+<h4>8.2.2 The HuggingFace token &mdash; OPEN, and it needs care</h4>
+<div class="box warn">
+<strong>A full sweep of all 3,500 tracked files for nine classes of secret found one more real
+leak:</strong> <code>_goldstate.txt</code> line 19 carries
+<code>HF_TOKEN=hf_&hellip;</code> (37 characters), committed. The file is the output of
+<code>_goldstate.sh</code>, which dumps the container's environment &mdash; so it is a credential
+file whose name gives no hint of it. It is now untracked and ignored, and the value is unchanged.
+<br><br>
+<strong>Why this one is harder than the Gemini key.</strong> The HF token is <strong>in active
+use</strong>: it lives in the container's environment and diarization depends on it. Rotating it
+therefore means changing that environment &mdash; and the container's environment is fixed at
+create time, so a permanent change requires <code>docker rm</code> and a recreate. That is the one
+operation the handbook warns destroys the in-place-patched backend if done carelessly.
+<code>_recreate_with_hf.sh</code> exists to do exactly this, so the path is known, but it must be
+run deliberately, against a verified backup, with the five pinned MD5s and both guarded invariants
+re-checked afterwards.
+<br><br>
+<strong>Compounding it:</strong> if the token is merely invalidated and not correctly replaced,
+diarization does not fail loudly. It silently degrades to a silence-gap heuristic that merges every
+character into one speaker with no cloning &mdash; which looks like a quality regression, not a
+credential problem. That is the failure this project has already seen once.
+<br><br>
+<strong>My recommendation:</strong> rotate it as a planned maintenance step, not now &mdash; pair
+it with the next container recreate, and add the HF token expiry alarm from section 8.1 at the same
+time. I have not touched it.
+</div>
+
+<h4>8.2.3 Two findings that are not leaks</h4>
+<table>
+<tr><th>File</th><th>Pattern hit</th><th>Verdict</th></tr>
+<tr><td class="m">fix_pem.ps1</td><td>PEM private key block</td><td><strong>False positive.</strong> The literal marker string <code>""BEGIN RSA PRIVATE KEY" (header text)"</code>, used to repair PEM formatting. No key material.</td></tr>
+<tr><td class="m">research/_raw/d_el_dubstudio.md</td><td>8 &times; AWS access key id</td><td><strong>Not ours.</strong> One repeated <code>AKIA&hellip;</code> inside presigned S3 URLs scraped from ElevenLabs' public documentation CDN. Presigned URLs embed the key id by design; these were signed 2026-08-19 with a 7-day expiry and are already dead.</td></tr>
+</table>
+
+<h4>8.2.4 Standing controls, so this cannot recur</h4>
+<ul>
+<li><strong>Shape-based ignore patterns</strong> rather than named files, already in place.</li>
+<li><strong>GitHub secret scanning and push protection</strong> on both this repository and the new
+product one.</li>
+<li><strong><code>gitleaks</code> as a pre-commit hook and a CI step</strong>, so a machine catches
+this rather than a review months later.</li>
+<li><strong>Never commit the output of an environment dump.</strong> Any script that prints a
+container's <code>env</code> produces a credential file regardless of what it is named. This is the
+lesson of <code>_goldstate.txt</code> and it deserves a rule, not a habit.</li>
+<li><code>aws_transcript.json</code> and <code>instance_ip.txt</code> are also tracked. Neither is
+a credential, but both are operational detail that does not need to be in a repository that will
+gain collaborators.</li>
+</ul>
+
+<h3>8.3 Passwords, sessions and CSRF</h3>
+<table>
+<tr><th>Control</th><th>Choice</th><th>What it prevents</th></tr>
+<tr><td>Password hashing</td><td><strong>Argon2id</strong>, 64 MB memory, 3 iterations, 4 lanes, per-hash salt</td><td>Deliberately slow and memory-hungry, so a stolen database cannot be brute-forced cheaply on GPUs</td></tr>
+<tr><td>Password policy</td><td>Minimum 10 characters, checked against a known-breached list, no forced special characters</td><td>Forced complexity produces predictable passwords</td></tr>
+<tr><td>Session token</td><td>256-bit from the OS random source; <strong>only its SHA-256 is stored</strong></td><td>A database leak yields no usable session tokens</td></tr>
+<tr><td>Cookie</td><td><code>HttpOnly; Secure; SameSite=Lax</code>, host-only, path <code>/</code></td><td>JavaScript cannot read it, so an XSS bug cannot steal the session; subdomains cannot read it</td></tr>
+<tr><td>Lifetime</td><td>7 days sliding, 30 days absolute; rotated on login and privilege change</td><td>Abandoned sessions die; session fixation fails</td></tr>
+<tr><td>On password change</td><td><strong>Every session for that user is revoked</strong></td><td>A stolen cookie dies with the password</td></tr>
+<tr><td>CSRF</td><td><code>SameSite=Lax</code> <em>plus</em> a required <code>X-CSRF-Token</code> header matching a per-session value</td><td>Two independent defences, because SameSite behaviour varies between browsers</td></tr>
+<tr><td>CORS</td><td>Exactly one origin, with credentials. No wildcard, ever</td><td>Cross-origin credentialed reads</td></tr>
+<tr><td>Headers</td><td>HSTS long max-age, CSP with no inline scripts, <code>nosniff</code>, <code>Referrer-Policy: strict-origin-when-cross-origin</code>, <code>X-Frame-Options: DENY</code></td><td>The usual family</td></tr>
+</table>
+<p><strong>Sessions rather than JWTs</strong>, deliberately: a JWT cannot be revoked before it
+expires without a server-side blocklist, at which point you have a session table with extra
+steps. Opaque tokens in a table mean "log this device out now" actually works.</p>
+
+<h3>8.4 Authorization, and the rule that keeps users apart</h3>
+<div class="box warn">
+<strong>Every query that touches user data is scoped by the session's user id inside the query
+itself.</strong>
+<pre>SELECT * FROM jobs WHERE id = :job_id AND user_id = :session_user_id</pre>
+Not "fetch it, then compare" &mdash; that pattern is how one forgotten <code>if</code> becomes a
+data breach. Job ids are UUIDs so they cannot be enumerated, but that is a second layer, never
+the defence. A job that does not belong to the caller returns <strong>404, not 403</strong>, so
+the API does not confirm that someone else's job exists. Admin endpoints live under a separate
+path with a separate role check and write to <code>audit_log</code> every time.
+</div>
+
+<h3>8.5 Protecting the GPU box</h3>
+<div class="box warn">
+<strong>VoiceStudio has no authentication of any kind.</strong> A GET to port 3900 returns 200 to
+anyone who can reach it, and the box holds an AWS instance role &mdash; so whoever can reach the
+app can spend money on the account. That is acceptable today only because the security group
+allows exactly one home IP address. A public website changes the picture completely.
+<ul>
+<li>The instance gets <strong>no public IP</strong> and sits in a private subnet.</li>
+<li>Port 3900 is allowed <strong>only from the worker's security group</strong> &mdash; not from
+an IP range, and not from the internet.</li>
+<li>Its IAM role is narrowed to what the pipeline genuinely needs, and the failed policy update
+noted in v1 is fixed before anything depends on it.</li>
+<li><strong>No endpoint on our API proxies to it</strong>, and no endpoint accepts a URL or file
+path from a client and fetches it. The first would expose an unauthenticated engine to the
+internet; the second is how server-side request forgery happens.</li>
+<li>Outbound access for Google Speech and the Gemini proxy goes through a NAT gateway, or the
+instance keeps a public IP with <strong>no inbound rules at all</strong>. Both are safe for
+inbound; the difference is &#8377;2,800 a month and egress control.</li>
+<li>User media is deleted from the box as soon as the output is verified in R2. It is a shared
+machine and it should never accumulate customers' videos.</li>
+</ul>
+</div>
+
+<h3>8.6 Data at rest and in transit</h3>
+<ul>
+<li><strong>Cloudflare R2</strong>: buckets private with no public access and no <code>r2.dev</code> URL enabled, encrypted at rest by Cloudflare, lifecycle rules matching the retention columns in <code>plans</code>, and reachable only through the Worker binding or our worker's credentials. <span class="small">Trade-off worth naming: R2 does not offer a customer-managed KMS key the way S3 does, so you get provider-managed encryption rather than a key you rotate. For finished dubs of customer-supplied video, held 7 days, that is a reasonable exchange for removing every egress charge. If a customer ever contractually requires customer-managed keys, that specific account's outputs would need to go to S3 instead.</span></li>
+<li><strong>Legacy S3 note</strong>: account-level Block Public Access stays on and SSE-KMS with a customer-managed
+key, a bucket policy that <em>denies</em> any request not using TLS, versioning on, access
+logging on, lifecycle rules matching the retention columns in <code>plans</code>.</li>
+<li><strong>RDS</strong>: private subnet, not publicly accessible, KMS encrypted,
+<code>rds.force_ssl</code> so unencrypted connections are refused, automated backups with
+point-in-time recovery, deletion protection on.</li>
+<li><strong>In transit</strong>: TLS 1.2 or better everywhere, including inside the VPC to RDS.</li>
+<li><strong>Deletion</strong>: an account deletion request removes R2 objects, job rows and
+personal fields, leaving only the anonymised billing records the law requires.</li>
+</ul>
+
+<h3>8.7 Upload safety</h3>
+<ul>
+<li>The browser uploads <strong>straight to R2</strong> with a presigned PUT valid 15 minutes,
+pinned to one object key, content length and content type. A 30-minute video never passes through
+the API server's memory or disk.</li>
+<li>Duration and size are enforced <strong>server-side after upload</strong> with
+<code>ffprobe</code>, because a client can claim anything. Rejected before any GPU time is spent:
+anything longer than the plan's ceiling, anything that probes as audio-only when a video was
+promised, anything with no audio stream at all.</li>
+<li><strong>The user's filename is never used as a path.</strong> The object key is
+<code>uploads/{user_id}/{upload_id}.mp4</code>, generated by us. The original name is kept as a
+display label only. This is how path traversal happens and it is trivial to prevent.</li>
+<li>The <code>job_id</code> sent to the box is generated by us and matches the box's own
+allowlist of alphanumerics, hyphens and underscores.</li>
+</ul>
+
+<h3>8.8 Rate limiting and abuse</h3>
+<table>
+<tr><th>Endpoint</th><th>Limit</th><th>On breach</th></tr>
+<tr><td>login</td><td>5 per account per 15 min, 20 per IP</td><td>Exponential backoff, then temporary lock; the user is emailed</td></tr>
+<tr><td>signup</td><td>3 per IP per hour</td><td>Reject; add a CAPTCHA if abused</td></tr>
+<tr><td>password reset</td><td>3 per account per hour</td><td>Reject silently</td></tr>
+<tr><td>upload and job creation</td><td>The plan's concurrency, plus a daily ceiling</td><td>Reject with the reason and the remaining balance</td></tr>
+<tr><td>free jobs</td><td>One per account for life, plus a platform-wide daily cap</td><td>Reject with an upgrade prompt</td></tr>
+<tr><td>review submission</td><td>10 per job</td><td>Reject; a loop here is a re-render loop</td></tr>
+<tr><td>everything</td><td>A WAF rate rule at the edge</td><td>Blocked before it reaches our code</td></tr>
+</table>
+<p>Timing-safe comparison for every token, and a deliberately uniform response on login and
+signup whether or not the email exists, so neither endpoint can be used to enumerate customers.</p>
+
+<h3>8.9 Logging</h3>
+<ul>
+<li>Structured JSON to CloudWatch with a request id threaded through, retention set explicitly.</li>
+<li><strong>Never logged:</strong> passwords, session tokens or cookies, reset tokens, presigned
+URLs, card data, full request bodies on auth endpoints, the contents of
+<code>gcp_adc.json</code> or any token from the box.</li>
+<li><strong>Always logged:</strong> user id rather than email, job state changes, review
+submissions, admin actions, webhook signature results, and every authorization failure.</li>
+<li>Errors to Sentry with PII scrubbing on.</li>
+</ul>
+
+<h2 class="newpage">9. Payments with Razorpay</h2>
+
+<h3>9.1 The flow</h3>
+<ol>
+<li>The user picks a plan. Our API creates a Razorpay subscription or order and returns only the
+opaque id plus the public <code>key_id</code>.</li>
+<li>Razorpay's own hosted checkout takes the card or UPI details. <strong>They never reach our
+servers</strong>, which keeps us entirely out of PCI scope.</li>
+<li>Razorpay calls <code>POST /api/billing/webhook</code>. We <strong>verify the HMAC signature
+before parsing the body</strong>, record the event id in <code>webhook_events</code>, and ignore
+duplicates.</li>
+<li>Only then does the subscription become active. <strong>The browser is never believed about
+payment.</strong> A user who closes the tab mid-payment is still upgraded when the webhook lands;
+a user who forges a success call to our API achieves nothing.</li>
+</ol>
+
+<h3>9.2 The e-mandate ceiling &mdash; RESOLVED: annual is billed as a one-off</h3>
+<div class="box warn">
+<strong>The constraint.</strong> RBI's consolidated <em>Digital Payments E-Mandate Framework,
+2026</em> gathers the earlier recurring-payment circulars into one rulebook and keeps a
+<strong>&#8377;15,000 per-transaction threshold</strong> for recurring e-mandates processed
+<em>without</em> additional factor authentication. It is a regulatory limit, not a Razorpay one, and
+it applies to recurring debits generally &mdash; UPI Autopay and card mandates alike, not only UPI.
+A higher <strong>&#8377;1 lakh</strong> no-AFA threshold exists for specific categories such as
+credit card bills, insurance premiums and mutual fund SIPs; <strong>video dubbing is not one of
+them.</strong>
+<br><br>
+Your annual prices at a 20% discount are:
+<pre>Starter  &#8377;299  x 12 x 0.8 = &#8377; 2,870
+Creator  &#8377;999  x 12 x 0.8 = &#8377; 9,590
+Pro      &#8377;1,499 x 12 x 0.8 = &#8377;14,390   &lt;-- only &#8377;610 under the threshold</pre>
+<strong>One correction to how this was framed earlier.</strong> Above &#8377;15,000 a mandate is not
+refused outright &mdash; each debit simply requires the customer to authenticate again. For an
+<em>unattended</em> annual renewal that is worse than a hard failure: the charge does not go through
+unless the customer happens to act on an authentication prompt, so the renewal fails quietly and the
+subscription lapses without anyone deciding to cancel. Annual Pro clears the threshold by
+&#8377;610 today, and stops clearing it the moment Pro's monthly price passes about
+&#8377;1,562 or the discount narrows.
+</div>
+
+<div class="box good">
+<strong>DECISION: annual plans are taken as a one-time payment, not a recurring mandate.</strong>
+The threshold applies to <em>auto-payments</em>. A one-time order is not a mandate, so the limit does
+not apply to it at any price &mdash; and the customer is present and authenticating deliberately at
+the moment of purchase, which is exactly when an authentication step belongs. Nothing else in the
+design changes.
+<table>
+<tr><th>Billing period</th><th>Razorpay mechanism</th><th>Subject to the &#8377;15,000 no-AFA threshold?</th></tr>
+<tr><td><strong>Monthly</strong><br>&#8377;299 / &#8377;999 / &#8377;1,499</td><td>Subscription with a UPI Autopay or card mandate</td><td>Yes, but the largest charge is &#8377;1,499 &mdash; a tenth of the threshold, with no realistic path to reaching it</td></tr>
+<tr><td><strong>Annual</strong><br>&#8377;2,870 / &#8377;9,590 / &#8377;14,390</td><td><strong>One-time Order</strong>, paid by UPI, card or netbanking</td><td><strong>No.</strong> Not a mandate, so the threshold does not apply at any price</td></tr>
+</table>
+This also buys back pricing freedom. Annual Pro can rise past &#8377;15,000 later without payments
+quietly degrading, which under a mandate it could not.
+<span class="small">Ordinary per-transaction UPI limits still apply to a one-off, but those sit far
+above these amounts, so they are not a constraint here.</span>
+</div>
+
+<div class="box note">
+<strong>What this costs, stated plainly: annual no longer renews itself.</strong> There is no mandate
+behind a one-time order, so nothing charges the customer when the year ends. That is a genuine trade,
+and it needs four small things rather than being waved through.
+<ol>
+<li><strong>Renewal reminders are now load-bearing.</strong> SES emails at <strong>14 days, 3 days
+and on the expiry day</strong>, each linking to a pre-filled checkout. Without them annual churn is
+silent and total &mdash; the customer does not decide to leave, they simply lapse.</li>
+<li><strong>A grace period.</strong> Keep access for <strong>7 days</strong> past
+<code>current_period_end</code> before dropping to free, so somebody who pays a day late does not
+lose their dashboard or a job in flight. Store it as an explicit <code>grace_until</code> rather
+than inferring it, so support can see the real answer in one query.</li>
+<li><strong>The webhook handler switches on event type.</strong> One-time orders confirm as
+<code>payment.captured</code> against an <code>order_id</code>; mandates confirm as
+<code>subscription.charged</code>. Both paths must stay idempotent on
+<code>provider_payment_id</code>, which is what makes a replayed webhook harmless (section 7).</li>
+<li><strong>The schema has to admit both shapes.</strong> An annual row has no
+<code>provider_subscription_id</code>, and <code>cancel_at</code> is meaningless for it &mdash;
+there is nothing to cancel, it lapses. Add <code>auto_renew boolean</code> to
+<code>subscriptions</code> and set it false for annual, so "will this renew?" has one honest column
+to read instead of being inferred from a null.</li>
+</ol>
+</div>
+
+<div class="box note">
+<strong>Keep the per-plan eligibility check anyway.</strong> Have the API decide, per plan, whether an
+amount is mandate-eligible, and let checkout offer autopay only where a mandate can actually
+complete unattended. Monthly prices are nowhere near the threshold, so this is insurance rather than
+a fix &mdash; but it is a few lines, and it stops a future pricing change from quietly becoming a
+payments outage.
+<br><br>
+<span class="small">Sources:
+<a href="https://bfsi.economictimes.indiatimes.com/news/articles/rbi-unveils-comprehensive-e-mandate-rules-for-seamless-recurring-payments/130419072">ETBFSI on the RBI 2026 consolidated e-mandate framework</a>,
+<a href="https://indianexpress.com/article/business/rbi-india-e-mandate-norms-additional-factor-authentication-10649277/">Indian Express on the &#8377;15,000 AFA threshold</a>,
+<a href="https://m.economictimes.indiatimes.com/news/economy/policy/rbi-brings-cross-border-transactions-under-e-mandate-rules-allows-customer-to-opt-out-anytime/articleshow/130418978.cms">Economic Times on the &#8377;1 lakh category carve-out</a>,
+<a href="https://razorpay.com/docs/payments/subscriptions/supported-banks-apps/">Razorpay supported banks and apps</a>.
+Content was rephrased for compliance with licensing restrictions.</span>
+</div>
+
+<h3>9.3 International customers</h3>
+<div class="box note">
+Accepting foreign cards on Razorpay is <strong>not on by default</strong>. It requires a separate
+request from the dashboard, a KYC-verified account, and approval by their banking partners;
+Razorpay's own documentation puts average activation for a payment method at around
+<strong>ten working days</strong>. More than 160 currencies are supported once live.
+<br><br>
+<strong>The practical consequence for the build order:</strong> apply for international
+activation <em>now</em>, in parallel with Phase 1, because it is a waiting period you cannot
+compress and it is not on the engineering critical path. Launch India-only if approval has not
+landed, and keep the currency in the <code>plans</code> table so adding USD pricing later is a
+row rather than a refactor. If international turns out to be the larger audience, Stripe becomes
+the better primary and the payments module should be written behind a small provider interface
+so that swap costs days rather than weeks.
+<span class="small">Sources:
+<a href="https://razorpay.com/docs/payments/international-payments/international-debit-credit-cards/">Razorpay international cards</a>,
+<a href="https://razorpay.com/docs/payments/dashboard/account-settings/payment-methods/">Razorpay payment method activation</a>.
+Content was rephrased for compliance with licensing restrictions.</span>
+</div>
+
+<h3>9.4 The rules that keep billing honest</h3>
+<ul>
+<li><strong>Idempotency by provider event id</strong>, unique-constrained. Razorpay retries
+webhooks; retries must be free.</li>
+<li><strong>Signature verified before the body is parsed</strong>, and a signature failure is
+logged and alerted, because it is either a misconfiguration or someone probing.</li>
+<li><strong>Quota is never granted by the checkout callback</strong>, only by a verified webhook.</li>
+<li><strong>A failed or cancelled job writes no usage row.</strong> Partial work is not billed
+even when the GPU time was real.</li>
+<li><strong>Downgrades take effect at period end</strong>, upgrades immediately with the minutes
+prorated, and both are computed from the ledger rather than adjusted by hand.</li>
+</ul>
+
+<h2 class="newpage">10. Your own access: the database and the admin dashboard</h2>
+
+<h3>10.1 Direct database access</h3>
+<p>The database is private, which means there is no public endpoint to attack &mdash; and it still
+has to be usable by you, from a normal GUI.</p>
+<table>
+<tr><th>Route</th><th>How</th><th>Why this way</th></tr>
+<tr><td><strong>Recommended: SSM tunnel</strong></td><td><code>aws ssm start-session --target &lt;instance&gt; --document-name AWS-StartPortForwardingSessionToRemoteHost</code>, then point pgAdmin or DBeaver at <code>localhost:5432</code></td><td>No public bastion, no SSH key to lose, every session IAM-authenticated and recorded in CloudTrail. You get a normal GUI over a private database.</td></tr>
+<tr><td>A read-only login</td><td>A Postgres role with <code>SELECT</code> only, for day-to-day looking</td><td>You cannot accidentally write to production while browsing</td></tr>
+<tr><td>Admin write access</td><td>A separate role, used deliberately</td><td>Separating "look" from "change" is most of the value</td></tr>
+<tr><td><strong>The admin dashboard</strong></td><td>A private web panel behind the admin role &mdash; specified in 10.2</td><td>No longer "if useful". Granting subscriptions and refunding credits must be auditable actions, not hand-written <code>UPDATE</code> statements. The tunnel stays the tool for reading; the dashboard is the tool for <em>changing</em>.</td></tr>
+</table>
+<div class="box note">
+Answer support questions from the database, not the logs. "Why did this user's job fail" is one
+query over <code>jobs</code> joined to <code>job_events</code>, which is exactly why
+<code>job_events</code> exists. "Why does this dub sound wrong" is <code>jobs.preset_sha256</code>
+plus <code>job_artifacts</code>, which is exactly why those exist.
+</div>
+
+<h3>10.2 The admin dashboard</h3>
+<p>One private panel, admin role only, that answers the questions you actually ask and performs the
+handful of changes that must not be done by hand in a SQL client.</p>
+
+<table>
+<tr><th>What you need</th><th>Where it comes from</th><th>Action available</th></tr>
+<tr><td><strong>Is the box running or stopped?</strong></td><td><code>DescribeInstances</code> for the <em>real</em> state, shown next to <code>gpu_state.desired_state</code> for the intended one</td><td>Manual <strong>stop</strong>, as a safety valve. No manual start &mdash; jobs do that (6.1)</td></tr>
+<tr><td><strong>Who is logged in</strong></td><td><code>sessions</code>: user, created, last seen, IP, user agent</td><td><strong>Revoke</strong> a session, or all of a user's sessions</td></tr>
+<tr><td><strong>Is this user subscribed?</strong></td><td><code>subscriptions</code> joined to <code>plans</code>: plan, status, period end, <code>auto_renew</code>, <code>grace_until</code>, minutes used and left</td><td>&mdash;</td></tr>
+<tr><td><strong>Give a user a subscription</strong></td><td>Search users, pick one, pick a plan and a number of months, give a reason</td><td><strong>Grant</strong> and <strong>revoke</strong>. Re-authentication required</td></tr>
+<tr><td><strong>Earnings: total, today, this week</strong></td><td><code>payments</code> where status is captured, minus refunds</td><td>&mdash;</td></tr>
+<tr><td><strong>A user says their credits were taken but the dub was bad or failed</strong></td><td>That user's jobs: video name, state, minutes charged, when, and whether already refunded</td><td><strong>Refund</strong> the minutes for one named job. Re-authentication required</td></tr>
+<tr><td><strong>Dub videos yourself, with no limit</strong></td><td>The normal pipeline, quota checks skipped for an admin</td><td>Unlimited, tagged as admin work</td></tr>
+<tr><td><strong>Every change is recorded</strong></td><td><code>admin_audit</code>, append-only</td><td>Read-only, and permanent</td></tr>
+</table>
+
+<h4>10.2.1 Schema this adds</h4>
+<pre>users.role              'user' | 'admin'
+
+jobs.origin             'customer' | 'admin'      tag admin's own dubs
+jobs.billable           boolean                   false for admin dubs
+
+usage_ledger.kind       'charge' | 'refund'       refunds are ROWS, not edits
+usage_ledger.admin_user_id   who issued a refund
+
+subscriptions.provider  gains 'manual'            a granted subscription
+
+admin_audit             id, at, admin_user_id, action, target_user_id,
+                        target_job_id, before JSONB, after JSONB,
+                        reason, ip                APPEND-ONLY</pre>
+
+<h4>10.2.2 The traps, and they are not small</h4>
+
+<div class="box warn">
+<strong>1. A refund is a new ledger row, never an edit.</strong> <code>usage_ledger</code> is
+append-only for the reason given in 3.2: a decrementing counter cannot be reconciled or explained to a
+customer who disputes a charge. So a refund inserts a <em>compensating</em> row &mdash; negative
+<code>minutes_charged</code>, <code>kind='refund'</code>, carrying the <code>job_id</code>, the admin's
+id and the reason. The original charge row is never touched.
+<br><br>
+Editing or deleting the original would make the balance correct and the history a lie, and you would
+lose the one thing that lets you answer "why is this number what it is" six months later.
+</div>
+
+<div class="box warn">
+<strong>2. Granting a subscription must not write to <code>payments</code>.</strong> It is the obvious
+shortcut and it quietly corrupts the earnings figure sitting on the same screen. A grant writes a
+<code>subscriptions</code> row with <code>provider='manual'</code> and
+<code>auto_renew=false</code>, and nothing else. <code>payments</code> records money that actually
+arrived from Razorpay &mdash; never an entitlement you handed out.
+</div>
+
+<div class="box warn">
+<strong>3. Tag your own dubs, and keep them out of revenue but inside cost.</strong> Admin jobs skip
+the quota check, so they must carry <code>origin='admin'</code> and <code>billable=false</code>. They
+are excluded from per-customer usage and from anything revenue-shaped &mdash; but they burn real GPU
+minutes, so they stay visible in the cost view. Untagged, they silently distort the cost-per-video
+figures section 15 is built on, and you would be measuring your own testing as customer demand.
+</div>
+
+<div class="box warn">
+<strong>4. Read the instance state from AWS, not from our own table.</strong>
+<code>gpu_state.desired_state</code> is what we <em>intended</em>; the admin needs what is
+<em>true</em>. Show both, and highlight it when they disagree &mdash; a box that is actually
+<code>running</code> while we believe it is <code>stopped</code> is precisely the bug that quietly
+bills &#8377;47 an hour, and a dashboard reading from our own table would hide it. Cache the AWS call
+for about 30 seconds so an open dashboard cannot rate-limit the account.
+</div>
+
+<div class="box warn">
+<strong>5. "Today" and "this week" need one fixed timezone.</strong> Pin them to
+<strong>Asia/Kolkata</strong>, defined once server-side, with the week starting Monday. Computed from
+the admin's browser instead, the same day's takings change depending on where you are when you look,
+and two people comparing notes will never agree.
+</div>
+
+<div class="box note">
+<strong>6. Cash collected is not recurring revenue &mdash; label it.</strong> Since annual is now a
+one-off order (9.2), a single &#8377;14,390 payment lands as one row today but covers twelve months. The
+figure you asked for is <em>cash collected</em>, which is the right number for "did money arrive", so
+show that and name it that. Just do not let a good annual day be read as a new monthly baseline.
+Refunds subtract from it.
+</div>
+
+<div class="box warn">
+<strong>7. The admin panel is the deliberate exception to the rule that keeps users apart.</strong>
+Every other query in this system is scoped by the session's own user id (8.4). Admin routes take a
+<em>target</em> user id from the request &mdash; which is exactly the shape of the vulnerability that
+rule exists to prevent. So:
+<ul>
+<li>Every admin route checks <code>role='admin'</code> <strong>server-side</strong>, on every request,
+with no exceptions and nothing inferred from the client.</li>
+<li>They live under their own <code>/api/admin/</code> prefix so they can never be confused with a
+customer route during review.</li>
+<li><strong>No admin capability ships in the customer frontend bundle.</strong> Not hidden behind a
+flag, not disabled in the UI &mdash; absent from the build.</li>
+<li>Granting subscriptions and issuing refunds <strong>require the admin's password again</strong>,
+and are rate limited. A stolen admin session must not be able to hand out a year of Pro in silence.</li>
+</ul>
+</div>
+
+<h4>10.2.3 Routes</h4>
+<pre>GET    /api/admin/overview              earnings today / week / total, jobs today,
+                                        sessions active, real instance state
+GET    /api/admin/users?q=              search; subscription status per row
+GET    /api/admin/users/{id}            plan, period, minutes used and left
+POST   /api/admin/users/{id}/grant      plan + months + reason      [re-auth]
+DELETE /api/admin/users/{id}/grant      revoke a manual grant       [re-auth]
+GET    /api/admin/users/{id}/jobs       video name, state, minutes charged,
+                                        refunded yes/no
+POST   /api/admin/jobs/{id}/refund      compensating ledger row + reason  [re-auth]
+GET    /api/admin/sessions              who is logged in
+DELETE /api/admin/sessions/{id}         revoke one session
+GET    /api/admin/gpu                   desired vs actual, divergence flagged
+POST   /api/admin/gpu/stop              safety valve only
+GET    /api/admin/audit                 the append-only log</pre>
+<p>Listing sessions leaks nothing: only the <strong>SHA-256</strong> of a session token is ever stored
+(8.3), so the panel can show who is signed in without holding anything that could be replayed. And
+seeing a suspicious session is useless without being able to end it, which is why revoke sits next
+to it.</p>
+
+<div class="box good">
+<strong>Why the audit log earns its place.</strong> Two of these actions move money: granting a
+subscription and refunding minutes. Six months from now, "why does this account have Pro without ever
+paying" and "why is this user's balance different from their charges" are questions you will be asked,
+possibly by someone other than you. <code>admin_audit</code> answers both in one query, with the
+before and after values and the reason typed at the time. It is append-only for the same reason the
+usage ledger is: a record you can edit is not a record.
+</div>
+
+<h2>11. Moving everything to another AWS account</h2>
+<p>You want to be able to move if this account's credits run out. That is a hard requirement, so
+it shapes earlier decisions rather than being bolted on. The design rule:
+<strong>nothing that matters may exist only as a setting somebody clicked.</strong></p>
+
+<h3>11.1 What makes it possible</h3>
+<table>
+<tr><th>Decision</th><th>Why it helps migration</th></tr>
+<tr><td>Everything in <strong>Terraform</strong></td><td>A new account is <code>terraform apply</code> with a different account id, region and domain. No manual rebuild.</td></tr>
+<tr><td>No hardcoded account ids or ARNs</td><td>They come from variables and data sources, so nothing has to be hunted down and edited.</td></tr>
+<tr><td><strong>Our own authentication</strong> rather than Cognito</td><td>Password hashes move with the database. <strong>Cognito cannot export password hashes</strong>, so using it would force every customer to reset their password &mdash; and a migration that loses customers is not a migration.</td></tr>
+<tr><td>Plain <strong>PostgreSQL</strong></td><td><code>pg_dump</code> and <code>pg_restore</code> work between any two accounts, and between AWS and anything else.</td></tr>
+<tr><td>Alembic migrations in git</td><td>The schema can be rebuilt from scratch and verified independently of any dump.</td></tr>
+<tr><td>The queue inside Postgres</td><td>Nothing extra to drain, recreate or reconcile.</td></tr>
+<tr><td>Images rebuilt from source</td><td>The new account's registry is filled from git, not copied across accounts.</td></tr>
+<tr><td>Secrets named in Terraform, values entered separately</td><td>The new account gets its own values; nothing sensitive travels in a repository.</td></tr>
+<tr><td><strong>The preset file in git</strong></td><td>The pipeline configuration moves as source, so the new environment provably sends the same bytes as the old one.</td></tr>
+</table>
+
+<h3>11.2 The runbook</h3>
+<ol>
+<li>In the new account, create the Terraform state bucket and lock table, then
+<code>terraform apply</code> with the new variables. Infrastructure exists, empty.</li>
+<li>Create the secrets in the new account's Secrets Manager: new database password, new Razorpay
+keys, <strong>rotated</strong> GPU tokens and a fresh Google service account.</li>
+<li>Build and push the images from git to the new account's ECR.</li>
+<li>Run Alembic against the new database to create the schema.</li>
+<li><strong>Freeze writes.</strong> Put the API in maintenance mode, stop accepting jobs, and let
+running jobs finish. Because every job runs start to finish without pausing, the longest you ever
+wait is one job &mdash; there are no half-finished jobs to reconcile.</li>
+<li><code>pg_dump</code> the old database, <code>pg_restore</code> into the new one, then verify
+row counts table by table and spot-check a few users, jobs and ledger sums.</li>
+<li><strong>Storage does not move at all.</strong> The buckets are in Cloudflare R2, not AWS, so
+changing AWS account leaves every video exactly where it is. Repoint nothing, copy nothing, verify
+nothing. <span class="small">Under the old S3 design this step was an <code>aws s3 sync</code> across
+accounts behind a temporary cross-account bucket policy, followed by verifying object counts and
+checksums &mdash; and objects were re-encrypted with the new account's KMS key on copy, which took
+real time on a large bucket. Moving delivery to R2 deleted this entire step.</span></li>
+<li>Create the GPU instance in the new account from the same AMI or a fresh build. <strong>This is
+the step to be most careful with.</strong> The patched backend must arrive byte-identical:
+verify the five pinned file sizes and MD5s from the handbook, and re-check both guarded
+invariants &mdash; the <code>leadin</code> marker count of 5 in
+<code>api/routers/dub_generate.py</code>, and <code>services/speech_rate.py</code> at exactly
+13,073 bytes. Then render the canary video from section 2.6 and compare it against the stored
+reference before any customer traffic arrives.</li>
+<li>Point DNS at the new front door. Watch error rates.</li>
+<li>Keep the old account read-only for a fortnight before deleting anything.</li>
+</ol>
+<div class="box warn">
+<strong>Rehearse this once into a throwaway account before you need it.</strong> A migration plan
+that has never been executed is a hypothesis. The rehearsal also produces the real timings, which
+is what tells you how long the maintenance window has to be &mdash; and it is much better to
+discover a byte-mismatch in the patched backend on a Tuesday afternoon than on the day your
+credits expire.
+</div>
+
+<h2>12. Repository, CI and deployment</h2>
+<table>
+<tr><th>Item</th><th>Setting</th></tr>
+<tr><td>Repository</td><td><strong>Private.</strong> A new one, separate from this research repository, containing <code>api/</code>, <code>worker/</code>, <code>infra/</code> (Terraform), <code>migrations/</code>, <code>preset/</code>, <code>docs/</code>.</td></tr>
+<tr><td>Why a new repository</td><td>This one carries 139 MB of media, hundreds of scratch scripts, and a committed key in its history. The product should not inherit any of that. The pipeline research stays here; the website starts clean.</td></tr>
+<tr><td>Branch protection</td><td><code>main</code> protected: no direct pushes, review required, CI must pass.</td></tr>
+<tr><td>Secret hygiene</td><td>GitHub secret scanning and push protection on. <code>gitleaks</code> as a pre-commit hook and in CI. A <code>.env.example</code> with names only, never values.</td></tr>
+<tr><td>Dependencies</td><td>Pinned exact versions with a lock file. Dependabot on. <code>pip-audit</code> in CI.</td></tr>
+<tr><td><strong>AWS credentials in CI</strong></td><td><strong>None.</strong> GitHub Actions assumes an AWS role via OIDC for a short-lived token per run. There is no long-lived key to steal.</td></tr>
+<tr><td>Deploy flow</td><td>Push to <code>main</code> &rarr; tests &rarr; build image &rarr; push to ECR &rarr; run Alembic &rarr; update the ECS service. Terraform changes applied deliberately, with a reviewed plan.</td></tr>
+<tr><td>Environments</td><td><code>staging</code> and <code>production</code>, separate databases and buckets. Never test against production data.</td></tr>
+<tr><td>The preset</td><td>Changes to <code>preset/</code> require an explicit reviewer and trigger the canary render. This is the most quality-sensitive file in the project and it should be the hardest one to change casually.</td></tr>
+</table>
+
+<h2 class="newpage">13. Monitoring and failure modes</h2>
+
+<h3>13.1 What you get told about</h3>
+<table>
+<tr><th>Alert</th><th>Why it matters</th></tr>
+<tr><td>GPU running with no work for over 20 minutes</td><td>The watchdog has failed and money is burning. Must sit above the 10-minute idle timeout or it fires on every normal shutdown</td></tr>
+<tr><td><strong>GPU box free disk below 10 GB</strong></td><td><strong>The box starts at 32 GB free and a job needs up to 1.3 GB. A full disk fails every job, not one</strong></td></tr>
+<tr><td>Working files left on the box for a job that already finished</td><td>The cleanup step is failing silently, and the disk will fill over weeks rather than hours</td></tr>
+<tr><td>GPU running more than N hours today</td><td>A cost ceiling independent of the software</td></tr>
+<tr><td>Any job in a working state over 90 minutes</td><td>A stuck job pinning the GPU</td></tr>
+<tr><td>Queue depth or oldest queued job above a threshold</td><td>Demand exceeds one GPU &mdash; time to decide about a second</td></tr>
+<tr><td>Job failure rate above a few percent</td><td>Something regressed</td></tr>
+<tr><td><strong>Canary render differs from its reference</strong></td><td><strong>The pipeline itself has changed.</strong> This is the alert that protects your actual product</td></tr>
+<tr><td><strong>A download whose audio track is not the target language</strong></td><td>The <code>default_track</code> trap from 2.4 firing in production</td></tr>
+<tr><td><strong>HF token invalid or near expiry</strong></td><td>Diarization degrades silently to one merged voice with no cloning</td></tr>
+<tr><td>Webhook signature failures</td><td>Either a misconfiguration or someone probing</td></tr>
+<tr><td>Authorization failures spiking</td><td>Someone testing for other people's data</td></tr>
+<tr><td>Reviews expiring above a baseline rate</td><td>The review UX is losing people, which is a product signal, not an ops one</td></tr>
+<tr><td>Database CPU, storage or connections</td><td>The usual capacity warnings</td></tr>
+</table>
+
+<h3>13.2 Failure modes</h3>
+<table>
+<tr><th>What fails</th><th>Behaviour</th></tr>
+<tr><td>GPU will not start</td><td>Job stays <code>preparing</code>, retried a bounded number of times, then failed with an honest message. No quota charged.</td></tr>
+<tr><td>Transcribe stream stalls</td><td>Keep the segments that arrived rather than falling back to the coarse POST endpoint, which is a materially worse transcript. Warn on the job. Fail only if nothing arrived.</td></tr>
+<tr><td>CUDA fault mid-render</td><td>A device-side assert poisons the process's CUDA context and every later kernel launch fails, so the server returns 500 for the rest of its life. The worker detects it, restarts the container, waits for health, and retries once.</td></tr>
+<tr><td>Render completes but no track exists</td><td><strong>Refuse to download.</strong> Fail the job loudly rather than delivering the original audio as a dub.</td></tr>
+<tr><td>Worker dies mid-job</td><td>The claim expires and the job returns to <code>queued</code> for one retry. <code>attempts</code> stops an infinite loop. Park stale <code>seg_&lt;lang&gt;_*.wav</code> before re-rendering.</td></tr>
+<tr><td>Worker dies mid-review</td><td>Nothing happens. Review state is entirely in Postgres, which is the point of section 4.6.</td></tr>
+<tr><td>Watchdog Lambda fails</td><td>GPU keeps running &mdash; wasteful but safe &mdash; and the cost alarm tells you.</td></tr>
+<tr><td>Payment webhook is late</td><td>The user is not upgraded until it arrives, and is told the payment is confirming.</td></tr>
+<tr><td>Upload abandoned</td><td>No job is created; the orphaned object is removed by a lifecycle rule.</td></tr>
+<tr><td>R2 unreachable at export time</td><td>The job stays in <code>exporting</code> and the push is retried with backoff. The finished video is still on the box, so nothing is lost; only delivery is delayed. If it keeps failing, the job is failed with no quota charged and an alert fires.</td></tr>
+<tr><td>The download Worker is down</td><td>Dubbing is unaffected &mdash; only downloads stop. Our API can fall back to issuing a direct presigned R2 URL, which costs the same (nothing) and skips the Worker entirely. Worth building on day one, because it makes the Worker non-critical.</td></tr>
+<tr><td>Box disk fills</td><td>The pressure guard expires the oldest paused jobs early and alerts. New jobs are queued rather than started, so they wait instead of failing mid-render.</td></tr>
+</table>
+
+<h2>14. Build order and effort</h2>
+<p>Working days for one developer. Ordered so something real works early and nothing
+security-critical is left until last.</p>
+<table>
+<tr><th></th><th>Phase</th><th>Contents</th><th class="m">Days</th></tr>
+<tr><td><span class="tag p1">0</span></td><td><strong>Discovery and hygiene</strong></td><td>Rotate the leaked key and fix <code>.gitignore</code>. Record one real dubbing session against the running box and pin every request and response shape. Settle the translation-path question in 16.1. Capture the canary video and its reference output.</td><td class="m">1&ndash;2</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>Foundations</strong></td><td>Terraform for VPC, RDS, KMS, ECR, ECS, Secrets Manager; Cloudflare account and R2 buckets. New private repository, CI with OIDC, staging environment.</td><td class="m">4&ndash;6</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>Accounts</strong></td><td>Signup, email verification, login, logout, password reset, sessions, cookies, CSRF, rate limits, audit log.</td><td class="m">4&ndash;5</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>One click, end to end</strong></td><td>Presigned upload, <code>ffprobe</code> validation, jobs table and queue, the locked preset, the worker driving VoiceStudio, segment storage, output to S3 with track verification, download URL, progress events.</td><td class="m">7&ndash;9</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>The user's library</strong></td><td>History listing with per-row capabilities, owner-scoped queries, retention lifecycle rules per plan, staged expiry, thumbnails, the reminder emails. Mostly assembling tables that already exist for other reasons, which is why it is cheap.</td><td class="m">2&ndash;3</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>GPU lifecycle</strong></td><td>Start on enqueue and on upload-URL issue, readiness polling with the SSM <code>docker start</code> fallback, EventBridge and Lambda watchdog at 10 minutes, working-file cleanup after every job, free-disk alarm, all the safety rules, cost alarm, canary render in CI.</td><td class="m">3&ndash;4</td></tr>
+<tr><td><span class="tag p2">2</span></td><td><strong>Money</strong></td><td>Plans, Razorpay checkout, subscriptions, webhooks with idempotency, usage ledger, quota enforcement, the mandate-eligibility check, invoices.</td><td class="m">5&ndash;7</td></tr>
+<tr><td><span class="tag p1">1</span></td><td><strong>R2 delivery</strong></td><td>R2 buckets and lifecycle rules, presigned upload straight to R2, the box-to-R2 push, the download-token endpoint, the Cloudflare Worker and its secret, the custom download domain, download rate limiting.</td><td class="m">2&ndash;3</td></tr>
+<tr><td><span class="tag p2">2</span></td><td><strong>Operations</strong></td><td>CloudFront, WAF, alarms, Sentry, admin role, SSM database access, runbooks.</td><td class="m">3&ndash;4</td></tr>
+<tr><td><span class="tag p3">3</span></td><td><strong>Hardening and rehearsal</strong></td><td>A self-review against this document, load-test the queue, rehearse the account migration into a throwaway account, restore-from-backup drill.</td><td class="m">4&ndash;5</td></tr>
+</table>
+<p><strong>Roughly 35&ndash;48 working days, so 7 to 9.5 weeks</strong>, to a service you would be
+willing to charge money for. A demo that works for one logged-in user, one click, no payments, is
+reachable in about two and a half weeks. The difference is Phase 2 and 3 &mdash; which is what stops
+a small breach becoming a serious one, and what stops a pipeline regression reaching a customer.</p>
+<p class="small">Removing editing took out 4&ndash;5 days; adding R2 delivery put back 2&ndash;3. So
+the net effect of both changes is about two days saved, and one whole class of risk removed &mdash;
+no render now has to survive an instance stop.</p>
+
+<h2 class="newpage">15. What it costs to run</h2>
+<p>ap-south-1, rough monthly figures at low traffic, around &#8377;88 to the dollar. Prices change,
+so treat these as the shape of the bill rather than a quotation.</p>
+<table>
+<tr><th>Item</th><th class="m">Per month</th><th>Notes</th></tr>
+<tr><td>RDS Postgres <code>db.t4g.micro</code></td><td class="m">&#8377;1,150&ndash;1,600</td><td>Multi-AZ doubles it; not needed at first</td></tr>
+<tr><td>ECS Fargate, API and worker, small</td><td class="m">&#8377;1,600&ndash;2,650</td><td>A single <code>t4g.small</code> with Docker Compose is about &#8377;1,050 and a fair Phase 1 alternative</td></tr>
+<tr><td>CloudFront and WAF</td><td class="m">&#8377;700&ndash;1,320</td><td>WAF managed rules carry a small fixed fee</td></tr>
+<tr><td><strong>Cloudflare R2 storage</strong></td><td class="m">&#8377;0&ndash;40</td><td>First 10 GB free. About &#8377;40 at 500 videos a month held 7 days &mdash; it was &#8377;210 at 30 days. <strong>No egress charge at any volume</strong></td></tr>
+<tr><td>Cloudflare Workers</td><td class="m">&#8377;0&ndash;440</td><td>Free below 100,000 requests a day; $5 a month buys 10 million. One request per download</td></tr>
+<tr><td>Secrets Manager, SES, CloudWatch, KMS</td><td class="m">&#8377;440&ndash;880</td><td>Per-secret and per-log-group charges</td></tr>
+<tr><td>NAT gateway <em>if</em> the GPU goes fully private</td><td class="m">&#8377;2,800+</td><td>Avoidable: keep a public IP with no inbound rules</td></tr>
+<tr><td>Box disk, 250 GB gp3</td><td class="m">&#8377;2,006</td><td>Billed whether the instance runs or not. See 15.2</td></tr>
+<tr><td>NAT gateway <em>if</em> the GPU goes fully private</td><td class="m">&#8377;2,800+</td><td>Avoidable: keep a public IP with no inbound rules</td></tr>
+<tr><td><strong>Fixed subtotal</strong></td><td class="m"><strong>&#8377;6,200&ndash;9,300</strong></td><td>Without NAT, including the 250 GB disk</td></tr>
+<tr><td><strong>GPU, per hour while running</strong></td><td class="m">about &#8377;47</td><td><code>g4dn.xlarge</code> on demand</td></tr>
+</table>
+<h3>15.1 Per video</h3>
+<pre>                        12-minute video     30-minute video     60-second free
+GPU incl. boot          ~&#8377;20               ~&#8377;42               ~&#8377;5.90
+Chirp 3 + Gemini        ~&#8377;4 - 18           ~&#8377;11 - 44          ~&#8377;0.35 - 1.35
+AWS egress to R2, ONCE  ~&#8377;1.30            ~&#8377;3.30             ~&#8377;0.15
+R2 storage for 7 days   ~&#8377;0.05            ~&#8377;0.10             negligible
+every download after    &#8377;0                 &#8377;0                &#8377;0
+                        ---------------     ---------------     --------------
+total                   ~&#8377;25 - 39          ~&#8377;56 - 89          ~&#8377;6 - 7
+                                                                (once per account, for life;
+                                                                 ~&#8377;1 - 2 if a box is already warm)</pre>
+<div class="box good">
+<strong>The line that matters is the one that reads &#8377;0.</strong> Under the old
+S3 design, "unlimited downloads" was an open-ended cost: every re-download of a 30-minute
+video cost another &#8377;3.30, so a single enthusiastic customer could cost more in transfer than
+they paid in subscription. With R2 the video leaves AWS once and every download after that is free,
+so the promise of unlimited downloads inside the 7-day window costs you nothing beyond the storage
+line above.
+</div>
+<p>The ten-minute idle shutdown is what makes this work: a quiet day costs the fixed
+&#8377;4,000&ndash;7,500 plus the box's disk, and nothing more. Because six of those GPU minutes are
+boot regardless of length, <strong>back-to-back jobs are much cheaper per video than isolated
+ones</strong> &mdash;
+which is the argument for queueing free jobs behind paid ones in 3.4, and worth remembering when
+setting prices.</p>
+
+<h3>15.2 Growing the box's disk from 150 GB</h3>
+<p>The volume today is <strong>150 GB gp3</strong>, 3,000 IOPS, 125 MB/s, in
+<code>ap-south-1c</code> (<code>_mig_vol.json</code>). In Mumbai gp3 capacity is
+<strong>$0.0912 per GB-month</strong>, and the 3,000 IOPS and 125 MB/s it already has are included
+free &mdash; so only capacity is being bought.
+<span class="small">Source:
+<a href="https://aws-pricing.com/ap-south-1.html">aws-pricing.com, ap-south-1</a>;
+<a href="https://aws.amazon.com/ebs/pricing/">AWS EBS pricing</a>.
+Content was rephrased for compliance with licensing restrictions.</span></p>
+<table>
+<tr><th>Size</th><th class="m">Per month</th><th class="m">Per year</th><th class="m">Delta / month</th><th>Free space after</th></tr>
+<tr><td>150 GB <em>(today)</em></td><td class="m">$13.68 &nbsp;&#8377;1,204</td><td class="m">&#8377;14,450</td><td class="m">&mdash;</td><td class="m">32 GB</td></tr>
+<tr><td><strong>250 GB &mdash; CHOSEN</strong></td><td class="m"><strong>$22.80 &nbsp;&#8377;2,006</strong></td><td class="m"><strong>&#8377;24,075</strong></td><td class="m"><strong>+&#8377;803</strong></td><td class="m"><strong>~132 GB</strong></td></tr>
+<tr><td>300 GB</td><td class="m">$27.36 &nbsp;&#8377;2,408</td><td class="m">&#8377;28,900</td><td class="m">+&#8377;1,204</td><td class="m">~182 GB</td></tr>
+<tr><td>500 GB <em>(considered, rejected)</em></td><td class="m">$45.60 &nbsp;&#8377;4,013</td><td class="m">&#8377;48,150</td><td class="m">+&#8377;2,809</td><td class="m">~382 GB</td></tr>
+</table>
+<div class="box good">
+<strong>Decision: 250 GB.</strong> An extra &#8377;803 a month takes free space from 32 GB to about
+132 GB &mdash; four times today's headroom &mdash; for under a third of what 500 GB would have cost.
+It clears the 79%-full problem outright while leaving the option to step up later if a real need
+appears, which is the correct shape of decision for a resource that can grow but never shrink.
+</div>
+<div class="box warn">
+<strong>Two properties of EBS that decide this.</strong>
+<ul>
+<li><strong>You pay for provisioned size, 24/7, running or stopped.</strong> Unlike the GPU, which
+costs nothing while the instance is off, the disk bills every hour of every day. So this lands
+entirely on the fixed monthly cost &mdash; 500 GB would take the fixed floor from
+&#8377;4,000&ndash;7,500 to roughly &#8377;6,800&ndash;10,300, a 40&ndash;60% increase in what you
+pay on a day with no customers.</li>
+<li><strong>A volume can grow but never shrink.</strong> 500 GB is a one-way commitment to
+&#8377;2,809 a month forever. Stepping up later is easy; stepping down is not possible.</li>
+</ul>
+</div>
+<h4>Why 250 GB rather than 500</h4>
+<p>With resume removed, the pipeline needs disk for one job at a time &mdash; two or three
+gigabytes. Today's 32 GB already covers that, and clearing the leftover test jobs makes it about 38.
+So 500 GB would buy roughly 350 GB with no identified use, at <strong>&#8377;48,150 a year</strong>
+&mdash; close to what two Pro subscribers pay across a whole year, spent on empty space.</p>
+<p>Growing to <em>something</em> is still right, because the real risk is not job-sized: the
+container's writable layer is at 29 GB and grows on its own, the 24 GB swapfile shares the volume,
+and a full disk fails every job at once rather than one. <strong>250 GB gives four times today's
+headroom for 29% of the price of 500 GB.</strong></p>
+<p>The reason to prefer the smaller step is asymmetry, not thrift. Growing later is a live,
+non-disruptive operation that takes minutes; shrinking is impossible. So the cost of
+under-provisioning is a short maintenance task, while the cost of over-provisioning is a bill you
+cannot ever reduce. When one direction is cheap to correct and the other is not, start at the
+smaller end. Revisit if free space trends below about 60 GB, or if you add a second concurrent job,
+lipsync, or a new model family.</p>
+<h4>How to do it</h4>
+<table>
+<tr><th>Operation</th><th>Disruptive?</th><th>Notes</th></tr>
+<tr><td>Grow gp3 in place</td><td><strong>No</strong></td><td>EBS Elastic Volumes changes size live; then extend the filesystem with <code>growpart</code> and <code>resize2fs</code>. A 6-hour cooldown applies before the same volume can be modified again.</td></tr>
+<tr><td>Encrypt the volume</td><td><strong>Yes</strong></td><td>Cannot be done in place. Requires snapshot &rarr; encrypted snapshot copy &rarr; new volume &rarr; detach and swap.</td></tr>
+</table>
+<div class="box note">
+<strong>Do both in one window.</strong> <code>_mig_vol.json</code> records
+<code>"Enc": false, "Kms": null</code> &mdash; <strong>the volume is unencrypted</strong>, and it is
+about to hold paying customers' video. Section 8.6 requires encryption at rest, and adding it means
+creating a new volume anyway. Since that new volume can be created at any size, <strong>set the
+final size during the encryption swap</strong> rather than resizing now and swapping later. One
+maintenance window instead of two, and the resize becomes free work.
+<br><br>
+Whichever order you choose, the volume swap is the moment to re-verify the box arrived intact: the
+five pinned MD5s and both guarded invariants from section 11.2, then the canary render.
+</div>
+
+<h2 class="newpage">16. What must be verified before code is written</h2>
+
+<h3>16.1 The one question that changed the architecture &mdash; RESOLVED: Path A</h3>
+<div class="box good">
+<strong>The engine does all of it. Nothing runs outside the box.</strong> This was settled from the
+artefacts of the dub you approved &mdash; job <code>x4ftk22r</code>, Hindi&rarr;Telugu, rescued off
+the test copy before it was terminated &mdash; rather than by reasoning from the outside.
+<br><br>
+<strong>The decisive chain.</strong> Every file that job left behind is written by engine code, and
+the segment identifiers line up end to end:
+<table>
+<tr><th>Artefact in the approved job</th><th>Written by</th><th>What it establishes</th></tr>
+<tr><td><code>chirp_words_cache.json</code> &mdash; 508 Chirp words, <code>src</code> = <code>/root/.omnivoice/dub_jobs/x4ftk22r/audio.wav</code></td><td><code>services/chirp_wire.py</code>, <code>CACHE_NAME</code></td><td>Chirp 3 word timing ran <em>inside the container</em></td></tr>
+<tr><td><code>pre_retime_segments.json</code> &mdash; 50 lines, ids <code>s00000&hellip;</code>, <code>lang: hi</code>, 4 speakers</td><td><code>services/chirp_wire.py</code>, <code>PRE_RETIME_DUMP</code></td><td>the transcriber's raw lines were dumped by engine code before retiming</td></tr>
+<tr><td>30 final segments, ids <code>c000&hellip;c029</code></td><td><code>services/chirp_wire.py</code>: <code>"id": "c%03d" % i</code></td><td>the engine re-segmented 50 transcriber lines into 30 timed ones</td></tr>
+<tr><td>30 &times; <code>seg_te_c0NN.wav</code> and 30 &times; <code>seg_ref_c0NN.wav</code>, contiguous, no gaps</td><td><code>dub_generate.py</code></td><td><strong>the render consumed the engine's own segmentation 1:1</strong></td></tr>
+<tr><td><code>seg_ref_c026_wide.wav</code></td><td><code>services/speaker_clone.py</code>, <code>_widen_short_refs</code></td><td>voice-reference building was the engine's, not a client's</td></tr>
+<tr><td><code>onsets.json</code> &mdash; 120 onsets, <code>source: vocals</code></td><td>engine prep (Demucs separation)</td><td>separation ran on the box</td></tr>
+</table>
+Three of those files are produced by <code>services/chirp_wire.py</code>, which is <strong>one of the
+five MD5-pinned golden files</strong>. The tuned code is demonstrably the code that made this dub.
+<br><br>
+<strong>Why Path B is ruled out.</strong> <code>pipeline/voicestudio_dub.py</code> rebuilds the
+transcript with Gemini before rendering (<code>rebuild_transcript_with_gemini</code>,
+<code>fill_transcript_gaps</code>, <code>repair_thin_transcript</code>) and its own header admits the
+consequence: after a rebuild "our line boundaries no longer match the segments VoiceStudio cut its
+per-segment reference clips from". Had it run, the rendered clips could not map perfectly onto
+<code>chirp_wire</code>'s contiguous <code>c000&ndash;c029</code>. They do.
+<br><br>
+<strong>And the box is configured only for the internal route.</strong> Its settings database holds
+<code>llm.active_provider = custom</code>, <code>llm.base_url.custom =
+http://172.17.0.1:8900/v1</code>, <code>llm.model.custom = gemini-3.1-pro-preview</code> &mdash; keys
+read <em>only</em> by the <code>provider="openai"</code> branch of <code>/dub/translate</code>. The
+project's own audit script <code>_audit_pdf.sh</code> asserts those exact values as the expected
+production state, and <code>_deploy_all.sh</code> verifies a tuned
+<code>OMNIVOICE_LLM_CONCURRENCY</code> inside the container's <code>dub_translate.py</code>. Nobody
+tunes a code path they do not use.
+</div>
+
+<div class="box note">
+<strong>One loose end, no longer architecture-changing.</strong> The translated Telugu text itself
+lives in the jobs store (<code>job["segments"][].text</code> and <code>segments_i18n</code>), not in
+the job directory, so the literal <code>provider</code> value on that request was not read back from
+the rescued files. Transcription, timing, re-segmentation, cloning and rendering are
+<em>established</em>; engine-internal translation is very strongly indicated by the box's
+configuration but rests on that one indirect link. The earlier puzzle about the engine dropdown
+reading <strong>Argos (Local, Fast)</strong> is unexplained &mdash; the request's own
+<code>provider</code> field overrides the stored default, so a stale label is the likely answer.
+Neither point changes the build: one <code>SELECT</code> against the jobs store on the next boot
+settles both, and it is no longer on the critical path.
+</div>
+
+<h3>16.1.1 The pipeline, exactly as it runs today</h3>
+<div class="box good">
+The website drives these five stages in this order, against the box, and changes nothing about any of
+them. Every option stays at the value the box already holds &mdash; the API sends only
+<code>target_lang</code> (section 2).
+<table>
+<tr><th>#</th><th>Stage</th><th>Call</th><th>What actually happens</th><th>GPU</th></tr>
+<tr><td>1</td><td>Upload + prep</td><td><code>POST /dub/upload</code></td><td>ffmpeg extracts <code>audio.wav</code>; <strong>Demucs</strong> separates <code>vocals.wav</code>; onsets are detected from the vocals</td><td>Yes</td></tr>
+<tr><td>2</td><td>Transcribe, diarize, clone</td><td><code>GET /dub/transcribe-stream/{job_id}</code></td><td>ASR is <code>openai-compat-asr</code> on <strong>gemini-3.7-flash</strong> via the proxy; <strong>Chirp 3</strong> supplies word timings; <code>chirp_wire.py</code> with <code>aligner.py</code> and <code>fa_timing.py</code> retimes and re-segments, minting the <code>c000&hellip;</code> ids; <strong>pyannote</strong> diarizes; <code>speaker_clone.py</code> cuts a voice reference per speaker</td><td>Partly &mdash; ASR is network-bound and the GPU idles, but pyannote uses it</td></tr>
+<tr><td>3</td><td>Translate</td><td><code>POST /dub/translate</code></td><td><strong>gemini-3.1-pro-preview</strong> through the same proxy, 20 lines a call, carrying the tone rule, the length broker's per-video rate calibration, the auto-glossary pass and the reflect pass</td><td>No &mdash; pure network</td></tr>
+<tr><td>4</td><td>Render</td><td><code>POST /dub/generate/{job_id}</code></td><td>Per-line TTS in the speaker's cloned voice; <code>head_language.py</code> catches source-language leakage; <code>speech_rate.py</code> and the timing strategy fit each line to its slot; writes <code>seg_&lt;lang&gt;_c0NN.wav</code> and mixes the dub track</td><td><strong>Yes</strong></td></tr>
+<tr><td>5</td><td>Mux and deliver</td><td><code>GET /dub/download/{job_id}</code></td><td>ffmpeg muxes the original video against the dub track; that output is what goes to R2 and then to the dashboard</td><td>No</td></tr>
+</table>
+</div>
+<div class="box warn">
+<strong>Stage 2 must use the streaming endpoint, never <code>POST /dub/transcribe</code>.</strong>
+The POST variant skips speaker-clone extraction entirely, so every segment ends up with no reference
+audio and stage 4 synthesises in the engine's <em>default</em> voice &mdash; the original speakers are
+never cloned at all. Measured on one video: the POST returned 3 merged segments with no clones, the
+stream returned 8 segments with clones bound. The POST endpoint's own docstring calls itself legacy,
+kept for a headless CLI.
+</div>
+<div class="box note">
+<strong>What this means for the GPU bill.</strong> Translation is the one stage that needs no GPU at
+all, but it sits between two that do, and the box must already be running for prep, diarization and
+rendering. So there is no saving available from stopping the instance around stage 3 &mdash; a
+six-minute reboot costs more than the translate wall time it would avoid. One continuous box session
+per job, which is exactly what section 6 assumes, is the right shape.
+<br><br>
+It also means the <code>gemini-proxy</code> living on the GPU box's host costs nothing extra. Both
+network stages call <code>172.17.0.1:8900</code>, and that host is up regardless.
+</div>
+
+<h3>16.2 Everything else that is not yet proven</h3>
+<table>
+<tr><th>Item</th><th>Status and why it matters</th></tr>
+<tr><td><strong>R2 upload speed from the box</strong></td><td>Pushing a ~350 MB output from EC2 in Mumbai to R2 has not been measured. It should take well under a minute on a <code>g4dn.xlarge</code>'s network, but it happens while the GPU is still billing, so it is worth timing once. If it is slow, use multipart upload with parallel parts.</td></tr>
+<tr><td><strong>Whether R2 presigned upload suits a 30-minute video from a browser</strong></td><td>R2 supports S3-compatible presigned URLs and multipart upload, so this should be routine. Confirm with one real large upload on a slow connection before relying on it, because it replaces the S3 path this plan originally assumed.</td></tr>
+<tr><td><strong>Whether the container is up after an automated boot</strong></td><td>The scripts in this repository contradict each other (see 6.2). Docker's <code>unless-stopped</code> semantics explain both, but which state the box is actually left in by your current shutdown path is <strong>unverified</strong>, and it decides whether the SSM <code>docker start</code> fallback is a rare safety net or the normal path. Check it in the discovery pass by stopping and starting the instance once and looking at <code>docker ps</code> before touching anything.</td></tr>
+<tr><td><strong>SSE event field names</strong></td><td>Only the terminal <code>done</code> event of <code>/dub/generate</code> is confirmed field by field. The prep and transcribe streams are read defensively by the existing driver precisely because their shapes were never pinned. Capture them in the discovery pass.</td></tr>
+<tr><td><strong>Boot-to-ready time</strong></td><td>Estimated at about 2 minutes for the instance plus a minute of model load, inferred from logs. It is what the user waits through and what dominates free-tier cost, so measure it properly.</td></tr>
+<tr><td><strong>Concurrency inside VoiceStudio</strong></td><td>Assumed strictly one job at a time. That matches one GPU and everything observed, but has not been tested by deliberately sending two. The queue enforces one regardless, so this is a safety margin rather than a dependency.</td></tr>
+<tr><td><strong><code>GET /dub/media/{job_id}</code></strong></td><td>Route exists; response shape unread. Not needed if downloads go through <code>/dub/download</code>, which is the plan.</td></tr>
+<tr><td><strong>Which UI defaults the screenshot represents</strong></td><td>Quality, "suggest shorter lines" and the speaker cast are not documented as UI defaults anywhere. Section 2.3 pins the values the tuned driver actually sends, which is what matters &mdash; but if a discovery recording shows the browser sending something different, the recording wins.</td></tr>
+<tr><td><strong>The failed IAM policy update</strong></td><td>Noted in v1 and still outstanding (<code>policy update FAILED</code>). Harmless so far because nothing since used AWS APIs from the box, but it must be fixed before anything relies on them.</td></tr>
+<tr><td><strong>Cost figures</strong></td><td>Estimates from published pricing and measured timings, not from your bill.</td></tr>
+<tr><td><strong>Razorpay specifics</strong></td><td>The &#8377;15,000 mandate cap and the international activation requirement are from Razorpay's current public documentation, cited in section 9. Confirm both against your own dashboard once the account exists, because merchant-specific limits vary.</td></tr>
+</table>
+
+<div class="box good" style="margin-top:6mm">
+<strong>The shortest summary.</strong> Build a normal, boring, well-secured web application in
+front of the dubbing engine, and let it treat the engine as a black box it starts, feeds, reads
+and stops. The pipeline configuration becomes a locked, versioned, hashed preset that no request
+can influence &mdash; which is simultaneously the "one click, defaults except language"
+requirement, the "do not disturb the pipeline" requirement, and a security control. Editing is
+worth building, on paid plans, off by default, as a review rather than a free-form editor, with
+row identity held immutable because the alternative reintroduces a bug this project has already
+paid for once. Every other hard requirement you gave &mdash; easy account migration, no leaked
+keys, secure user data, your own database access, automatic GPU shutdown &mdash; is satisfied by a
+specific decision above rather than by good intentions: Terraform, our own auth in Postgres,
+secrets only in Secrets Manager and only on the box, an SSM tunnel, and a watchdog that refuses to
+stop a machine that is working.
+</div>
+
+<p class="small" style="margin-top:6mm">Companion to
+<code>docs/VoiceStudio_Pipeline_Handbook.pdf</code>, which records the pipeline this plan must not
+disturb, and to <code>docs/website_backend_plan.html</code>, which this supersedes.
+Source: <code>docs/website_backend_plan_v2.html</code>.</p>
+
+</body>
+</html>

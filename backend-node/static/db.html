@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Database browser</title>
+<style>
+  :root { --line:#d5dbe2; --ink:#14171a; --muted:#5b6670; --blue:#1a5fa8;
+          --green:#0a7a3d; --red:#a8321a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 "Segoe UI",system-ui,Arial,sans-serif;
+         color:var(--ink); background:#f6f8fa; }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:12px 18px;
+           display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; }
+  .pill { font-size:11.5px; padding:2px 9px; border-radius:11px;
+          border:1px solid #a9d6bb; color:var(--green); background:#f1faf4; }
+  main { display:flex; gap:0; height:calc(100vh - 49px); }
+  aside { width:250px; background:#fff; border-right:1px solid var(--line);
+          overflow:auto; padding:10px 0; flex:0 0 250px; }
+  aside a { display:flex; justify-content:space-between; gap:8px; padding:6px 14px;
+            text-decoration:none; color:var(--ink); cursor:pointer; }
+  aside a:hover { background:#eef4fb; }
+  aside a.on { background:#e4eefb; font-weight:600; }
+  aside a i { color:var(--muted); font-style:normal; font-size:11.5px; }
+  section { flex:1; overflow:auto; padding:16px 18px; }
+  h2 { font-size:14px; margin:0 0 10px; }
+  table { border-collapse:collapse; width:100%; background:#fff; font-size:12px; }
+  th,td { border:1px solid var(--line); padding:4px 7px; text-align:left;
+          vertical-align:top; max-width:340px; overflow-wrap:anywhere; }
+  th { background:#eef1f5; position:sticky; top:0; font-weight:600; }
+  tr:nth-child(even) td { background:#fafbfc; }
+  textarea { width:100%; min-height:70px; font:12px Consolas,monospace;
+             border:1px solid var(--line); border-radius:5px; padding:8px; }
+  button { font:13px "Segoe UI",Arial,sans-serif; padding:7px 13px; border-radius:5px;
+           border:1px solid var(--blue); background:var(--blue); color:#fff;
+           cursor:pointer; }
+  button.ghost { background:#fff; color:var(--ink); border-color:var(--line); }
+  .bar { display:flex; gap:8px; align-items:center; margin:8px 0 14px; flex-wrap:wrap; }
+  .err { background:#fdf3f1; border:1px solid #e2b6aa; color:#7a2718;
+         padding:8px 11px; border-radius:5px; margin:8px 0; }
+  .small { color:var(--muted); font-size:11.5px; }
+  code { background:#eef1f5; padding:1px 5px; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Database browser</h1>
+  <span class="pill">read-only</span>
+  <span class="small" id="dbfile"></span>
+  <span style="flex:1"></span>
+  <a class="small" href="/">back to the app</a>
+</header>
+<main>
+  <aside id="tables"></aside>
+  <section>
+    <div id="err"></div>
+    <h2 id="title">Pick a table</h2>
+    <div class="bar">
+      <button class="ghost" onclick="page(-1)">&larr; prev</button>
+      <button class="ghost" onclick="page(1)">next &rarr;</button>
+      <span class="small" id="pageinfo"></span>
+    </div>
+    <div class="bar">
+      <textarea id="sql" placeholder="SELECT * FROM jobs ORDER BY created_at DESC LIMIT 20"></textarea>
+    </div>
+    <div class="bar">
+      <button onclick="runSql()">Run SELECT</button>
+      <span class="small">One statement. SELECT / WITH / PRAGMA table_info only &mdash;
+        the connection itself is opened read-only.</span>
+    </div>
+    <div id="out"></div>
+  </section>
+</main>
+<script>
+let CUR = null, OFF = 0, LIM = 50, TOTAL = 0;
+const $ = id => document.getElementById(id);
+const esc = s => (s === null || s === undefined) ? '<span class="small">null</span>'
+  : String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+function err(m) { $('err').innerHTML = m ? `<div class="err">${esc(m)}</div>` : ''; }
+
+// The session's CSRF token. Every POST to the API must carry it in X-CSRF-Token, and
+// "Run SELECT" is a POST - without this it was refused with 403 every time. It comes
+// from /api/auth/me, the same place the dashboard gets it.
+let CSRF = null;
+async function csrf() {
+  if (CSRF) return CSRF;
+  const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
+  if (!r.ok) throw new Error('not signed in - sign in on the dashboard first');
+  CSRF = (await r.json()).csrf || null;
+  return CSRF;
+}
+
+async function api(p, opts) {
+  opts = Object.assign({ credentials: 'same-origin' }, opts || {});
+  const method = (opts.method || 'GET').toUpperCase();
+  if (method !== 'GET') {
+    opts.headers = Object.assign({}, opts.headers || {}, { 'X-CSRF-Token': await csrf() || '' });
+  }
+  const r = await fetch(p, opts);
+  const t = await r.text();
+  let d; try { d = t ? JSON.parse(t) : {}; } catch (e) { d = { detail: t }; }
+  // A session that changed underneath the page (signed out and in again) gets one retry
+  // with a fresh token rather than a confusing 403.
+  if (r.status === 403 && method !== 'GET' && !opts._retried) {
+    CSRF = null;
+    return api(p, Object.assign({}, opts, { _retried: true }));
+  }
+  if (!r.ok) throw new Error((typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail)) || ('HTTP ' + r.status));
+  return d;
+}
+
+async function boot() {
+  try {
+    const d = await api('/api/admin/db');
+    $('dbfile').textContent = d.database_file +
+      '  (' + (d.size_bytes / 1024).toFixed(0) + ' KB)';
+    $('tables').innerHTML = d.tables.map(t =>
+      `<a onclick="open_('${t.table}')" id="t_${t.table}">
+         <span>${t.table}</span><i>${t.rows ?? '?'}</i></a>`).join('');
+  } catch (e) { err(e.message + ' - are you signed in as the admin?'); }
+}
+
+async function open_(name) {
+  CUR = name; OFF = 0;
+  document.querySelectorAll('#tables a').forEach(a => a.classList.remove('on'));
+  const el = $('t_' + name); if (el) el.classList.add('on');
+  $('sql').value = `SELECT * FROM ${name} LIMIT 50`;
+  await load();
+}
+
+async function load() {
+  if (!CUR) return;
+  err('');
+  try {
+    const d = await api(`/api/admin/db/table/${CUR}?limit=${LIM}&offset=${OFF}`);
+    TOTAL = d.total;
+    $('title').textContent = `${d.table}  -  ${d.total} row(s)`;
+    $('pageinfo').textContent = `showing ${d.rows.length} from offset ${OFF}`;
+    render(d.columns, d.rows);
+  } catch (e) { err(e.message); }
+}
+
+function page(dir) {
+  if (!CUR) return;
+  OFF = Math.max(0, OFF + dir * LIM);
+  if (OFF >= TOTAL) OFF = Math.max(0, TOTAL - LIM);
+  load();
+}
+
+async function runSql() {
+  err('');
+  try {
+    const d = await api('/api/admin/db/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql: $('sql').value })
+    });
+    $('title').textContent = `query - ${d.row_count} row(s)` +
+      (d.truncated ? ' (capped)' : '');
+    $('pageinfo').textContent = '';
+    render(d.columns, d.rows);
+  } catch (e) { err(e.message); }
+}
+
+function render(cols, rows) {
+  if (!rows.length) { $('out').innerHTML = '<p class="small">no rows</p>'; return; }
+  let h = '<table><thead><tr>' + cols.map(c => `<th>${esc(c)}</th>`).join('') +
+          '</tr></thead><tbody>';
+  for (const r of rows) {
+    h += '<tr>' + cols.map(c => `<td>${esc(r[c])}</td>`).join('') + '</tr>';
+  }
+  $('out').innerHTML = h + '</tbody></table>';
+}
+
+boot();
+</script>
+</body>
+</html>

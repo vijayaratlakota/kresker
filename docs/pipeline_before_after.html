@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VoiceStudio pipeline - before and after CSV import</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 9.6pt; line-height: 1.45;
+         color: #14181f; margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 2mm; letter-spacing: -0.3px; }
+  h2 { font-size: 12.5pt; margin: 7mm 0 2.5mm; padding-bottom: 1.2mm;
+       border-bottom: 2px solid #14181f; }
+  h3 { font-size: 10.5pt; margin: 4.5mm 0 1.5mm; }
+  p  { margin: 0 0 2.2mm; }
+  .sub { color: #5b6472; font-size: 9pt; margin-bottom: 4mm; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3.5mm; font-size: 8.6pt; }
+  th, td { border: 1px solid #ccd2da; padding: 1.6mm 2mm; text-align: left;
+           vertical-align: top; }
+  th { background: #eef1f5; font-weight: 600; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 8.3pt; }
+  .stage { border: 1px solid #ccd2da; border-left: 3.5px solid #14181f;
+           padding: 2.5mm 3mm; margin: 0 0 2.5mm; background: #fbfcfd; }
+  .stage h3 { margin-top: 0; }
+  .old  { border-left-color: #9aa3b0; }
+  .new  { border-left-color: #1e7a45; }
+  .gone { border-left-color: #b03636; }
+  .tag { display: inline-block; font-size: 7.4pt; font-weight: 700; padding: 0.5mm 1.6mm;
+         border-radius: 2px; vertical-align: 1px; margin-left: 1.5mm; }
+  .t-same { background: #e6e9ee; color: #3a424e; }
+  .t-new  { background: #d8efe0; color: #14512e; }
+  .t-gone { background: #f6dede; color: #7d2020; }
+  .flow { font-family: Consolas, monospace; font-size: 8.2pt; background: #f4f6f9;
+          border: 1px solid #dde2e9; padding: 2.5mm; margin: 2mm 0 3mm;
+          white-space: pre; line-height: 1.35; }
+  .key { background: #fff8e1; border: 1px solid #e8d9a0; padding: 2.5mm 3mm; margin: 2.5mm 0; }
+  .num { background: #eef4ef; border: 1px solid #c3d8c9; padding: 2.5mm 3mm; margin: 2.5mm 0; }
+  ul, ol { margin: 0 0 2.5mm; padding-left: 5mm; }
+  li { margin-bottom: 1mm; }
+  .pb { page-break-before: always; }
+  .nb { page-break-inside: avoid; }
+  .foot { margin-top: 6mm; padding-top: 2mm; border-top: 1px solid #ccd2da;
+          font-size: 8pt; color: #5b6472; }
+  strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>VoiceStudio dubbing pipeline</h1>
+<div class="sub">What happens at every stage, before and after the CSV import feature.
+Hindi &rarr; Telugu, 12:40 source, 168 lines, 6 speakers. Every number here was measured on
+job <span class="mono">fno0wbe7</span> and its predecessors, 20 Aug 2026.</div>
+
+<div class="flow">THE SIX STAGES  (unchanged in both modes)
+
+  Upload  &rarr;  Prepare  &rarr;  Transcribe  &rarr;  Edit  &rarr;  Generate  &rarr;  Export
+                             ^^^^^^^^^^^^^^^^^^
+                             this is the only part CSV import replaces</div>
+
+<h2>1. The short answer</h2>
+
+<table class="nb">
+<tr><th style="width:16%">Stage</th><th style="width:42%">Before CSV import</th>
+    <th style="width:42%">After CSV import</th></tr>
+<tr><td><strong>Upload</strong></td>
+    <td>Video goes to the server, a job row is created</td>
+    <td><em>Identical</em></td></tr>
+<tr><td><strong>Prepare</strong></td>
+    <td>ffmpeg extracts audio; Demucs splits it into <span class="mono">vocals.wav</span>
+        and <span class="mono">no_vocals.wav</span></td>
+    <td><em>Identical &mdash; and still required.</em> Voice cloning needs
+        <span class="mono">vocals.wav</span></td></tr>
+<tr><td><strong>Transcribe</strong></td>
+    <td>ASR + diarization + Chirp word timings + gap filling + onset snapping + line
+        reshaping. <strong>7 models decide your timeline.</strong></td>
+    <td><strong>All of it skipped.</strong> Your CSV <em>is</em> the timeline. Voice clones are
+        cut immediately</td></tr>
+<tr><td><strong>Translate</strong></td>
+    <td>An LLM translates each line and tries to fit it to the slot</td>
+    <td><strong>Skipped.</strong> Your translation CSV is used verbatim</td></tr>
+<tr><td><strong>Edit</strong></td>
+    <td>You fix mistakes by hand</td>
+    <td><em>Identical</em> (usually nothing to fix)</td></tr>
+<tr><td><strong>Generate</strong></td>
+    <td>Voice cloning &rarr; TTS &rarr; wrong-language check &rarr; place &rarr; mix</td>
+    <td><em>Identical</em>, except placement is forced to
+        <span class="mono">strict_slot</span></td></tr>
+<tr><td><strong>Export</strong></td>
+    <td>Mux video with the dub track</td>
+    <td><em>Identical</em></td></tr>
+</table>
+
+<div class="key"><strong>The one sentence version.</strong> CSV import removes every model that
+was <em>guessing</em> what was said, who said it, and when &mdash; and leaves every model that
+<em>produces</em> the dubbed voice. Stages 3 and 4 become file reads. Stage 5 is untouched.</div>
+
+<h2>2. Before CSV import &mdash; what ran inside "Transcribe"</h2>
+<p>This single button hid seven decisions. Each one could be wrong, and each error fed the next.</p>
+
+<div class="stage old"><h3>3a. Speech recognition</h3>
+<p><span class="mono">gemini-3.7-flash</span> via an OpenAI-compatible proxy transcribes the
+Hindi. Produces the words, but its timestamps drift &mdash; measured up to 157s of drift on a
+12-minute file in published tests, which is why its timings are never used directly.</p></div>
+
+<div class="stage old"><h3>3b. Speaker diarization</h3>
+<p><span class="mono">pyannote</span> decides how many people are speaking and labels each line.
+Capped at 8 speakers (<span class="mono">OMNIVOICE_DIAR_MAX_SPEAKERS</span>). Its known failure
+is collapsing several voices into one &mdash; one job had 75% of all speech assigned to a single
+speaker until it was forced to split.</p></div>
+
+<div class="stage old"><h3>3c. Word timings from Google Chirp 2</h3>
+<p>The audio is sent to Google Speech-to-Text v2 (<span class="mono">chirp_2</span>,
+us-central1, <span class="mono">enableWordTimeOffsets</span>) purely for <em>when</em> each word
+was spoken. Each line is then matched onto that word stream and takes those times.</p>
+<p><strong>Measured problem:</strong> Chirp 2's word onsets run <strong>90&ndash;150 ms early</strong>
+on average, with a tail to &minus;4.3 s. In a 7-language benchmark against constructed ground
+truth it placed only <strong>0&ndash;31%</strong> of line starts inside the acceptable window.</p></div>
+
+<div class="stage old"><h3>3d. Gap filling</h3>
+<p>Speech with no line over it is treated as missing dialogue, so extra lines are invented to
+cover it. One historic bug spread <strong>24 words evenly across a 0.56 s gap</strong>.</p></div>
+
+<div class="stage old"><h3>3e. Line reshaping</h3>
+<p>Lines that look too sparse are split, slivers too short to speak are absorbed into neighbours,
+repeated junk text is cleaned. Your line boundaries change here.</p></div>
+
+<div class="stage old"><h3>3f. Onset snapping</h3>
+<p>Line starts are nudged onto detected speech onsets, up to 0.6 s
+(<span class="mono">SNAP_MAX_S</span>) or 1.5 s in the aligner
+(<span class="mono">MAX_SNAP_S</span>).</p></div>
+
+<div class="stage old"><h3>3g. Quality scoring</h3>
+<p>A "well placed" percentage is computed &mdash; but on the <strong>merged blocks</strong>, before
+the speaker split turns them into the lines that actually get rendered. On one job that reported
+<strong>88.5% on 26 blocks</strong> while the <strong>31 rendered lines scored 53.3%</strong>.
+The number described a timeline that was never used.</p></div>
+
+<div class="stage old"><h3>4. Translation</h3>
+<p>An LLM translates line by line and is asked to keep the result short enough to fit. Character
+count is a weak proxy for duration &mdash; it explains under 10% of the real variance.</p></div>
+
+<h2 class="pb">3. After CSV import &mdash; what replaces it</h2>
+
+<div class="stage new"><h3>3. Import Transcript CSV <span class="tag t-new">REPLACES 3a&ndash;3g</span></h3>
+<p><span class="mono">POST /dub/import/transcript/{job_id}</span> with
+<span class="mono">line_id,speaker,start,end,source_text</span></p>
+<p>Each row becomes one segment. <strong>Nothing is recalculated:</strong> no ASR, no diarization,
+no Chirp call, no gap filling, no reshaping, no snapping. Speaker labels
+<span class="mono">SPK1..SPK6</span> map to Speaker&nbsp;1..6. The job is stamped
+<span class="mono">timing_source = manual-csv-v1</span>.</p>
+<p>Then the file is <strong>validated</strong> and refused outright if it would produce a broken
+dub &mdash; duplicate <span class="mono">line_id</span>, more than 8 speakers, a speaker with under
+3 s of speech, <span class="mono">end &le; start</span>, an ellipsis in the source text, bad UTF-8.
+On refusal <strong>nothing on the job changes.</strong></p>
+<p>Finally the six voice clones are cut from <span class="mono">vocals.wav</span> using each
+speaker's own lines, and the import re-reads the saved row to prove every value survived.</p></div>
+
+<div class="stage new"><h3>4. Import Translation CSV <span class="tag t-new">REPLACES translation</span></h3>
+<p><span class="mono">POST /dub/import/translation/{job_id}</span> with
+<span class="mono">line_id,start,end,target_text,notes</span></p>
+<p>Joined on <span class="mono">line_id</span> &mdash; not on row order, so a file that has drifted
+by one row is <em>detected</em> instead of silently pairing the wrong text with the wrong line.
+Sets the target text only; start, end and source text are never touched.</p></div>
+
+<div class="stage gone"><h3>What is now bypassed by construction</h3>
+<p>The Chirp timing, onset snapping and gap filling code has <strong>no call site in the render
+path at all</strong> &mdash; it only ever ran from the Transcribe endpoints. Importing a CSV
+skips those endpoints, so those stages cannot run even if they are switched on.</p></div>
+
+<h2>4. Stage 5 "Generate" &mdash; identical in both modes</h2>
+<p>This is where the dub is actually produced, and CSV import changes only one thing in it.</p>
+
+<div class="flow">for each line:
+
+  1  reference  cut a few seconds of that speaker's real HINDI voice from vocals.wav,
+                with the Hindi words in it                        [voice cloning input]
+
+  2  synthesis  the engine generates, as ONE continuous stream:
+                     [ Hindi reference words ] -&gt; [ your Telugu line ]
+                and only the Telugu region is kept
+
+  3  check      the produced clip is transcribed. Is it actually Telugu?
+                   NO  -&gt; throw it away and generate again  (this is a "re-render")
+                   YES -&gt; keep it
+
+  4  front      remove leading near-silence so the first syllable lands on your start
+
+  5  place      put the clip at exactly your start value          [strict_slot]
+
+  6  mix        lay it over no_vocals.wav (music and effects kept)</div>
+
+<div class="key"><strong>Why re-rendering happens even though you supplied everything.</strong>
+Step 2 is the reason. The engine speaks the Hindi reference and your Telugu as one breath, and we
+cut where the Telugu should begin. When it is still finishing the Hindi, the kept clip contains
+<strong>Hindi audio</strong> &mdash; despite the text asked for being pure Telugu. Step 3 catches
+that and regenerates.
+<br><br>
+This has nothing to do with your CSV. It is the voice cloner failing and being caught. It is also
+exactly the "Hindi playing before the Telugu line" problem &mdash; and the check fixes it by
+<em>regenerating</em>, never by deleting words (measured: <span class="mono">cut_s: 0.0</span>).</div>
+
+<p><strong>The one change CSV import makes here:</strong> placement is forced to
+<span class="mono">strict_slot</span> with <span class="mono">slot_fit = off</span>.
+<span class="mono">strict_slot</span> does <span class="mono">place_at = start</span>. The other
+modes (<span class="mono">smart_fit</span>, <span class="mono">stretch_video</span>) lay each clip
+on their own running cursor and re-time the video, which would move your timestamps.</p>
+
+<h2 class="pb">5. What the import guarantees, measured</h2>
+
+<div class="num">
+<table style="margin:0">
+<tr><th style="width:52%">Check</th><th style="width:48%">Result</th></tr>
+<tr><td>Timestamps imported vs your CSV</td>
+    <td><strong>168 / 168, worst delta 0.000000000 s</strong></td></tr>
+<tr><td>Source and target text</td><td><strong>168 / 168 byte-identical</strong></td></tr>
+<tr><td>Extra segments invented</td><td><strong>0</strong></td></tr>
+<tr><td>Speakers cloned from their own audio</td><td><strong>6 of 6</strong></td></tr>
+<tr><td>Where each clip landed in the finished track</td>
+    <td><strong>median +0.0 ms, P95 +0.0 ms</strong>, 0 lines off by &gt;100 ms</td></tr>
+<tr><td>Video re-timed?</td><td><strong>No</strong></td></tr>
+<tr><td>Your two overlapping lines (93.1&ndash;94.2 s)</td>
+    <td><strong>Preserved</strong> &mdash; both voices sound together, as authored</td></tr>
+</table>
+</div>
+
+<h2>6. The honest costs of "use my timestamps exactly"</h2>
+<table>
+<tr><th style="width:30%">What</th><th style="width:20%">Measured</th><th style="width:50%">Why</th></tr>
+<tr><td>Lines cut mid-speech</td><td>12 of 50 (24%)</td>
+    <td>When the Telugu needs longer than your slot, it is hard-trimmed at your
+        <span class="mono">end</span>. Nothing compresses it, because compression would move
+        your timings</td></tr>
+<tr><td>Lines using a pooled voice</td><td>6 of 50</td>
+    <td>Their Hindi text mixes Latin and Devanagari, which the reference gate rejects. Right
+        actor, but not that line's own delivery</td></tr>
+<tr><td>Re-renders</td><td>~1 in 3 takes</td>
+    <td>Reference leakage (step 2 above). Root cause: some references describe
+        <strong>1.68&times;</strong> more speech than their clip holds &mdash; a bug in reference
+        cutting, fixable</td></tr>
+<tr><td>Render time</td><td>~40 s per line</td>
+    <td>Dominated by TTS on a T4 plus the re-renders and 2&ndash;3 recogniser calls per line</td></tr>
+</table>
+
+<h2>7. Practical notes</h2>
+<ul>
+<li><strong>Prepare still has to run</strong> before importing. The import cuts voice references
+    from <span class="mono">vocals.wav</span>, which does not exist until separation finishes.
+    Importing before that returns <span class="mono">404 Job not found</span>.</li>
+<li><strong>Do not press Translate All</strong> after importing &mdash; it would overwrite your
+    imported Telugu.</li>
+<li><strong>Do not let a transcription finish</strong> alongside an import. The two can race, and
+    the browser can end up showing a merged timeline (168 of yours plus the AI's). A hard refresh
+    reloads the correct set from the server.</li>
+<li><strong>Set Default Track to Telugu</strong> before exporting, or the MP4 plays Hindi by
+    default even though the Telugu track is present.</li>
+<li><strong>Revert:</strong> <span class="mono">.\revert_csvimport.ps1 -Status</span>, then
+    <span class="mono">-Level ui | router | all</span>.</li>
+</ul>
+
+<div class="foot">
+Sources: measured on jobs <span class="mono">5p113y7e</span>,
+<span class="mono">a2a1615a</span> and <span class="mono">fno0wbe7</span>.
+Full detail in <span class="mono">research/manual_csv_render.md</span>,
+<span class="mono">research/csv_import_feature.md</span> and
+<span class="mono">research/timing_bakeoff_results.md</span>.
+File formats: <span class="mono">docs/INPUT_FORMAT.md</span>; AI prompts:
+<span class="mono">docs/AI_PROMPTS.md</span>.
+</div>
+
+</body>
+</html>

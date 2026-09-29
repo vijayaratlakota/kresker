@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      `viewport-fit=cover` is what makes env(safe-area-inset-*) resolve to anything
+      other than 0px. Without it the CSS for notches and home indicators is present
+      and inert, so the cookie banner's buttons sit under the iPhone home bar and the
+      sidebar's sign-out sits under it too.
+
+      No `maximum-scale` and no `user-scalable=no`: pinch-zoom is an accessibility
+      feature, and disabling it is the most common mobile mistake in the list.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <!-- Paints Android Chrome's address bar to match the page. Without it a #08090b
+         site gets a light grey browser chrome above it, which reads as two apps.
+
+         The value must stay EXACTLY equal to --color-ink-950. iOS Safari 15+ tints the
+         area behind the status bar with this, so any drift between the two shows up as
+         a solid band across the top of the phone that no CSS can reach. -->
+    <meta name="theme-color" content="#08090b" />
+    <!--
+      Full-screen when the site is added to the Home Screen.
+
+      `black-translucent` is the part that matters: the status bar stops having a
+      background of its own and the page paints underneath it, which is how a native
+      app looks. `viewport-fit=cover` above is what then makes
+      env(safe-area-inset-top) report the real inset so the nav can clear the clock.
+
+      HONEST LIMIT: these two do nothing in a normal Safari tab. Apple only honours
+      them for a Home Screen launch, so tapping Share -> Add to Home Screen is what
+      turns this on. Nothing here can remove Safari's own chrome from a tab.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kresker" />
+    <title>Kresker — dub any video into any language</title>
+    <meta
+      name="description"
+      content="Kresker dubs your video into another language in one click, keeping the original speaker's voice."
+    />
+    <!--
+      ICONS, AND WHY THERE IS MORE THAN ONE.
+
+      This used to be the single SVG line below and nothing else, which is why search
+      results showed a blank globe next to the domain: plenty of crawlers still will not
+      read an SVG icon, and with no raster to fall back to they draw a placeholder. The
+      SVG stays first because a browser that understands it gets the sharpest version at
+      any size; the PNGs and the .ico are for everything that does not.
+
+      /favicon.ico is requested BY NAME by crawlers and old Windows surfaces whether it is
+      linked or not, so a file has to exist at that path or the request 404s.
+    -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16" />
+    <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+
+    <!--
+      The Home Screen icon. `apple-mobile-web-app-title` above named the shortcut but
+      nothing supplied a picture for it, so adding the site to an iPhone produced a
+      screenshot of the page instead of the mark. 180px is the size Apple asks for, and it
+      is deliberately not transparent — iOS composites transparency onto black.
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#08090b" />
+
+    <!--
+      WHAT A PASTED LINK LOOKS LIKE. There was no og:image at all, so sharing kresker.com
+      anywhere — WhatsApp, X, LinkedIn, Slack — produced a bare grey card with no logo.
+      That is the one place a logo does the most work and it was the one place it was
+      missing.
+
+      These live in the static HTML on purpose. Google renders JavaScript; link unfurlers
+      do not. Anything added to the document by React is invisible to them, so a preview
+      has to be here or it does not exist.
+
+      Absolute URLs, because a crawler resolves these without a document base.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Kresker" />
+    <meta property="og:url" content="https://kresker.com/" />
+    <meta property="og:title" content="Kresker — dub any video into any language" />
+    <meta
+      property="og:description"
+      content="Kresker dubs your video into another language in one click, keeping the original speaker's voice."
+    />
+    <meta property="og:image" content="https://kresker.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Kresker — dub any video into any language" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Kresker — dub any video into any language" />
+    <meta
+      name="twitter:description"
+      content="Kresker dubs your video into another language in one click, keeping the original speaker's voice."
+    />
+    <meta name="twitter:image" content="https://kresker.com/og.png" />
+    <style>
+      /* Paint the background before React mounts, so a slow first load is a dark
+         page rather than a white flash on a dark site. */
+      html { background: #08090b; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

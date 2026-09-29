@@ -1,0 +1,1382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Getting Kresker Found - the SEO and AI plan, explained simply</title>
+<style>
+  @page { size: A4; margin: 14mm 13mm 16mm 13mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+         font-size: 10.5pt; line-height: 1.6; color: #e6e8ec;
+         background: #08090b; margin: 0; }
+
+  h1 { font-size: 25pt; margin: 0 0 3mm 0; letter-spacing: -0.6pt; color: #fff; }
+  h2 { font-size: 16pt; margin: 0 0 4mm 0; padding: 0 0 2.5mm 0; color: #fff;
+       border-bottom: 1.5pt solid #6366f1; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 7mm 0 2mm 0; page-break-after: avoid; color: #a5b4fc; }
+  p  { margin: 0 0 3mm 0; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+  li { margin: 0 0 1.8mm 0; }
+  b, strong { color: #fff; }
+  em { color: #c7cbd3; }
+
+  code { font-family: Consolas, monospace; font-size: 9.5pt; color: #a5b4fc;
+         background: #16181e; padding: 0.4mm 1.4mm; border-radius: 1mm; }
+  pre { font-family: Consolas, monospace; font-size: 9pt; color: #c7cbd3;
+        background: #101218; border: 0.4pt solid #262b33; border-left: 3pt solid #6366f1;
+        padding: 3mm; margin: 3mm 0; border-radius: 1.5mm; white-space: pre-wrap;
+        page-break-inside: avoid; }
+
+  .page { page-break-after: always; }
+  .last { page-break-after: auto; }
+
+  .lead { font-size: 12pt; color: #a5b4fc; font-weight: 600; margin: 0 0 4mm 0; }
+
+  .box { border: 0.4pt solid #262b33; border-left: 3.5pt solid #6b7480;
+         background: #101218; padding: 3mm 3.5mm; margin: 4mm 0;
+         page-break-inside: avoid; border-radius: 1.5mm; }
+  .box.good { border-left-color: #22c55e; background: #0c1410; }
+  .box.warn { border-left-color: #ef4444; background: #150e0e; }
+  .box.note { border-left-color: #6366f1; background: #0e0f1a; }
+  .box.money { border-left-color: #f59e0b; background: #14100a; }
+  .box .t { font-weight: 700; display: block; margin-bottom: 1.8mm;
+            font-size: 11pt; color: #fff; }
+
+  table { border-collapse: collapse; width: 100%; margin: 3mm 0 4mm 0; font-size: 9.5pt; }
+  th { background: #1c1f27; color: #fff; text-align: left; padding: 2mm;
+       font-size: 9pt; border-bottom: 1pt solid #6366f1; }
+  td { border-bottom: 0.4pt solid #23262e; padding: 2mm; vertical-align: top;
+       color: #d4d8de; }
+  tbody tr:nth-child(even) td { background: #0d0f14; }
+  td.m { font-family: Consolas, monospace; font-size: 9pt; }
+
+  .jargon { background: #141208; border: 0.4pt solid #4a3f18; border-radius: 1.5mm;
+            padding: 2.5mm 3mm; margin: 3.5mm 0; font-size: 10pt;
+            page-break-inside: avoid; }
+  .jargon b { color: #fbbf24; }
+
+  .cover { padding-top: 34mm; page-break-after: always; }
+  .cover .sub { font-size: 14pt; color: #9aa3ad; margin-top: 3mm; line-height: 1.5; }
+  .cover .meta { margin-top: 18mm; font-size: 10pt; color: #6b7480;
+                 border-top: 0.4pt solid #262b33; padding-top: 5mm; }
+
+  .toc { font-size: 11pt; }
+  .toc td { border-bottom: 0.3pt dotted #2b2f38; padding: 2.2mm 2mm; }
+  .toc td.n { width: 11mm; font-weight: 700; color: #6366f1; }
+  .toc td.p { width: 16mm; color: #6b7480; font-size: 9.5pt; }
+  .toc tbody tr:nth-child(even) td { background: transparent; }
+
+  .yes { color: #22c55e; font-weight: 700; }
+  .no  { color: #ef4444; font-weight: 700; }
+  .meh { color: #f59e0b; font-weight: 700; }
+  .big { font-size: 13pt; font-weight: 600; color: #22c55e; }
+
+  .fig { margin: 4mm 0 5mm 0; page-break-inside: avoid; text-align: center; }
+  .fig svg { width: 100%; height: auto; }
+  .cap { font-size: 9pt; color: #6b7480; margin-top: 2mm; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Getting Kresker Found</h1>
+  <div class="sub">How people and AI assistants will discover your website &mdash;<br>
+  what is wrong today, and what to do about it.</div>
+
+  <div class="box good" style="margin-top:14mm">
+    <span class="t">How to read this</span>
+    Nothing here assumes you know anything technical. Every technical word gets a
+    <b style="color:#fbbf24">yellow box</b> the first time it appears, explaining what it
+    is and why it matters to you. Every recommendation says three things:
+    <b>what it does</b>, <b>why we need it</b>, and <b>how it helps us</b>.
+    <br><br>
+    If you read only the coloured boxes, you will still understand the whole plan.
+  </div>
+
+  <div class="box warn">
+    <span class="t">The short version, if you read nothing else</span>
+    Your website is currently <b>telling ChatGPT, Claude and Gemini to go away</b>, and it
+    looks like a <b>blank page</b> to Google. Both are fixable. The first one is a
+    settings change you can do today in about ten minutes. The second is real work,
+    about a week of it. Until both are fixed, nothing else in any SEO plan can work.
+  </div>
+
+  <div class="meta">
+    <div><strong>Written:</strong> 30 August 2026</div>
+    <div><strong>For:</strong> kresker.com</div>
+    <div><strong>Based on:</strong> a live inspection of your website and a full read of
+    your code, plus the &ldquo;Global Dominance Blueprint&rdquo; report you were given.</div>
+  </div>
+</div>
+
+<!-- ============================================ CONTENTS -->
+<div class="page">
+<h2>What's inside</h2>
+<table class="toc">
+<tr><td class="n">&mdash;</td><td><b>Words you will see everywhere</b> &mdash; read this first</td><td class="p">p.3</td></tr>
+<tr><td class="n">1</td><td>What we found, in one page</td><td class="p">p.4</td></tr>
+<tr><td class="n">2</td><td>Problem 1: we are telling the AIs to go away</td><td class="p">p.5</td></tr>
+<tr><td class="n">3</td><td>Problem 2: our website looks empty to Google</td><td class="p">p.7</td></tr>
+<tr><td class="n">4</td><td>What we already do right</td><td class="p">p.9</td></tr>
+<tr><td class="n">5</td><td>Your 43 languages</td><td class="p">p.10</td></tr>
+<tr><td class="n">6</td><td>The report you were given has some wrong facts</td><td class="p">p.11</td></tr>
+<tr><td class="n">7</td><td>Phase 0 &mdash; this week, no code needed</td><td class="p">p.13</td></tr>
+<tr><td class="n">8</td><td>Phase 1 &mdash; make the website readable</td><td class="p">p.16</td></tr>
+<tr><td class="n">9</td><td>Phase 2 &mdash; make it machine-readable</td><td class="p">p.19</td></tr>
+<tr><td class="n">10</td><td>Phase 3 &mdash; languages, content, and the money problem</td><td class="p">p.21</td></tr>
+<tr><td class="n">11</td><td>Phase 4 &mdash; reputation</td><td class="p">p.24</td></tr>
+<tr><td class="n">12</td><td>Honest expectations</td><td class="p">p.25</td></tr>
+<tr><td class="n">13</td><td>What I need from you to start</td><td class="p">p.26</td></tr>
+</table>
+
+<div class="box note" style="margin-top:10mm">
+<span class="t">Why this document exists</span>
+You were given a report called the &ldquo;Global Dominance Blueprint&rdquo;. Most of its
+advice is sound. But it was written <b>without looking at your actual website</b>, so it
+misses the two things that would stop every one of its recommendations from working, and
+it states several things about your product that are not true.
+<br><br>
+This document is the version written <em>after</em> looking.
+</div>
+</div>
+
+<!-- ============================================ WORDS -->
+<div class="page">
+<h2>Words you will see everywhere</h2>
+<p class="lead">Eight words. Once you know these, the rest of the document reads like plain
+English.</p>
+
+<table>
+<tr><th style="width:32mm">Word</th><th>What it means, and why you care</th></tr>
+
+<tr><td><b>Crawler</b><br>(also &ldquo;bot&rdquo;)</td>
+<td>A program that visits websites automatically and reads them. Google has one. So does
+ChatGPT. They are how you get found: <b>if a crawler cannot read your page, that page does
+not exist</b> as far as that service is concerned.</td></tr>
+
+<tr><td><b>Indexing</b></td>
+<td>When a crawler has read your page and filed it away so it can appear in search results.
+&ldquo;Not indexed&rdquo; means invisible.</td></tr>
+
+<tr><td class="m">robots.txt</td>
+<td>A plain text file at <code>kresker.com/robots.txt</code>. It is a
+<b>doormat with rules on it</b>: it tells each crawler which parts of your site it may
+read. Crawlers from real companies obey it. <b>This file is where our first problem is.</b></td></tr>
+
+<tr><td class="m">sitemap.xml</td>
+<td>A list of every page on your site, for crawlers. Like handing someone a table of
+contents instead of making them wander around. You already have one.</td></tr>
+
+<tr><td><b>HTML</b></td>
+<td>The actual text and structure of a web page &mdash; the raw material a crawler reads.
+Think of it as the printed page underneath all the styling.</td></tr>
+
+<tr><td><b>JavaScript</b></td>
+<td>Code that runs <em>inside the visitor's browser</em> to build the page after it
+arrives. Modern websites use a lot of it. The catch: a crawler has to be willing and able
+to run that code before it sees anything. Many are not.
+<b>This is our second problem.</b></td></tr>
+
+<tr><td><b>SEO</b></td>
+<td>Search Engine Optimisation. Everything you do so that Google shows your site higher
+when someone searches.</td></tr>
+
+<tr><td><b>GEO</b></td>
+<td>Generative Engine Optimisation. The same idea, but for AI assistants &mdash; making
+ChatGPT, Claude, Gemini and Perplexity recommend <em>you</em> when someone asks
+&ldquo;what's the best tool to dub a video?&rdquo;. This is newer, less crowded, and
+currently easier to win than Google.</td></tr>
+</table>
+
+<div class="jargon">
+<b>Why GEO matters as much as SEO now.</b> A growing share of people no longer type
+&ldquo;video dubbing tool&rdquo; into Google. They ask ChatGPT. When ChatGPT answers, it
+names two or three tools. Being one of those names is worth more than being result
+number four on Google, because there is no &ldquo;result number four&rdquo; in a
+conversation &mdash; there are only the names it mentions.
+</div>
+
+<div class="box note">
+<span class="t">One more, because it comes up constantly</span>
+<b>Cloudflare</b> is a company that sits between the internet and your server. Every
+visitor to kresker.com goes through Cloudflare first, and Cloudflare passes them on to
+your machine. It makes the site faster and blocks attacks &mdash; and, as you will see in
+a moment, it has been quietly making a decision on your behalf that you did not ask for.
+</div>
+</div>
+
+<!-- ============================================ 1 -->
+<div class="page">
+<h2>1. What we found, in one page</h2>
+<p class="lead">I inspected the live website the way a crawler would, and read through the
+code. Here is the whole picture.</p>
+
+<table>
+<tr><th style="width:52mm">Thing</th><th style="width:20mm">State</th><th>What it means</th></tr>
+
+<tr><td>AI crawlers allowed in?</td><td><span class="no">NO</span></td>
+<td>ChatGPT, Claude and Gemini are explicitly told to stay out. Section 2.</td></tr>
+
+<tr><td>Readable text on the page?</td><td><span class="no">NO</span></td>
+<td>The page is empty until JavaScript runs. Section 3.</td></tr>
+
+<tr><td>Page titles</td><td><span class="no">1 for all</span></td>
+<td>All seven pages share one title. Google cannot tell them apart.</td></tr>
+
+<tr><td>Pages on the site</td><td><span class="meh">7</span></td>
+<td>Home, pricing, about, contact, privacy, terms, disclaimer. That is everything.</td></tr>
+
+<tr><td>Pages in other languages</td><td><span class="no">0</span></td>
+<td>You dub into 43 languages and the website is English only.</td></tr>
+
+<tr><td>A blog, guides, or help pages</td><td><span class="no">none</span></td>
+<td>Nothing for someone searching &ldquo;how do I dub a YouTube video&rdquo; to land on.</td></tr>
+
+<tr><td class="m">llms.txt</td><td><span class="no">missing</span></td>
+<td>A summary file written for AI assistants. Section 9.</td></tr>
+
+<tr><td>Machine-readable product facts</td><td><span class="no">missing</span></td>
+<td>Nothing tells Google or an AI what your prices, languages or features are. Section 9.</td></tr>
+
+<tr><td>Social media accounts</td><td><span class="no">none</span></td>
+<td>Needed before Google will show a branded panel for &ldquo;Kresker&rdquo;.</td></tr>
+
+<tr><td class="m">robots.txt</td><td><span class="yes">good</span></td>
+<td>Well built, apart from what Cloudflare adds to it.</td></tr>
+
+<tr><td class="m">sitemap.xml</td><td><span class="yes">good</span></td>
+<td>Correct and automatic, though thin because there are only 7 pages.</td></tr>
+
+<tr><td>Error and downtime handling</td><td><span class="yes">good</span></td>
+<td>Genuinely better than most sites. Section 4.</td></tr>
+</table>
+
+<div class="box warn">
+<span class="t">The order matters more than the list</span>
+It is tempting to start with the exciting parts &mdash; hundreds of language pages, AI
+optimisation, backlinks. But <b>the first two rows are gates</b>. Building content on a
+site that AI cannot visit and Google sees as blank is like printing beautiful posters and
+storing them in a locked garage. Fix the two gates first. They are sections 2 and 3.
+</div>
+
+<div class="box good">
+<span class="t">The good news</span>
+Neither gate is a deep or expensive problem. The first is a settings toggle. The second is
+about a week of engineering, and I found something in your server setup that makes it
+much cheaper than it would normally be &mdash; explained in section 8.
+</div>
+</div>
+
+<!-- ============================================ 2 -->
+<div class="page">
+<h2>2. Problem 1: we are telling the AIs to go away</h2>
+<p class="lead">Your robots.txt currently contains instructions blocking every major AI
+assistant. You did not write them. Cloudflare added them.</p>
+
+<h3>What I actually found</h3>
+<p>This is a real extract from <code>kresker.com/robots.txt</code> as it is served right
+now. I have removed the long legal preamble and kept the instructions:</p>
+
+<pre>User-agent: *
+Content-Signal: search=yes, ai-train=no, use=reference
+
+User-agent: GPTBot              Disallow: /     &lt;-- ChatGPT
+User-agent: ClaudeBot           Disallow: /     &lt;-- Claude
+User-agent: Google-Extended     Disallow: /     &lt;-- Gemini
+User-agent: CCBot               Disallow: /
+User-agent: Bytespider          Disallow: /
+User-agent: Applebot-Extended   Disallow: /
+User-agent: Amazonbot           Disallow: /
+User-agent: meta-externalagent  Disallow: /</pre>
+
+<div class="jargon">
+<b>Reading that.</b> <code>User-agent</code> names a specific crawler.
+<code>Disallow: /</code> means &ldquo;you may not read anything on this site&rdquo; &mdash;
+the <code>/</code> is the whole website. So each line above is a door closed to one
+company's crawler.
+</div>
+
+<h3>Why this happened without you doing anything</h3>
+<p>Cloudflare has a feature called <b>Managed robots.txt</b>. When it is switched on,
+Cloudflare writes AI-blocking rules into your robots.txt automatically and keeps them
+updated. It exists for a good reason: many website owners are angry that AI companies read
+their content, train on it, and send no visitors back.</p>
+
+<p>For a news site or a blog, that anger makes sense &mdash; their content <em>is</em> the
+product, and an AI that summarises it steals the visit. <b>For you it is backwards.</b>
+Your content is not the product; your dubbing tool is. You <em>want</em> ChatGPT to read
+your pages, because you want it to say &ldquo;try Kresker&rdquo;. Every one of those
+blocked lines is a recommendation you will never get.</p>
+
+<h3>The part that needs your judgement</h3>
+<p>&ldquo;Let the AI read my site&rdquo; is not one decision, it is three. The report you
+were given treats it as one switch. It is not, and the difference is money.</p>
+
+<table>
+<tr><th style="width:30mm">Permission</th><th>What it lets them do</th><th style="width:34mm">My advice</th></tr>
+
+<tr><td><b>Search</b></td>
+<td>Normal Google and Bing indexing, so you appear in search results. Also feeds the AI
+summary box at the top of Google.</td>
+<td><span class="yes">Allow.</span> Already allowed.</td></tr>
+
+<tr><td><b>AI input</b><br>(grounding)</td>
+<td>When someone asks ChatGPT a question, it fetches your page <em>at that moment</em> to
+answer. <b>This is the one that gets you recommended.</b></td>
+<td><span class="yes">Allow.</span> This is the entire point.</td></tr>
+
+<tr><td><b>AI training</b></td>
+<td>Your text becomes part of what a future model is built from. Happens once, invisibly,
+and sends you no visitors ever.</td>
+<td><span class="meh">Your call.</span> Refusing costs you nothing in recommendations.</td></tr>
+</table>
+
+<div class="box note">
+<span class="t">In plain terms</span>
+You can say: <b>&ldquo;Yes, read my site to answer someone's question right now. No, do
+not use it to train your model.&rdquo;</b> That is a coherent, common position, and it
+keeps everything you want while giving away nothing you care about. The blocked lines
+above refuse both, which is what needs changing.
+</div>
+</div>
+
+<div class="page">
+<h2>2. Problem 1, continued &mdash; exactly what to change</h2>
+
+<p class="lead">This is all in the Cloudflare dashboard. No code, no deploy, about ten
+minutes. There are three separate places that can block AI crawlers and you should check
+all three, because turning off only one is a known Cloudflare bug that leaves the block in
+place.</p>
+
+<h3>Step 1 &mdash; the main one</h3>
+<p>Log into Cloudflare, pick the <code>kresker.com</code> domain, then:</p>
+<pre>AI Crawl Control  ->  Directives tab</pre>
+<p>A card at the top tells you whether Cloudflare is managing your robots.txt. <b>Turn
+Managed robots.txt off.</b> This is the setting that wrote all those blocking lines.</p>
+
+<h3>Step 2 &mdash; per-crawler blocks</h3>
+<pre>AI Crawl Control  ->  Crawlers tab</pre>
+<p>Check that no individual crawler is blocked here. This is a separate list from step 1
+and can override it.</p>
+
+<h3>Step 3 &mdash; the older switch</h3>
+<pre>Security  ->  Settings  ->  Block AI bots</pre>
+<p>An older toggle, sometimes labelled &ldquo;AI Scrapers and Crawlers&rdquo;. Set it to
+<b>do not block</b>. While you are there, look for policies split by purpose &mdash;
+<b>Search</b>, <b>Agent</b>, <b>Training</b> &mdash; and set them per the table on the
+previous page.</p>
+
+<h3>How to check it worked</h3>
+<p>Two ways, and do both:</p>
+<ul>
+<li><b>In Cloudflare:</b> on the Directives tab there is a <em>Robots.txt availability</em>
+table. Its Status should change from <code>Cloudflare Managed</code> to
+<code>200 OK</code>. That is Cloudflare confirming it has stopped editing your file.</li>
+<li><b>Tell me, and I will verify from outside.</b> I have already written the checking
+tool. It fetches your live robots.txt and reports whether the injected block is gone. It
+takes about a minute.</li>
+</ul>
+
+<div class="box good">
+<span class="t">What this buys us</span>
+<b>What it does:</b> stops your website turning AI assistants away at the door.<br>
+<b>Why we need it:</b> every GEO tactic in the plan &mdash; the summary file, the product
+facts, the FAQ data &mdash; depends on those crawlers being able to fetch the page. Right
+now they cannot, so none of that work would have any effect.<br>
+<b>How it helps us:</b> this is the single cheapest high-value change in the whole
+document. Ten minutes of clicking, no code, no risk, and it is the difference between
+being invisible to ChatGPT and being eligible to be recommended by it.
+</div>
+
+<div class="box note">
+<span class="t">A useful extra you will see on that same screen</span>
+The Directives tab has an <b>Agent Readiness</b> score that scans your site for the AI
+files described in section 9. It will score badly today &mdash; that is expected, and it
+makes a handy scoreboard to watch as we work through Phase 2.
+</div>
+</div>
+
+<!-- ============================================ 3 -->
+<div class="page">
+<h2>3. Problem 2: our website looks empty to Google</h2>
+<p class="lead">If you switch JavaScript off and load kresker.com, the page contains exactly
+one character of text. Not one sentence &mdash; one character.</p>
+
+<h3>What I measured</h3>
+<p>I fetched your homepage the way a crawler does, and looked at the text before any code
+ran:</p>
+
+<pre>visible text in the page body before JavaScript runs:  1 character
+  contains the word "dubbing"?   NO
+  contains the word "Hindi"?     NO
+  contains the word "free"?      NO
+  contains the word "pricing"?   NO</pre>
+
+<p>And I checked every page. Home, pricing, about, contact, privacy, terms, disclaimer,
+plus made-up addresses that do not exist &mdash; <b>every single one returns the identical
+5,999 bytes.</b> Byte for byte the same file.</p>
+
+<div class="jargon">
+<b>Why this happens.</b> Your website is built as a
+<b>single-page application</b>. That means the server sends one nearly-empty shell, and
+then JavaScript builds the real page inside the visitor's browser. It is a completely
+normal way to build a web <em>app</em> &mdash; and it is exactly right for your dashboard,
+where people upload videos and watch progress. The problem is that your <em>marketing</em>
+pages are built the same way, and marketing pages need to be readable by machines.
+</div>
+
+<h3>Why this is worse than it sounds</h3>
+<p>People assume Google runs JavaScript so it must be fine. Two things are wrong with that.</p>
+
+<p><b>First, Google does run JavaScript, but reluctantly.</b> It puts those pages in a
+separate, slower queue and revisits them less often. A page that needs code to run competes
+against millions of pages that do not. You are choosing the harder path for no benefit.</p>
+
+<p><b>Second, and this is the important one: the AI crawlers do not run JavaScript at
+all.</b> I tested this directly by pretending to be each of them:</p>
+
+<table>
+<tr><th style="width:34mm">Pretending to be</th><th style="width:26mm">Got back</th><th>Meaning</th></tr>
+<tr><td>Googlebot</td><td class="m">5,999 bytes</td><td>Same empty shell as everyone.</td></tr>
+<tr><td>GPTBot (ChatGPT)</td><td class="m">5,999 bytes</td><td>Cannot run code. Sees nothing.</td></tr>
+<tr><td>ClaudeBot</td><td class="m">5,999 bytes</td><td>Cannot run code. Sees nothing.</td></tr>
+<tr><td>PerplexityBot</td><td class="m">5,999 bytes</td><td>Cannot run code. Sees nothing.</td></tr>
+</table>
+
+<div class="box warn">
+<span class="t">The two problems together</span>
+Problem 1 locks the AI crawlers out. Problem 2 means that <b>even after we unlock the
+door, they walk in and find an empty room.</b> Both have to be fixed, in that order, before
+any content work is worth doing.
+</div>
+
+<div class="box note">
+<span class="t">Why the report you were given misses this</span>
+The blueprint tells us to write an <code>llms.txt</code> summary file and add
+machine-readable product facts to the pages. Both are good ideas and both are in this plan.
+But it never asks whether the pages have any readable content to begin with. Writing product
+facts into a page that no crawler can read is decorating a house with no doors.
+</div>
+</div>
+
+<div class="page">
+<h2>3. Problem 2, continued &mdash; what &ldquo;fixed&rdquo; looks like</h2>
+
+<p class="lead">The fix is to have the server send finished, readable pages for the public
+parts of the site, while leaving the dashboard exactly as it is.</p>
+
+<div class="fig">
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#6b7480"/>
+    </marker>
+  </defs>
+
+  <!-- TODAY -->
+  <text x="20" y="26" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#ef4444">TODAY</text>
+  <rect x="20" y="42" width="150" height="70" rx="7" fill="#16181e" stroke="#3a3f49" stroke-width="1.3"/>
+  <text x="95" y="72" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">Crawler asks</text>
+  <text x="95" y="92" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">for /pricing</text>
+
+  <line x1="176" y1="77" x2="246" y2="77" stroke="#6b7480" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="252" y="42" width="180" height="70" rx="7" fill="#16181e" stroke="#3a3f49" stroke-width="1.3"/>
+  <text x="342" y="72" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">Server sends an</text>
+  <text x="342" y="92" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">empty shell</text>
+
+  <line x1="438" y1="77" x2="508" y2="77" stroke="#6b7480" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="514" y="42" width="200" height="70" rx="7" fill="#150e0e" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="614" y="66" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">AI crawler cannot</text>
+  <text x="614" y="84" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">run the code</text>
+  <text x="614" y="102" text-anchor="middle" font-family="Segoe UI, Arial" font-size="13" fill="#f87171">reads nothing</text>
+
+  <!-- AFTER -->
+  <text x="20" y="186" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#22c55e">AFTER PHASE 1</text>
+  <rect x="20" y="202" width="150" height="70" rx="7" fill="#16181e" stroke="#3a3f49" stroke-width="1.3"/>
+  <text x="95" y="232" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">Crawler asks</text>
+  <text x="95" y="252" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#e6e8ec">for /pricing</text>
+
+  <line x1="176" y1="237" x2="246" y2="237" stroke="#6b7480" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="252" y="202" width="180" height="70" rx="7" fill="#0c1410" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="342" y="226" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">Server sends the</text>
+  <text x="342" y="244" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">finished page,</text>
+  <text x="342" y="262" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">text and all</text>
+
+  <line x1="438" y1="237" x2="508" y2="237" stroke="#6b7480" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <rect x="514" y="202" width="200" height="70" rx="7" fill="#0c1410" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="614" y="226" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">Everyone reads it:</text>
+  <text x="614" y="244" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">Google, ChatGPT,</text>
+  <text x="614" y="262" text-anchor="middle" font-family="Segoe UI, Arial" font-size="14" fill="#fff">Claude, Perplexity</text>
+
+  <text x="740" y="240" font-family="Segoe UI, Arial" font-size="13" fill="#6b7480">and the page</text>
+  <text x="740" y="258" font-family="Segoe UI, Arial" font-size="13" fill="#6b7480">still works the</text>
+  <text x="740" y="276" font-family="Segoe UI, Arial" font-size="13" fill="#6b7480">same for people</text>
+</svg>
+<div class="cap">The only change is what arrives first. Visitors see no difference &mdash;
+except the page appears slightly faster, because there is something to read while the code
+loads.</div>
+</div>
+
+<div class="box good">
+<span class="t">What this buys us</span>
+<b>What it does:</b> makes your public pages readable without running any code.<br>
+<b>Why we need it:</b> AI crawlers cannot run code, and Google prefers pages that do not
+need it.<br>
+<b>How it helps us:</b> it is the gate on everything. Language pages, guides, product
+facts, FAQ data &mdash; all of it only counts once the page can be read. It also makes the
+site faster for real visitors, which Google measures and rewards.
+</div>
+
+<p>The options for <em>how</em> to do this, with costs and trade-offs, are in section 8. I
+am not asking you to pick a technical approach here &mdash; only to understand why the work
+is necessary.</p>
+</div>
+
+<!-- ============================================ 4 -->
+<div class="page">
+<h2>4. What we already do right</h2>
+<p class="lead">This section exists so the two problems do not make the site sound broken.
+Several things here are done better than on most commercial websites.</p>
+
+<table>
+<tr><th style="width:44mm">What</th><th>Why it is good</th></tr>
+
+<tr><td><b>robots.txt is generated,<br>not hand-written</b></td>
+<td>It is built fresh by your server every time it is asked, and the sitemap address inside
+it is always correct for wherever the site is running. Hand-written files go stale and point
+at the wrong domain.</td></tr>
+
+<tr><td><b>A safety catch against<br>indexing a test copy</b></td>
+<td>If the site is ever running somewhere that is not the real kresker.com, robots.txt
+automatically switches to &ldquo;index nothing&rdquo;. Getting a test copy into Google is
+genuinely painful to undo, and this makes it impossible by accident.</td></tr>
+
+<tr><td><b>The sitemap cannot drift<br>out of date</b></td>
+<td>There is an automated test that fetches every address in the sitemap and fails if any of
+them is missing. A sitemap listing pages that do not exist is worse than no sitemap, because
+Google reads it as a broken site.</td></tr>
+
+<tr><td><b>Error pages are real errors</b></td>
+<td>A missing page returns a proper &ldquo;not found&rdquo; and is marked
+&ldquo;do not index this&rdquo;. Many sites return a cheerful page with a success code,
+which fills Google with junk entries.</td></tr>
+
+<tr><td><b>Maintenance mode is<br>crawler-aware</b></td>
+<td>When you take the site down for work, visitors get a proper &ldquo;come back
+later&rdquo; with a retry time, so Google waits instead of concluding the site is dead. And
+robots.txt and the sitemap stay reachable throughout &mdash; if those had gone down too,
+Google could drop the whole site.</td></tr>
+
+<tr><td><b>A social share card</b></td>
+<td>Paste a kresker.com link into WhatsApp or LinkedIn and you get a proper preview with the
+logo, not a grey box.</td></tr>
+
+<tr><td><b>Icons done properly</b></td>
+<td>Multiple sizes and formats, so search results show your mark rather than a blank
+globe.</td></tr>
+</table>
+
+<div class="box note">
+<span class="t">One small thing to fix later</span>
+Your sitemap tells Google that every page was <b>last changed today</b>, every single time
+it is asked. That is not deliberate deception &mdash; the pages are compiled into one
+bundle, so there is no real per-page date to report. But a crawler that keeps revisiting and
+finding nothing changed learns to distrust the dates. Small item for Phase 2.
+</div>
+
+<div class="box good">
+<span class="t">Why this matters for the plan</span>
+It means the foundations are sound and we are adding to solid work, not repairing it. The
+two problems are both <b>things that were never built</b> rather than things built wrong
+&mdash; which is a much better position to be in.
+</div>
+</div>
+
+<!-- ============================================ 5 -->
+<div class="page">
+<h2>5. Your 43 languages</h2>
+<p class="lead">You asked which languages we dub into. Here is the definitive list, taken
+from the code rather than from memory.</p>
+
+<h3>Indian languages &mdash; 14</h3>
+<p>Telugu, Hindi, Tamil, Kannada, Malayalam, Bengali, Marathi, Gujarati, Punjabi, Urdu,
+Odia, Assamese, Nepali, Sinhala</p>
+
+<h3>Rest of the world &mdash; 29</h3>
+<p>English, Spanish, French, German, Italian, Portuguese, Dutch, Swedish, Danish,
+Norwegian, Finnish, Polish, Czech, Hungarian, Romanian, Greek, Russian, Ukrainian, Turkish,
+Arabic, Persian, Hebrew, Chinese, Japanese, Korean, Vietnamese, Thai, Indonesian, Malay</p>
+
+<div class="box note">
+<span class="t">Two things about this list worth knowing</span>
+<b>These are languages you dub <em>into</em>.</b> The language a video is
+<em>already</em> in gets detected automatically, and there is no published list of which
+source languages are supported. That matters for the plan: pages like &ldquo;English to
+Hindi&rdquo; imply a grid of from&ndash;to pairs we have never actually stated. We should
+decide what we claim before we publish pages claiming it.
+<br><br>
+<b>Eight languages per job.</b> Someone can pick up to eight at once, not all 43. That is
+deliberate &mdash; each language is a separate dub on one graphics card, so 43 at once would
+be hours of machine time from a single click. Not an SEO problem, but do not let marketing
+copy imply otherwise.
+</div>
+
+<h3>Where your real advantage is</h3>
+<p>The report you were given frames the market as a fight against HeyGen on lip-sync
+quality and ElevenLabs on voice realism. You will not win either fight soon, and you do not
+need to. You have two things they do not:</p>
+
+<table>
+<tr><th style="width:44mm">Advantage</th><th>Why it is worth more than it looks</th></tr>
+
+<tr><td><b>14 Indian languages,<br>including the hard ones</b></td>
+<td>Odia, Assamese, Sinhala and Nepali are barely served by anyone. There is far less
+competition for &ldquo;Odia dubbing&rdquo; than for &ldquo;Spanish dubbing&rdquo;, so you
+can realistically be the top result &mdash; and it is a real audience, not a technicality.</td></tr>
+
+<tr><td><b>YouTube audio tracks</b></td>
+<td>You can produce an audio file that gets added to the creator's <em>existing</em> video
+&mdash; same link, same view count, same comments &mdash; and a viewer whose phone is set
+to Hindi simply hears Hindi. Everyone else's answer is &ldquo;make a second video and
+upload it to a second channel&rdquo;. This is a genuinely different product, and nobody is
+writing about it. It deserves its own page and it is the kind of thing an AI assistant will
+happily explain to someone, because it answers a question they actually have.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">How this shapes the plan</span>
+Chasing &ldquo;best AI dubbing tool&rdquo; head-on means competing with companies that have
+years of reputation. Owning &ldquo;how do I add a Telugu audio track to my YouTube
+video&rdquo; means competing with almost nobody, for a question your product answers
+better than theirs. That is where the early wins are.
+</div>
+</div>
+
+<!-- ============================================ 6 -->
+<div class="page">
+<h2>6. The report you were given has some wrong facts</h2>
+<p class="lead">This section is the most important one to read carefully, because acting on
+the blueprint as written would publish untrue statements about your product.</p>
+
+<div class="box warn">
+<span class="t">Why wrong facts are dangerous here, specifically</span>
+The plan involves publishing a file whose entire purpose is to give AI assistants
+<b>facts</b> about your product. Whatever we put in it, ChatGPT and Claude will repeat as
+truth to anyone who asks. So an error there is not a typo &mdash; it becomes a promise, made
+at scale, that your product does not keep. A customer who signs up because ChatGPT told
+them you do lip-sync has a legitimate complaint.
+</div>
+
+<table>
+<tr><th style="width:56mm">The report says</th><th>The truth, from your code</th></tr>
+
+<tr><td>Free plan gives <b>3 videos a month,
+up to 5 minutes each</b></td>
+<td><b>One minute, once, ever.</b> Not per month &mdash; a lifetime trial. Maximum 60
+seconds per video, and the result is deleted after 1 day. This is the biggest error in the
+report and it is not close.</td></tr>
+
+<tr><td>Core feature: <b>lip-sync</b>,
+&ldquo;facial re-animation&rdquo;</td>
+<td><b>You do not ship lip-sync.</b> I searched the entire codebase &mdash; there is no such
+feature. Publishing this would be advertising something you cannot deliver.</td></tr>
+
+<tr><td>Core feature: <b>subtitle export</b>
+in SRT and VTT files</td>
+<td><b>Not a customer feature.</b> Subtitle options exist in the underlying engine and are
+deliberately switched off. Nobody can download a subtitle file today.</td></tr>
+
+<tr><td>Prices in <b>US dollars</b>,
+free tier listed as <code>$0.00</code></td>
+<td><b>Indian rupees only</b>, and the listed price excludes tax: &#8377;299, &#8377;999 and
+&#8377;1,499 a month, <em>plus 18% GST</em>. So &#8377;299 is really about
+&#8377;353 at checkout.</td></tr>
+
+<tr><td><b>40 languages</b>, including
+Tagalog and Slovak</td>
+<td><b>43</b>, and neither Tagalog nor Slovak is among them. The report also omits Odia,
+Assamese, Nepali, Sinhala and Persian &mdash; several of which are your best
+opportunities.</td></tr>
+
+<tr><td>FAQ data will get you
+<b>rich results in Google</b></td>
+<td>Google <b>retired</b> FAQ rich results for almost all sites in 2023. Still worth adding
+because AI assistants read it &mdash; but do not expect it to change how you look in Google
+search results.</td></tr>
+
+<tr><td>Allowing <code>Google-Extended</code>
+gets you into <b>Google's AI answers</b></td>
+<td>Wrong mechanism. That setting governs Gemini. Google's AI summary box is built from the
+normal search index. Worth allowing, but not for the stated reason.</td></tr>
+
+<tr><td>Allow <b>Bytespider</b></td>
+<td>That is ByteDance's scraper. It sends you no visitors. Allowing it is a choice about
+training data, not a way to get found.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">What to take from this</span>
+The report's <em>architecture</em> advice is largely correct and this plan follows it. Its
+<em>facts</em> about your product are not, because it was written without access to your
+code. <b>Every number and feature we publish must come from your actual system.</b> Section
+9 explains how to make that automatic rather than a thing to remember.
+</div>
+</div>
+
+<!-- ============================================ 7 -->
+<div class="page">
+<h2>7. Phase 0 &mdash; this week, no code needed</h2>
+<p class="lead">Four things, all done through websites you log into. Nothing here touches
+your code or risks breaking the site. Realistically one afternoon.</p>
+
+<h3>7.1 Let the AI crawlers in</h3>
+<p>Covered in full in section 2. Three Cloudflare settings to check, then tell me and I
+verify from outside.</p>
+<p><b>What it does:</b> removes the block on ChatGPT, Claude and Gemini.<br>
+<b>Why we need it:</b> nothing in the AI half of the plan functions while it is there.<br>
+<b>How it helps:</b> makes you eligible to be recommended in AI answers at all.</p>
+
+<h3>7.2 Google Search Console</h3>
+<div class="jargon">
+<b>Google Search Console</b> is a free tool from Google that shows you your own site through
+Google's eyes: which pages it has read, which searches you appeared in, how many people
+clicked, and what is broken. Without it you are guessing. With it, every later decision is
+based on real numbers.
+</div>
+
+<p>Set-up, in order:</p>
+<ol>
+<li>Go to <code>search.google.com/search-console</code> and add a property.</li>
+<li>Choose <b>Domain</b>, not URL prefix, and enter <code>kresker.com</code>. A domain
+property covers <code>www</code>, non-<code>www</code>, and every address in one place
+&mdash; otherwise you end up with four half-empty views of your own site.</li>
+<li>Verify by <b>DNS</b>. Google gives you a line of text to add to your domain settings;
+because your domain is managed at Cloudflare, this is a two-minute copy and paste.</li>
+<li>Submit your sitemap: <code>https://kresker.com/sitemap.xml</code></li>
+<li>Use <b>URL Inspection</b> on the homepage, then click <b>Test live URL</b> and open the
+rendered HTML.</li>
+</ol>
+
+<div class="box note">
+<span class="t">Do step 5 &mdash; it is the most educational five minutes available</span>
+That screen shows you the page exactly as Google received it. You will see Problem 2 with
+Google's own eyes rather than taking my word for it. Keep the screenshot; when Phase 1 is
+done, take the same screenshot again and the difference is the proof it worked.
+</div>
+
+<p><b>What it does:</b> gives you Google's own report on your site.<br>
+<b>Why we need it:</b> we are about to make changes and need to know whether they worked.
+&ldquo;It feels busier&rdquo; is not a measurement.<br>
+<b>How it helps:</b> tells us which searches you already appear in &mdash; usually a
+surprise, and usually the cheapest first content to write.</p>
+
+<div class="box warn">
+<span class="t">Do not go looking for a setting that no longer exists</span>
+Older SEO guides tell you to set a target country in Search Console. Google
+<b>removed</b> that feature in 2022. If you go hunting for it you will waste an hour. The
+modern way to tell Google which country a page is for is described in section 10.
+</div>
+</div>
+
+<div class="page">
+<h2>7. Phase 0, continued</h2>
+
+<h3>7.3 Bing Webmaster Tools</h3>
+<div class="jargon">
+<b>Why Bing matters more than you would think.</b> Bing's own share of search is small. But
+<b>ChatGPT's web search is built on Bing's index.</b> So being properly indexed in Bing is
+not about Bing traffic &mdash; it is part of getting recommended by ChatGPT.
+</div>
+
+<p>Sign up at Bing Webmaster Tools and use <b>Import from Google Search Console</b>. It
+copies your verification and sitemap across in one click, so this is a five-minute job once
+7.2 is done.</p>
+
+<p>While you are at it, turn on <b>IndexNow</b> in Cloudflare. It is a one-click integration
+on your zone that tells Bing immediately whenever a page changes, instead of waiting to be
+re-crawled. Free, and it will matter a lot once we start publishing many pages.</p>
+
+<h3>7.4 Create the social accounts</h3>
+<p>You currently have no X, LinkedIn or YouTube presence. This blocks two things:</p>
+
+<ul>
+<li><b>The branded panel.</b> When someone searches &ldquo;Kresker&rdquo;, Google can show a
+box on the right with your logo, description and links. To build it, Google needs to connect
+your website to official accounts elsewhere. With nothing to connect, there is no panel
+&mdash; and a brand with no panel looks smaller than it is.</li>
+<li><b>The trust check AI assistants do.</b> Before recommending a tool, these systems look
+for corroboration elsewhere on the web. A website that exists nowhere but itself reads as
+unverified.</li>
+</ul>
+
+<p>You do not need to be active on them yet. They need to <em>exist</em>, with the right
+name, logo and a link back to kresker.com. YouTube is the one worth genuinely using later,
+because a video showing a Telugu dub being made is both marketing and the exact kind of
+thing that gets linked to.</p>
+
+<div class="box good">
+<span class="t">Phase 0 summary</span>
+<table style="margin:0">
+<tr><td style="width:52mm"><b>Cloudflare: unblock AI</b></td><td>10 minutes</td><td>Unlocks the whole GEO plan</td></tr>
+<tr><td><b>Search Console</b></td><td>20 minutes</td><td>Gives us measurement</td></tr>
+<tr><td><b>Bing + IndexNow</b></td><td>10 minutes</td><td>Feeds ChatGPT's search</td></tr>
+<tr><td><b>Social accounts</b></td><td>30 minutes</td><td>Unblocks branded search</td></tr>
+</table>
+<b>No code. No deploy. No risk.</b> And section 7.1 alone changes your standing with every
+AI assistant.
+</div>
+
+<div class="box note">
+<span class="t">What I do while you do this</span>
+Nothing in Phase 0 needs me, which is why it goes first &mdash; it is the part that can
+happen in parallel. Once you confirm, I run the verification tool and we both see the same
+result. Then we choose an approach for Phase 1.
+</div>
+</div>
+
+<!-- ============================================ 8 -->
+<div class="page">
+<h2>8. Phase 1 &mdash; make the website readable</h2>
+<p class="lead">This is the engineering work, and it is the one thing on the list that has
+to be done properly. Roughly a week.</p>
+
+<h3>The good news I found in your server</h3>
+<p>Your server is already configured in a way that makes this much cheaper than usual.
+Simplified, the rule it follows is:</p>
+
+<pre>if a real file exists at this address, send it
+otherwise, send the empty shell and let JavaScript sort it out</pre>
+
+<p>Read that again, because it is the whole opportunity: <b>if finished pages exist as real
+files, your server will serve them automatically.</b> No new software, no new service, no
+change to how the site is hosted. We only have to produce the files.</p>
+
+<div class="jargon">
+<b>Pre-rendering</b> means: at the moment we build the website, run each public page once
+ourselves, wait for JavaScript to finish building it, and save the finished result as a
+plain file. The visitor then gets a complete page immediately, and the JavaScript takes over
+afterwards so everything still clicks and works. Same site, same code, better first
+delivery.
+</div>
+
+<h3>The options, in plain terms</h3>
+
+<table>
+<tr><th style="width:36mm">Approach</th><th>What it involves</th><th style="width:20mm">Time</th><th style="width:16mm">Risk</th></tr>
+
+<tr><td><b>A. Pre-render the pages we already have</b><br><em>my recommendation</em></td>
+<td>Add a step at the end of the build that saves a finished copy of each public page.
+Nothing about how the site is written changes. Your server already serves the result.</td>
+<td>3&ndash;5 days</td><td><span class="yes">Low</span></td></tr>
+
+<tr><td><b>B. Rebuild the marketing pages in a tool designed for content</b></td>
+<td>Move the public pages to a different system built for exactly this, and leave the
+dashboard alone. Better if you eventually want hundreds of pages, a blog and proper
+multi-language handling.</td>
+<td>2&ndash;4 weeks</td><td><span class="meh">Medium</span></td></tr>
+
+<tr><td><b>C. Add page-building on the server</b></td>
+<td>Keep one system but restructure how pages are assembled. More disruption than A for a
+similar result today.</td>
+<td>1.5&ndash;3 weeks</td><td><span class="meh">Medium</span></td></tr>
+
+<tr><td><b>D. Move to a different website framework</b></td>
+<td>Rebuild the front of the site on Next.js or similar. A real migration.</td>
+<td>4&ndash;8 weeks</td><td><span class="no">High</span></td></tr>
+
+<tr><td><b>E. Serve special pages to crawlers only</b></td>
+<td>Detect crawlers and give them a different version. Google explicitly discourages it, and
+it adds a fragile piece in front of every visit.</td>
+<td>&mdash;</td><td><span class="no">Avoid</span></td></tr>
+</table>
+
+<div class="box good">
+<span class="t">My recommendation: A now, B later if needed</span>
+<b>Option A</b> gets us from &ldquo;invisible&rdquo; to &ldquo;readable&rdquo; in under a
+week, with no rewrite and no risk to your dashboard. It also does not block Option B: if the
+content plan grows past roughly fifty pages, we move the marketing pages to a content tool
+<em>then</em>, and everything built in Phase 2 carries straight over.
+<br><br>
+Doing B first would be spending three weeks before seeing any benefit. Doing A first means
+benefit next week, and the option to do B stays open.
+</div>
+</div>
+
+<div class="page">
+<h2>8. Phase 1, continued &mdash; what else comes with it</h2>
+
+<h3>Every page gets its own title and description</h3>
+<p>Right now all seven pages share one title. In a search result, the title is the blue
+line people click &mdash; so seven pages competing with one identical title means Google
+cannot tell them apart, and neither can a human scanning results.</p>
+
+<p><b>What it does:</b> gives each page its own headline and summary in search results.<br>
+<b>Why we need it:</b> Google uses the title heavily to decide what a page is about.<br>
+<b>How it helps:</b> your pricing page can rank for &ldquo;video dubbing price&rdquo;
+instead of competing with your own homepage.</p>
+
+<h3>Each page says which address is the real one</h3>
+<div class="jargon">
+<b>A canonical link</b> is a line on the page saying &ldquo;the official address for this
+page is X&rdquo;. It matters because the same page can be reached many ways &mdash; with a
+trailing slash, with tracking codes on the end, with or without <code>www</code>. Without
+this line, Google may treat those as several competing pages and split the credit between
+them.
+</div>
+
+<h3>Share previews become per-page</h3>
+<p>Today, pasting a link to your pricing page anywhere shows a preview claiming to be the
+homepage. Small, but it makes every shared link slightly wrong.</p>
+
+<h3>One decision I will need from you</h3>
+<p>Web addresses can end with a slash or not: <code>/pricing</code> or
+<code>/pricing/</code>. Both work. What matters is <b>picking one and using it
+everywhere</b> &mdash; in the sitemap, in the canonical links, in every internal link. If we
+use both, Google sees two versions of every page and splits the credit.</p>
+
+<p>I will bring you a recommendation with the trade-off. It is a two-minute decision, but it
+has to be made <em>before</em> Google indexes the pages, because changing it afterwards
+means asking Google to re-learn every address.</p>
+
+<div class="box note">
+<span class="t">What Phase 1 does not change</span>
+Your dashboard &mdash; uploading, dubbing, billing, admin &mdash; is untouched. It should
+stay exactly as it is built, because that part genuinely is an app and there is nothing for
+Google to index behind a login anyway. This work is only about the public pages.
+</div>
+</div>
+
+<!-- ============================================ 9 -->
+<div class="page">
+<h2>9. Phase 2 &mdash; make it machine-readable</h2>
+<p class="lead">Now that pages can be read, we make them easy to <em>understand</em>. About
+one to two weeks, and this is where the AI recommendations actually come from.</p>
+
+<h3>9.1 A summary file written for AI</h3>
+<div class="jargon">
+<b>llms.txt</b> is a plain summary of your product, in simple text, at
+<code>kresker.com/llms.txt</code>. It is a new convention that AI assistants increasingly
+look for. Where a human wants a nice page with pictures, an AI wants the facts with nothing
+in the way: what the product is, what it does, what it costs, which languages, what the
+limits are.
+</div>
+
+<p>Two files: a short one, and a longer one with the complete detail for assistants that
+can read a lot at once.</p>
+
+<p><b>What it does:</b> hands AI assistants a clean, correct summary instead of making them
+guess from marketing copy.<br>
+<b>Why we need it:</b> it removes ambiguity. An assistant deciding whether to recommend you
+needs to know you support Telugu and cost &#8377;299. If it has to infer that, it may
+decline to state it &mdash; or state it wrongly.<br>
+<b>How it helps:</b> this is the single highest-value item for getting recommended, and most
+of your competitors have not done it either.</p>
+
+<div class="box warn">
+<span class="t">The one rule for this file, and it is not optional</span>
+<b>It must be generated from your live system, never typed by hand.</b>
+<br><br>
+Your prices, plans, minute limits and language list all already exist in one place in your
+code. The file should be built from those, automatically. If it is hand-written, then the
+first time you change a price, the file starts lying &mdash; and it lies to every AI
+assistant that reads it, for as long as nobody notices.
+<br><br>
+This is exactly how the blueprint's version came to claim a free tier of &ldquo;3 videos a
+month&rdquo;. Hand-written facts drift. Generated facts cannot.
+</div>
+
+<h3>9.2 Product facts embedded in the pages</h3>
+<div class="jargon">
+<b>Structured data</b> is a hidden block on the page that states plainly, in a format both
+Google and AI systems understand: this is an organisation called Kresker; it makes a web
+application; here are its prices; here are the questions people ask and the answers. Humans
+never see it. Machines read it first.
+</div>
+
+<p>We would add blocks describing: your organisation, your website, the application itself
+with real prices in rupees, the navigation trail on each page, and a set of frequently asked
+questions.</p>
+
+<p><b>What it does:</b> converts your marketing pages into facts a machine can quote.<br>
+<b>Why we need it:</b> Google and AI systems build a mental map of &ldquo;things that
+exist&rdquo;. Without this, Kresker is a page of text; with it, Kresker is a known product
+with known properties.<br>
+<b>How it helps:</b> it is how you become a <em>named entity</em> rather than a website
+&mdash; which is what makes a branded search panel and confident AI recommendations
+possible.</p>
+
+<div class="box note">
+<span class="t">Set expectations on the FAQ part</span>
+Adding FAQ data will <b>not</b> change how you look in Google results &mdash; Google removed
+that display in 2023, whatever older guides say. It is still worth doing, because AI
+assistants read it eagerly and it is the cleanest way to answer &ldquo;does Kresker support
+Odia?&rdquo; in a form a machine will repeat.
+</div>
+
+<h3>9.3 Write for machines as well as people</h3>
+<p>Marketing language like &ldquo;the ultimate dubbing experience&rdquo; gives an AI nothing
+to work with. Factual language does: <em>&ldquo;Kresker dubs video into 43 languages
+including 14 Indian languages, keeps the original speaker's voice, and can deliver an audio
+track that attaches to an existing YouTube video.&rdquo;</em></p>
+
+<p>That sentence contains four checkable facts. The marketing version contains none. Both
+read fine to a human; only one can be quoted.</p>
+</div>
+
+<div class="page">
+<h2>9. Phase 2, continued &mdash; small fixes that come with it</h2>
+
+<table>
+<tr><th style="width:46mm">Fix</th><th>Why</th></tr>
+
+<tr><td><b>Honest sitemap dates</b></td>
+<td>Stop claiming every page changed today. A crawler that repeatedly finds nothing changed
+stops trusting the dates and visits less often.</td></tr>
+
+<tr><td><b>Per-page share previews</b></td>
+<td>So a shared pricing link says &ldquo;pricing&rdquo; and not &ldquo;homepage&rdquo;.</td></tr>
+
+<tr><td><b>A languages page</b></td>
+<td>One real page listing all 43 languages with their native names. Cheap to build, and it
+is the page both a person and an AI will look for to check whether you support their
+language. You already have the data.</td></tr>
+
+<tr><td><b>Decide the source-language claim</b></td>
+<td>From section 5: we detect the source automatically and have never stated which sources
+we support. Before publishing &ldquo;English to Hindi&rdquo; pages, decide what is
+true.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">Where you will be after Phase 2</span>
+Readable pages, each with its own identity, stating machine-checkable facts, with a summary
+file written for AI, on a site AI crawlers are allowed to visit.
+<br><br>
+That is the point at which asking ChatGPT &ldquo;what tools dub video into Telugu?&rdquo;
+can plausibly return your name. Everything after this is about <b>scale</b> and
+<b>reputation</b> &mdash; more pages, more languages, more mentions elsewhere. The
+foundation is done.
+</div>
+
+<!-- ============================================ 10 -->
+</div>
+<div class="page">
+<h2>10. Phase 3 &mdash; languages, content, and the money problem</h2>
+<p class="lead">Six to ten weeks. But one business decision has to come first, or this phase
+buys traffic that cannot become customers.</p>
+
+<div class="box money">
+<span class="t">Read this before spending anything on international SEO</span>
+Your prices are in <b>rupees only</b>, and the price shown excludes <b>18% GST</b>, an
+Indian tax.
+<br><br>
+Now picture the visitor this plan is designed to attract. Someone in Brazil searches in
+Portuguese, finds your page, likes it, clicks the price &mdash; and meets
+<b>&#8377;999 plus 18% GST</b>. They do not know what a rupee is worth. They do not know
+what GST is. They do not know whether their card will work or what their bank will charge
+them.
+<br><br>
+<b>Most of them leave.</b> So we would be paying for months of SEO work to deliver visitors
+to a checkout built for a different country.
+</div>
+
+<h3>What to do about it</h3>
+<p>Three options, and this is your decision, not a technical one:</p>
+
+<ol>
+<li><b>Show local currency.</b> Convert and display in the visitor's currency. Best
+experience, most work.</li>
+<li><b>Show USD alongside rupees.</b> Much less work, and removes most of the confusion
+&mdash; people can price a dollar even if they cannot price a rupee.</li>
+<li><b>Focus on India and Indian-language markets first.</b> Genuinely valid: it is where
+your product is strongest, where competition is weakest, and where the checkout already
+works. Then expand once the money side is ready.</li>
+</ol>
+
+<div class="box note">
+<span class="t">My honest view</span>
+Option 3 first, then 1 or 2. Your 14 Indian languages are your real advantage, the payment
+system already fits that market, and you will see results faster there than by fighting for
+Spanish and German. International expansion is a good second move, not a good first one.
+</div>
+
+<h3>Which markets, when you do expand</h3>
+<p>Not 43. Six to eight, chosen where you can win rather than where the volume looks
+biggest.</p>
+
+<table>
+<tr><th style="width:34mm">Market</th><th>Why it is on the list</th></tr>
+<tr><td>Hindi, Telugu, Tamil</td><td>Home advantage, weak competition, payments already work.</td></tr>
+<tr><td>Indonesian</td><td>Huge creator population, very few dubbing tools targeting it.</td></tr>
+<tr><td>Arabic</td><td>Large market, high demand for dubbing, thin competition.</td></tr>
+<tr><td>Portuguese (Brazil)</td><td>Enormous creator economy. More competition, but worth it.</td></tr>
+<tr><td>Spanish</td><td>Biggest prize, hardest fight. Later rather than first.</td></tr>
+</table>
+</div>
+
+<div class="page">
+<h2>10. Phase 3, continued</h2>
+
+<h3>Separate addresses per language</h3>
+<div class="jargon">
+<b>Language folders.</b> The Spanish version of your site lives at
+<code>kresker.com/es/</code>, Hindi at <code>kresker.com/hi/</code>, and so on. This
+matters because it must be <em>one website</em>, not several: everything that builds your
+reputation with Google adds to the same domain. Putting Spanish on a separate address like
+<code>es.kresker.com</code> would split that reputation in half.
+</div>
+
+<div class="jargon">
+<b>hreflang.</b> A set of lines telling Google &ldquo;this page has a Spanish version over
+here, a Hindi version over there&rdquo;. Without it, Google may treat your six language
+versions as six copies of the same thing and pick one, or think you are duplicating content.
+With it, a Spanish searcher gets the Spanish page automatically.
+</div>
+
+<div class="box warn">
+<span class="t">The mistake to avoid: a translated shell over an English product</span>
+Translating your landing page into Spanish while the dashboard, buttons and emails stay
+English produces a bad experience &mdash; someone is convinced in their language, then
+abandoned in yours. It also wastes the traffic we worked to get.
+<br><br>
+So a language market means: translated marketing pages <b>and</b> translated interface.
+That is why six markets is the right number and 43 is not.
+</div>
+
+<h3>Content: pages that answer real questions</h3>
+<p>You have seven pages. Nobody searches for any of them except your pricing. The traffic is
+in questions:</p>
+
+<ul>
+<li>&ldquo;how to add a Telugu audio track to a YouTube video&rdquo; &mdash; your unique
+strength, almost no competition</li>
+<li>&ldquo;dub a video into Hindi free&rdquo;</li>
+<li>&ldquo;how to translate a course video for Indian students&rdquo;</li>
+<li>&ldquo;best way to reach non-English viewers on YouTube&rdquo;</li>
+<li>a page per language: what it costs, what it sounds like, how long it takes</li>
+</ul>
+
+<div class="box warn">
+<span class="t">The real risk in mass-producing pages</span>
+The blueprint suggests generating 500+ pages from a template. <b>Google actively penalises
+this</b> under a policy on mass-produced content, updated in 2024 specifically to target it.
+Hundreds of near-identical pages with only the language name swapped is the exact pattern
+they look for.
+<br><br>
+The test each page must pass: <b>does it contain something that could only exist on this
+page?</b> A real voice sample in that language, real timings, a real example. If the only
+difference is a word substitution, it is a liability rather than an asset.
+<br><br>
+So: fewer, better pages. Thirty genuinely useful ones will outperform five hundred templated
+ones, and they cannot get you penalised.
+</div>
+</div>
+
+<!-- ============================================ 11 -->
+<div class="page">
+<h2>11. Phase 4 &mdash; reputation</h2>
+<p class="lead">Ongoing, and it can start during Phase 1 because it does not depend on the
+website work.</p>
+
+<div class="jargon">
+<b>Backlinks.</b> A link from another website to yours. Google treats them roughly as votes:
+a link from a respected site is a vote that you are worth showing. It is the single largest
+factor in why established competitors outrank newcomers &mdash; they have collected votes for
+years.
+<br><br>
+AI assistants use the same signal differently: before recommending a tool, they check whether
+it is mentioned in places that are not the tool's own website.
+</div>
+
+<h3>What to do, in order of value for effort</h3>
+
+<table>
+<tr><th style="width:44mm">Action</th><th>Why it works</th></tr>
+
+<tr><td><b>Software directories</b><br>G2, Capterra, Product Hunt,
+SourceForge, and the AI-tool lists</td>
+<td>The competitor named in your report grew by getting listed in 300+ of these. Each gives
+you a link, a page that can rank for &ldquo;Kresker alternative&rdquo;, and independent
+corroboration that AI assistants look for. It is tedious rather than difficult, and it can be
+done today.</td></tr>
+
+<tr><td><b>&ldquo;Best AI dubbing tools&rdquo;
+roundup articles</b></td>
+<td>These rank highly and people trust them. Being included puts you next to HeyGen and
+ElevenLabs in the reader's mind, and AI assistants read these lists when asked to
+compare.</td></tr>
+
+<tr><td><b>YouTube videos</b></td>
+<td>Show a real Telugu dub being made. It is marketing, it is a link, and it is proof.
+Doubly valuable because YouTube is where your customers already are.</td></tr>
+
+<tr><td><b>Regional links</b></td>
+<td>To rank in Brazil, links from Brazilian sites help. Indian tech blogs and startup lists
+are the version of this you can act on now.</td></tr>
+
+<tr><td><b>Answer questions in public</b></td>
+<td>Reddit and Quora threads asking how to dub videos. Be genuinely helpful, not
+promotional &mdash; these get read by both people and AI crawlers, and obvious advertising
+gets removed.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">Why this can start now</span>
+Directory listings and roundup outreach do not need the website fixed first &mdash; they need
+a working product and a clear description, both of which you have. This is the one part of
+the plan that can run in parallel with everything else, and it is the part with the longest
+lead time, so starting early is worth more here than anywhere.
+</div>
+</div>
+
+<!-- ============================================ 12 -->
+<div class="page">
+<h2>12. Honest expectations</h2>
+<p class="lead">You asked to rank number one everywhere. I would rather tell you what is
+actually achievable than agree and disappoint you in six months.</p>
+
+<div class="box warn">
+<span class="t">&ldquo;Number one in every country&rdquo; is not something anyone can promise</span>
+Not me, not an agency, not the report you were given. Google's results differ by country, by
+device, by the person searching and by the day. And your competitors are not standing still:
+ElevenLabs and HeyGen have years of accumulated reputation and thousands of sites linking to
+them. Nobody overtakes that in sixteen weeks, and any plan that implies otherwise is selling
+you something.
+</div>
+
+<h3>What is genuinely achievable</h3>
+
+<table>
+<tr><th style="width:30mm">Timeframe</th><th>Realistic outcome</th></tr>
+
+<tr><td><b>1&ndash;2 weeks</b><br>after Phase 0 + 1</td>
+<td>AI assistants can read your site at all. Google sees real pages instead of a blank
+shell. Every page indexed properly. This is not a ranking win yet &mdash; it is going from
+not being in the race to being in it.</td></tr>
+
+<tr><td><b>1&ndash;2 months</b><br>after Phase 2</td>
+<td>Asking ChatGPT, Claude or Perplexity about dubbing into Indian languages can start
+returning your name. <b>This is the fastest real win available</b>, because most competitors
+have not done this work either &mdash; you are not fighting years of accumulated
+reputation, you are competing on who published clear facts.</td></tr>
+
+<tr><td><b>3&ndash;6 months</b><br>after Phase 3</td>
+<td>Top-3 for specific, lower-competition searches &mdash; the Indian languages, the YouTube
+audio-track angle, particular use cases. Real visitors arriving from search for the first
+time.</td></tr>
+
+<tr><td><b>6&ndash;12 months</b><br>with Phase 4 running</td>
+<td>Competitive on broader terms in your chosen markets. Possibly first place on the narrow,
+specific searches. Still not first for &ldquo;AI dubbing tool&rdquo; globally, and that is
+fine &mdash; that search brings tyre-kickers, while &ldquo;dub my video into Odia&rdquo;
+brings customers.</td></tr>
+</table>
+
+<div class="box good">
+<span class="t">The strategic point</span>
+Being first for &ldquo;best AI dubbing tool&rdquo; is a fight you lose slowly and
+expensively. Being <b>the only serious answer</b> for Odia, Assamese, Sinhala and YouTube
+audio tracks is a fight you win quickly and keep. The second is worth more per visitor and
+costs a fraction as much to achieve.
+<br><br>
+Win the searches nobody is defending. Use that revenue to fight for the ones they are.
+</div>
+
+<div class="box money">
+<span class="t">One product issue that will cap all of this</span>
+Your free plan is <b>one minute, once, ever</b>. Competitors offer three videos a month, and
+the report you were given assumed you did too.
+<br><br>
+Every visitor this plan delivers will land on the thinnest free trial in the category. One
+60-second clip is barely enough to judge whether the dub sounds good &mdash; which is the
+one thing a prospective customer needs to find out.
+<br><br>
+I am not telling you to give more away; that is a cost decision only you can make with the
+GPU bill in front of you. But it is worth deciding <b>before</b> the traffic arrives rather
+than after, because the traffic is the expensive part and the trial is what converts it.
+</div>
+</div>
+
+<!-- ============================================ 13 -->
+<div class="page last">
+<h2>13. What I need from you to start</h2>
+<p class="lead">Three decisions and one afternoon of clicking. Then I can begin.</p>
+
+<h3>Do now &mdash; Phase 0, no code</h3>
+<table>
+<tr><th style="width:11mm">#</th><th>Task</th><th style="width:22mm">Time</th></tr>
+<tr><td>1</td><td>Cloudflare: turn off Managed robots.txt, check the two other AI-blocking
+settings (section 2)</td><td>10 min</td></tr>
+<tr><td>2</td><td>Google Search Console: domain property, verify by DNS, submit sitemap</td><td>20 min</td></tr>
+<tr><td>3</td><td>Bing Webmaster Tools: import from Google. Turn on IndexNow in Cloudflare</td><td>10 min</td></tr>
+<tr><td>4</td><td>Create X, LinkedIn and YouTube accounts with the right name and logo</td><td>30 min</td></tr>
+</table>
+
+<p>Then tell me, and I will verify all of it from outside and show you the before-and-after.</p>
+
+<h3>Decisions I need from you</h3>
+
+<table>
+<tr><th style="width:11mm">#</th><th>Decision</th><th>Why it matters now</th></tr>
+
+<tr><td>1</td><td><b>AI training: allow or refuse?</b></td>
+<td>Allowing AI to <em>read</em> your site is clearly right. Allowing it to <em>train</em> on
+your content is a separate choice with no traffic benefit. Refusing is fine. I just need to
+know which, so the settings match your intent.</td></tr>
+
+<tr><td>2</td><td><b>India first, or international from the start?</b></td>
+<td>This decides whether we fix currency and tax display before Phase 3, or focus effort on
+Indian languages where the checkout already works. Section 10.</td></tr>
+
+<tr><td>3</td><td><b>Am I approved to do Phase 1 as Option A?</b></td>
+<td>Pre-render the existing pages, 3&ndash;5 days, low risk, no rewrite. Section 8. If you
+would rather see the alternatives in more detail first, say so and I will write them up.</td></tr>
+</table>
+
+<h3>Two things to check yourself, because only you can</h3>
+<ul>
+<li><b>Lip-sync and subtitle export.</b> The report claims you offer both. Your code says
+otherwise. If I am wrong &mdash; if either exists somewhere I did not find &mdash; tell me,
+because these are exactly the claims we are about to publish as facts.</li>
+<li><b>The free trial.</b> One minute, lifetime. Worth a decision before we start driving
+traffic to it.</li>
+</ul>
+
+<div class="box good">
+<span class="t">Where this leaves us</span>
+Phase 0 costs you an afternoon and unlocks the entire AI half of the plan. Phase 1 is a week
+of my work and unlocks everything else. Nothing after that is blocked by anything technical
+&mdash; it becomes a steady question of how much content and outreach you want to invest in.
+<br><br>
+The two problems in this document are both <b>things never built</b> rather than things built
+wrong. That is the cheapest kind of problem to have, and it means we are adding to sound
+foundations rather than repairing them.
+</div>
+
+<div class="box note">
+<span class="t">If you read nothing else, read this</span>
+<b>1.</b> Your site currently blocks ChatGPT, Claude and Gemini. Ten-minute fix, in
+Cloudflare, no code. Do this first.<br>
+<b>2.</b> Your site looks blank to every crawler. One week of work. Everything else waits on
+it.<br>
+<b>3.</b> Do not publish the report's product facts &mdash; the free tier, lip-sync and
+subtitles are all wrong, and AI assistants will repeat whatever we tell them.<br>
+<b>4.</b> Your best opportunity is not &ldquo;beat HeyGen&rdquo;. It is Indian languages and
+YouTube audio tracks, where almost nobody is competing.
+</div>
+
+<div class="meta" style="margin-top:14mm; border-top:0.4pt solid #262b33; padding-top:5mm;
+     font-size:9.5pt; color:#6b7480">
+Every finding in this document came from inspecting the live kresker.com or reading your
+code, not from assumption. The checking tools are saved in
+<code>deploy/_seo_probe.py</code> and <code>deploy/_seo_probe2.py</code> so any of it can be
+re-verified at any time, by you or by me.
+</div>
+</div>
+
+</body>
+</html>

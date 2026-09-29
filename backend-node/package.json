@@ -1,0 +1,31 @@
+{
+  "name": "kresker-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The kresker.com website backend: accounts, billing, uploads, the job queue and the admin panel. Node.js + Express + TypeScript. Drives the GPU dubbing engine over HTTP; the engine itself is a separate Python service and is not part of this package.",
+  "license": "UNLICENSED",
+  "main": "dist/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js",
+    "watchdog": "node dist/watchdog.js",
+    "test": "tsc -p tsconfig.json --noEmit && node scripts/disclosure_node.js",
+    "verify": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify_all.ps1"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.11.1",
+    "busboy": "1.6.0",
+    "express": "5.2.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/busboy": "1.5.4",
+    "@types/express": "5.0.6",
+    "@types/node": "22.20.4",
+    "typescript": "5.9.3"
+  }
+}
