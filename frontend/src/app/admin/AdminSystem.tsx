@@ -122,9 +122,14 @@ export function AdminSystem() {
           <Card className="p-5 sm:p-6">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-h5">
-                Delivering from {data.storage.backend === 'cloudflare-r2' ? 'Cloudflare R2' : 'local disk'}
+                Delivering from{' '}
+                {data.storage.backend === 'aws-s3'
+                  ? 'AWS S3'
+                  : data.storage.backend === 'cloudflare-r2'
+                    ? 'Cloudflare R2'
+                    : 'local disk'}
               </h2>
-              <Badge tone={data.storage.backend === 'cloudflare-r2' ? 'good' : 'warn'}>
+              <Badge tone={data.storage.backend === 'local-disk' ? 'warn' : 'good'}>
                 {data.storage.backend}
               </Badge>
             </div>
@@ -137,8 +142,9 @@ export function AdminSystem() {
               <KV k="Credentials present" v={data.storage.r2_configured ? 'yes' : 'no'} />
               <KV k="Switched on" v={data.storage.r2_enabled_flag ? 'yes' : 'no'} />
               <KV k="Bucket" v={data.storage.bucket ?? '—'} />
+              {data.storage.region && <KV k="Region" v={data.storage.region} />}
               <KV k="Prefix" v={data.storage.prefix} />
-              <KV k="Videos on R2" v={String(data.storage.jobs_on_r2 ?? 0)} />
+              <KV k="Videos in storage" v={String(data.storage.jobs_on_r2 ?? 0)} />
               <KV k="Videos on local disk only" v={String(data.storage.jobs_local_only ?? 0)} />
               <KV k="Download token lifetime" v={`${data.storage.download_token_ttl_s ?? 0}s`} />
               <KV k="Local output directory" v={data.storage.local_output_dir ?? '—'} />

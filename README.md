@@ -19,8 +19,9 @@ underneath it is open source and not mine:
   runs in Docker on the GPU server. It provides vocal separation (Demucs), speaker diarization
   (pyannote), voice cloning (OmniVoice) and the basic dubbing flow.
 - **What I built:**
-  - the product itself: `backend-node/` (accounts, the job queue and worker, the GPU
-    lifecycle, payments, privacy, admin), `frontend/` (website and dashboard) and `deploy/`;
+  - the product itself: `backend-node/` (the engine wrapper described below, accounts, the
+    job queue and worker, the GPU lifecycle, payments, privacy, admin), `frontend/`
+    (website and dashboard) and `deploy/`;
   - new modules inside the engine, in `_box_src/`: `chirp_wire.py` rebuilds every line's
     timing from Google Chirp 2's word stream, checks it with MMS_FA forced alignment and
     splits lines at speaker changes; `head_language.py` finds and cuts source-language audio
@@ -33,6 +34,134 @@ underneath it is open source and not mine:
   - the measurements behind the model choices: `docs/model_map.html` and `research/`.
 
 `_box_src/` runs as part of VoiceStudio, so it is covered by VoiceStudio's licence, AGPL-3.0.
+
+## The engine wrapper
+
+The backend never calls the AI models directly. Every call goes through one typed
+interface, `Engine`, in [backend-node/src/engine.ts](backend-node/src/engine.ts), which has
+two implementations:
+
+| Implementation | What it is |
+|---|---|
+| `VoiceStudioEngine` | the real client: HTTP and server-sent events to the engine on the GPU server |
+| `FakeEngine` ([src/fakeEngine.ts](backend-node/src/fakeEngine.ts)) | the same interface with no GPU and no cost, for local runs and tests |
+
+`getEngine()` picks one from `VS_ENGINE_MODE` (`fake`, the default, or `real`).
+`VS_ENGINE_URL`, `VS_CONNECT_TIMEOUT_S` and `VS_STREAM_READ_TIMEOUT_S` configure the real
+client. The job worker, [backend-node/src/worker.ts](backend-node/src/worker.ts), is its
+only caller.
+
+### The interface
+
+| Method | What it does | Returns, or raises |
+|---|---|---|
+| `waitReady(timeoutS, pollS, onWait)` | polls the engine until it answers, e.g. while the GPU server boots | the engine's info, or `EngineUnavailable` |
+| `upload(videoPath, jobId)` | streams the video to the engine | the engine's reply |
+| `waitPrep(jobId, timeoutS, pollS, onWait)` | waits for the voice to be separated from the background | the job record, with `vocals_path` |
+| `transcribeStream(jobId, numSpeakers, onProgress)` | transcription, speaker detection and voice cloning, over server-sent events | `[segments, warnings]` |
+| `storedSegments(jobId)` | the engine's own copy of the lines, with the ids it renders by | segments |
+| `detectedSourceLang(jobId)` | the language the engine heard | a code such as `hi`, or `null` |
+| `translate(body)` | translates every line to fit its time slot | `[lines, rawReply]`; `EngineError` on a refusal or a reply in an unknown shape |
+| `generate(jobId, body)` | starts voice cloning and rendering | a task id; `EngineError` if none comes back |
+| `taskStream(taskId, afterSeq)` | render progress over server-sent events; `afterSeq` resumes from a sequence number | an async iterator of events |
+| `hasTrack(jobId, lang)`, `tracks(jobId)` | the real completion signal | whether that language's track exists |
+| `download(jobId, query, dest)` | the finished MP4, written to a `.part` file and renamed when complete | bytes written |
+| `deleteHistory(jobId)` | clears the job's media off the shared GPU server | nothing; never throws |
+
+Errors are typed (`EngineError`, `EngineUnavailable`, and the transport errors
+`ConnectError`, `ConnectTimeout`, `ReadTimeout` and `RemoteProtocolError`), so a failed
+job records exactly why it failed.
+
+### What it adds beyond calling a model API
+
+- **Streaming.** Transcription and rendering report progress as server-sent events. The
+  client decodes them incrementally (a line split across two network reads is still one
+  line), skips anything that is not valid JSON, and keeps the richest segment list it has
+  seen. Timeouts are per read, not per request, because a healthy stream can go quiet for
+  minutes while voices are cloned; a stream that stalls keeps what already arrived.
+- **Checking what the models return, before money is spent on it.** The worker refuses to
+  render when a translation covers fewer lines than the transcript (filling the gaps with
+  the source text would make a dub in the wrong language), when no line has a cloned voice
+  (every line would come out in a stock voice), when line ids do not match the engine's
+  own (each line would lose its speaker's voice), or when the render settings' SHA-256
+  differs from the approved preset. A render counts as finished only when the engine
+  reports that language's track, not when the progress stream says so.
+- **Validated inputs and structured outputs.** Every API route declares its body, query and
+  path parameters. A bad request gets a 422 listing every problem, and the same
+  declarations generate the OpenAPI document (`/openapi.json` and `/docs`, in
+  development). Language codes are checked before they reach a file name or ffmpeg, an
+  upload's size is read from storage instead of trusted from the browser, and each job
+  reports its state, progress and events as JSON.
+- **Reliability.** Requests that start work are never retried automatically, so a slow
+  reply cannot start a second render. The GPU server is started on demand, and the engine
+  must answer before a job begins. A job left behind by a crash is requeued at most twice,
+  then failed. Every failure refunds the customer's minutes through an append-only ledger,
+  so a refund cannot be paid twice. The raw model replies are stored with each job, and a
+  finished dub that cannot be copied to storage is still served from the server's disk.
+- **Provider configuration.** The engine (real or fake) and file storage (AWS S3,
+  Cloudflare R2 or local disk, chosen by which keys the credentials file holds) are
+  settings, not code.
+
+### Usage example
+
+[backend-node/examples/dub.js](backend-node/examples/dub.js) runs one whole dub through the
+interface, in the order the worker uses. With no settings it uses `FakeEngine`:
+
+```bash
+cd backend-node
+npm ci && npm run build
+node examples/dub.js talk.mp4 te
+```
+
+```text
+engine: fake://in-process   job: 0089cdf1
+  separating speech from background (fake)
+  transcribe: fake transcribing line 1/14
+  ...
+  warning: fake engine: transcript is placeholder text
+transcribed 14 lines (stored: 14)
+translated 14 lines, e.g. "[te] [fake source line 1]"
+  rendering 100%
+wrote …/talk.te.mp4 (7693708 bytes)
+```
+
+The core of it:
+
+```js
+const { getEngine, newJobId } = require('./dist/engine');
+
+const engine = getEngine();                        // VS_ENGINE_MODE=fake | real
+const id = newJobId();
+await engine.waitReady();
+await engine.upload('talk.mp4', id);
+await engine.waitPrep(id);
+await engine.transcribeStream(id, null, (ev) => console.log(ev.detail));
+const lines = await engine.storedSegments(id);     // the ids the engine renders by
+const [translated] = await engine.translate({ segments: lines, source_lang: 'hi', target_lang: 'te' });
+const task = await engine.generate(id, { segments: translated, language_code: 'te' });
+for await (const ev of engine.taskStream(task)) if (ev.type === 'done') break;
+if (await engine.hasTrack(id, 'te')) await engine.download(id, { default_track: 'te' }, 'talk.te.mp4');
+```
+
+In production the worker also sends the approved render settings from
+[src/preset.ts](backend-node/src/preset.ts) with `translate` and `generate`.
+
+### Tests
+
+`npm test` in `backend-node/` builds the TypeScript in strict mode, runs the disclosure
+checks, then runs [backend-node/test/](backend-node/test/) with Node's built-in test runner:
+
+- the real client against a stand-in engine that misbehaves the way the real one can: a
+  stream that goes silent, junk lines inside a stream, an HTTP error, a refused
+  translation, a reply in an unknown shape, a render that returns no task id, and an
+  engine that is not running at all;
+- one whole dub through `FakeEngine`;
+- provider configuration for the engine and for storage, including presigned upload URLs
+  compared byte for byte with an independent implementation of AWS's SigV4 signing;
+- an opt-in integration test against a real S3 bucket (`KRESKER_S3_TEST_ENV`).
+
+Today 19 tests pass and the opt-in one is skipped; pointed at the live bucket, it passes
+too.
 
 ## Sample input and output
 
@@ -117,15 +246,16 @@ GPU server on EC2  (VoiceStudio in Docker, extended by _box_src/ and pipeline/: 
    speech/background separation → transcription → translation fitted to each line's
    time slot → voice cloning → rendering the new audio track
 
-Cloudflare R2: direct browser uploads and video delivery · Dodo Payments: subscriptions,
-annual plans and minute top-ups (signed webhooks) · Resend: transactional email
+AWS S3 (Mumbai): browser uploads and finished videos, through short-lived signed links ·
+CloudFront: the homepage demo reel · Dodo Payments: subscriptions, annual plans and minute
+top-ups (signed webhooks) · Resend: transactional email
 ```
 
 ## What is where
 
 | Folder | What it is |
 |---|---|
-| `backend-node/` | The production backend. Node.js 24, Express, TypeScript (strict), better-sqlite3. Routers for auth, jobs, billing, privacy, admin, downloads; the worker, GPU lifecycle, payments, mail. |
+| `backend-node/` | The production backend. Node.js 24, Express, TypeScript (strict), better-sqlite3. The engine wrapper, routers for auth, jobs, billing, privacy, admin and downloads, the worker, GPU lifecycle, payments and mail. Tests in `test/`, a usage example in `examples/`. |
 | `frontend/` | React 18 + Vite 6 + Tailwind CSS 4. Dashboard, admin panel, pricing and legal pages. `scripts/prerender.mjs` renders the public pages to static HTML. |
 | `pipeline/` | My pipeline code and earlier experiments, including Gemini translation with a character budget per line. |
 | `_box_src/` | Code that runs inside VoiceStudio on the GPU server: the modules I added, and VoiceStudio files I changed (AGPL-3.0). |
@@ -145,18 +275,23 @@ annual plans and minute top-ups (signed webhooks) · Resend: transactional email
   uploaded originals on a published schedule.
 - **GPU cost control.** The GPU server is started only when a customer asks for a dub and
   stopped after ten idle minutes, with a systemd watchdog as a second guard.
+- **Files and backups.** Uploads and finished videos sit in a private, encrypted S3 bucket
+  in Mumbai, reached only through short-lived signed links. The database is copied off the
+  server every night to a separate versioned bucket, and the server's backup key can only
+  add copies: it cannot list, read or delete them.
 - **Deploys.** Each backend release is built and smoke-tested on the server beside the live
   service, then swapped in after a database backup, with an automatic revert if it does not
   pass its health check. Website releases need no restart at all.
-- **Testing.** TypeScript strict mode, source-level checks on what the API discloses, and
-  Playwright checks on a 390px phone screen in WebKit (iPhone Safari's engine) and Chromium.
+- **Testing.** TypeScript strict mode, the engine and storage tests above (`npm test`),
+  source-level checks on what the API discloses, and Playwright checks on a 390px phone
+  screen in WebKit (iPhone Safari's engine) and Chromium.
 
 ## Run it locally
 
 ```bash
 # backend - the dubbing engine is simulated, so no GPU, payment keys or email are needed
 cd backend-node
-npm ci && npm run build
+npm ci && npm test        # builds, then runs the checks and tests
 VS_ENGINE_MODE=fake VS_DATA_DIR=./data VS_COOKIE_INSECURE=1 node dist/main.js --port 8099
 
 # website, in a second terminal (proxies /api to the backend on 8099)

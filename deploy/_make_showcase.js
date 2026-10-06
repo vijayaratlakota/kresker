@@ -25,9 +25,12 @@ const SPEC = [
   [
     'backend-node',
     'backend-node',
+    // README.md is not copied: the public one is written from deploy/showcase/ (GENERATED).
     (p) =>
       /^(src|sql|static)\//.test(p) ||
-      /^(package\.json|package-lock\.json|tsconfig\.json|README\.md)$/.test(p) ||
+      /^test\/[^/]+\.js$/.test(p) ||
+      /^examples\/[^/]+\.js$/.test(p) ||
+      /^(package\.json|package-lock\.json|tsconfig\.json)$/.test(p) ||
       p === 'scripts/disclosure_node.js' ||
       /^scripts\/ui_check\/[^/]+\.(js|md)$/.test(p) ||
       p === 'scripts/ui_check/_phone_backend.ps1',
@@ -99,6 +102,7 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-ssr', '.git', '__pycach
 // Written into the export from deploy/showcase/ (they exist only for the export).
 const GENERATED = [
   ['deploy/showcase/README.md', 'README.md'],
+  ['deploy/showcase/backend-node.README.md', 'backend-node/README.md'],
   ['deploy/showcase/gitignore', '.gitignore'],
 ];
 

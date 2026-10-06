@@ -64,8 +64,8 @@ router.get('/privacy/notice', { name: 'notice' }, () => {
     recipients: [
       {
         who: 'Amazon Web Services',
-        what: 'your uploaded video and its transcript, while it is being dubbed',
-        why: 'hosting the processing that produces your dub',
+        what: 'your uploaded video, its transcript and the finished dub',
+        why: 'hosting the processing that produces your dub, and storing the files in Mumbai until they are deleted',
       },
       {
         who: 'A third-party large-language-model translation service',
@@ -80,9 +80,12 @@ router.get('/privacy/notice', { name: 'notice' }, () => {
       // Derived, never hand-written: see billing.paymentRecipient.
       billing.paymentRecipient(),
       {
+        // Storage moved from Cloudflare R2 to AWS S3 in October 2026. Cloudflare still
+        // carries the site's traffic, which includes uploads and downloads that go
+        // through this website rather than straight to storage.
         who: 'Cloudflare',
-        what: 'the finished dubbed video',
-        why: 'storing it and delivering it to you',
+        what: 'the traffic between your browser and this website',
+        why: 'delivering the website and protecting it from attacks',
       },
     ],
     cookies: [{ name: 'vs_session', essential: true, why: 'keeps you signed in', life: `${SESSION_TTL_DAYS} days` }],

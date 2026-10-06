@@ -55,7 +55,7 @@ const BAD_NAMES = /(^|\/)(\.env(\..*)?|.*\.pem|.*\.key|.*\.p12|.*\.pfx|.*\.keyst
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 // Placeholders, the site's own public addresses, and the textbook examples the address
 // normaliser is documented with. Anything else is somebody's real address.
-const EMAIL_OK = /@(example\.(com|org|net)(\.txt)?|kresker\.com|invalid|test|test\.local|localhost|users\.noreply\.github\.com)$|^(git|noreply|no-reply)@|^(john|j\.o\.hn|john\+1|\+tag)@(gmail|googlemail)\.com$|^(you|first\.last)@company\.com$/i;
+const EMAIL_OK = /@(example\.(com|org|net)(\.txt)?|kresker\.com|invalid|test|test\.local|localhost|users\.noreply\.github\.com)$|^(git|noreply|no-reply)@|^(john|j\.o\.hn|john\+1|\+tag)@(gmail|googlemail)\.com$|^(you|first\.last|firstlast)@company\.com$/i;
 const IPV4 = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
 const ARN_ACCOUNT = /arn:aws:[a-z0-9-]*:[a-z0-9-]*:\d{12}:/;
 const BIG = 5 * 1024 * 1024;
@@ -63,6 +63,7 @@ const BIG = 5 * 1024 * 1024;
 function privateOrSpecial(ip) {
   const p = ip.split('.').map(Number);
   if (p.some((n) => n > 255)) return true; // a version number, not an address
+  if (p[0] <= 1) return true; // 1.3.1.1 and friends: package versions in this codebase
   return (
     p[0] === 10 || p[0] === 127 || p[0] === 0 || (p[0] === 169 && p[1] === 254) ||
     (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168) ||

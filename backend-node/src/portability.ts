@@ -263,16 +263,23 @@ export function exportArchive(name: string | null = null): Record<string, unknow
 }
 
 function fileNote(): Record<string, unknown> {
+  // `outputs_on_r2` keeps its name so archives stay readable by either backend; it counts
+  // videos in object storage, whichever provider that is.
   const onR2 = db.scalar('SELECT COUNT(*) FROM jobs WHERE output_r2_key IS NOT NULL', [], 0);
   const local = db.scalar('SELECT COUNT(*) FROM jobs WHERE output_path IS NOT NULL AND output_r2_key IS NULL AND output_deleted_at IS NULL', [], 0);
+  const st = storage.status();
+  const inBucket =
+    st.backend === 'aws-s3'
+      ? `copy the S3 bucket ${String(st.bucket)}: it belongs to this AWS account, so the videos in it move only if the bucket is copied too`
+      : 'nothing to copy: R2 is not in any AWS account, so the videos do not move when the AWS account changes';
   return {
     note: 'this archive contains the database only. Videos are separate.',
-    delivery_backend: storage.status().backend,
+    delivery_backend: st.backend,
     outputs_on_r2: onR2,
     outputs_on_local_disk_only: local,
     action_required: local
       ? `copy ${path.join(DATA_DIR, 'uploads')} and ${path.join(DATA_DIR, 'outputs')} to the new host; ${local} finished video(s) exist only on local disk`
-      : 'nothing to copy: R2 is not in any AWS account, so the videos do not move when the AWS account changes',
+      : inBucket,
   };
 }
 
@@ -430,14 +437,17 @@ export function readiness(): Record<string, unknown> {
     });
   }
   const st = storage.status();
-  if (st.backend !== 'cloudflare-r2') {
+  if (st.backend === 'local-disk') {
     warnings.push({
-      what: 'finished videos are on local disk, not R2',
-      why:
-        'R2 is outside AWS, so with it switched on the videos do not ' +
-        'move at all when the AWS account changes. On local disk they ' +
-        'have to be copied by hand',
-      fix: 'set VS_R2_ENABLED=1 once the credentials are in place',
+      what: 'finished videos are on local disk, not in object storage',
+      why: 'on local disk they have to be copied by hand when the server or the AWS account changes',
+      fix: 'set VS_R2_ENABLED=1 once the storage credentials are in place',
+    });
+  } else if (st.backend === 'aws-s3') {
+    warnings.push({
+      what: `finished videos are in the S3 bucket ${String(st.bucket)}, inside this AWS account`,
+      why: 'they move with the account only if the bucket is copied too',
+      fix: 'copy the bucket to the new account and point STORAGE_BUCKET at the copy',
     });
   }
   const missingTables = TABLES.filter((t) => !db.one("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", [t]));

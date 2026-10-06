@@ -75,6 +75,8 @@ Log ("  --> " + $(if ($stamp -and $entry -match [regex]::Escape($stamp)) { 'agre
 Log "--- strings from this release, as served ---"
 $css = [regex]::Match($idx, 'assets/(index-[A-Za-z0-9_-]+\.css)').Groups[1].Value
 $checks = @(
+  @($entry,                'd3iq4yczk6aieh.cloudfront.net'), # demo reel now on AWS CloudFront
+  @('AdminSystem-*.js',    'AWS S3'),                     # admin storage panel names S3
   @($entry,                'Email us'),                   # maintenance page, no router
   @($css,                  'data-mounted'),               # a toast arrives opaque
   @('JobsTable-*.js',      'video expired'),              # the phone list of dubs

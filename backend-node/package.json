@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/main.js",
     "watchdog": "node dist/watchdog.js",
-    "test": "tsc -p tsconfig.json --noEmit && node scripts/disclosure_node.js",
+    "test": "tsc -p tsconfig.json && node scripts/disclosure_node.js && node --test \"test/*.test.js\"",
     "verify": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify_all.ps1"
   },
   "dependencies": {

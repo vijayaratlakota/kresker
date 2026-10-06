@@ -1,11 +1,19 @@
 /**
- * Where finished videos live: Cloudflare R2 when configured, local disk otherwise. R2
- * because downloads out of it are free at any volume, which is what makes "unlimited
- * downloads" cost nothing beyond storage.
+ * Where browser uploads and finished videos live: an S3-compatible bucket when
+ * configured, local disk otherwise.
  *
- * The S3-compatible calls go through the `aws` CLI with `--endpoint-url`, exactly as the
- * Python backend made them. That keeps one credential path and no SDK; the credentials
- * are passed per call in the environment and never written to a config file.
+ * Two providers, chosen by which keys the credentials file holds. VS_R2_ENV points at
+ * that file and VS_R2_ENABLED switches it on; those names predate S3 support and are kept
+ * so nothing else had to change.
+ *
+ *   AWS S3         STORAGE_BUCKET, STORAGE_REGION, STORAGE_ACCESS_KEY_ID, STORAGE_SECRET_ACCESS_KEY
+ *   Cloudflare R2  R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+ *
+ * S3 wins when a file holds both. Production moved from R2 to S3 in Mumbai in October
+ * 2026, when the Cloudflare account stopped being entitled to R2 ("NotEntitled").
+ *
+ * The calls go through the `aws` CLI. That keeps one credential path and no SDK; the
+ * credentials are passed per call in the environment and never written to a config file.
  */
 import { createHash, createHmac } from 'node:crypto';
 import { existsSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
@@ -27,44 +35,117 @@ function loadCfg(): Record<string, string> {
   return cfg;
 }
 
-export function enabled(): boolean {
-  if (!R2_ENABLED) return false;
-  const c = loadCfg();
-  return ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'].every((k) => Boolean(c[k]));
+export type Provider = 'aws-s3' | 'cloudflare-r2';
+
+/** Everything that differs between the two providers, decided in one place. */
+interface Target {
+  provider: Provider;
+  bucket: string;
+  access: string;
+  secret: string;
+  /** The SigV4 region: the bucket's real region on S3, 'auto' on R2. */
+  region: string;
+  /** The host a presigned URL points at. */
+  host: string;
+  /** R2 is addressed path-style (/bucket/key); S3 virtual-hosted (bucket in the host). */
+  pathStyle: boolean;
+  /** How every CLI call is pointed at the provider. */
+  cli: string[];
 }
 
-export function status(): Record<string, unknown> {
+function target(): Target | null {
   const c = loadCfg();
+  if (c.STORAGE_BUCKET) {
+    const region = c.STORAGE_REGION || 'ap-south-1';
+    const { STORAGE_ACCESS_KEY_ID: access = '', STORAGE_SECRET_ACCESS_KEY: secret = '' } = c;
+    return {
+      provider: 'aws-s3',
+      bucket: c.STORAGE_BUCKET,
+      access,
+      secret,
+      region,
+      host: `${c.STORAGE_BUCKET}.s3.${region}.amazonaws.com`,
+      pathStyle: false,
+      // The standard regional endpoint, so the CLI signs for the bucket's own region and
+      // presigns virtual-hosted URLs, which every S3 bucket accepts.
+      cli: ['--region', region],
+    };
+  }
+  if (c.R2_ACCOUNT_ID) {
+    const host = `${c.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+    return {
+      provider: 'cloudflare-r2',
+      bucket: c.R2_BUCKET ?? '',
+      access: c.R2_ACCESS_KEY_ID ?? '',
+      secret: c.R2_SECRET_ACCESS_KEY ?? '',
+      region: 'auto',
+      host,
+      pathStyle: true,
+      cli: ['--endpoint-url', `https://${host}`],
+    };
+  }
+  return null;
+}
+
+const complete = (t: Target | null): t is Target => Boolean(t && t.bucket && t.access && t.secret);
+
+export function enabled(): boolean {
+  if (!R2_ENABLED) return false;
+  return complete(target());
+}
+
+const NOTES: Record<Provider | 'local-disk', string> = {
+  'aws-s3':
+    'uploads and finished videos are kept in a private S3 bucket in Mumbai; browsers send and fetch them with short-lived signed links, so the bytes do not pass through this server',
+  'cloudflare-r2':
+    'downloads out of R2 are free at any volume, which is what makes unlimited downloads cost nothing beyond storage',
+  'local-disk': "finished videos are served from this server's own disk",
+};
+
+export function status(): Record<string, unknown> {
+  const t = target();
+  const on = enabled() && t !== null;
+  const backend = on ? t.provider : 'local-disk';
   return {
-    backend: enabled() ? 'cloudflare-r2' : 'local-disk',
-    r2_configured: Boolean(c.R2_ACCOUNT_ID),
+    backend,
+    // The old name, kept for the admin screen: "are storage credentials in place".
+    r2_configured: complete(t),
     r2_enabled_flag: R2_ENABLED,
-    bucket: enabled() ? c.R2_BUCKET ?? null : null,
+    bucket: on ? t.bucket : null,
+    region: on ? t.region : null,
     prefix: R2_PREFIX,
     env_file: R2_ENV_FILE,
-    note: 'downloads out of R2 are free at any volume, which is what makes unlimited downloads cost nothing beyond storage',
+    note: NOTES[backend],
   };
 }
 
 function awsEnv(): NodeJS.ProcessEnv {
-  const c = loadCfg();
-  return {
+  const t = target();
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
-    AWS_ACCESS_KEY_ID: c.R2_ACCESS_KEY_ID ?? '',
-    AWS_SECRET_ACCESS_KEY: c.R2_SECRET_ACCESS_KEY ?? '',
-    AWS_DEFAULT_REGION: 'auto',
-    // R2 rejects the newer default checksum headers the CLI adds
+    AWS_ACCESS_KEY_ID: t?.access ?? '',
+    AWS_SECRET_ACCESS_KEY: t?.secret ?? '',
+    AWS_DEFAULT_REGION: t?.region ?? 'auto',
+    // R2 rejects the newer default checksum headers the CLI adds; S3 does not need them
+    // for these single-object calls either.
     AWS_REQUEST_CHECKSUM_CALCULATION: 'when_required',
     AWS_RESPONSE_CHECKSUM_VALIDATION: 'when_required',
+    AWS_PAGER: '',
   };
+  // The two keys above are the whole identity. A session token or a named profile left in
+  // the service's environment (the GPU controls use one) must not be mixed into them.
+  delete env.AWS_SESSION_TOKEN;
+  delete env.AWS_SECURITY_TOKEN;
+  delete env.AWS_PROFILE;
+  return env;
 }
 
-function endpoint(): string {
-  return `https://${loadCfg().R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+function cli(): string[] {
+  return target()?.cli ?? [];
 }
 
 function bucket(): string {
-  return loadCfg().R2_BUCKET ?? '';
+  return target()?.bucket ?? '';
 }
 
 export function keyFor(jobId: string, targetLang: string): string {
@@ -84,10 +165,10 @@ function sizeOf(p: string): number {
  * still deliverable.
  */
 export async function put(local: string, key: string, timeoutS = 3600.0): Promise<Record<string, unknown>> {
-  if (!enabled()) return { ok: false, why: 'R2 not enabled' };
+  if (!enabled()) return { ok: false, why: 'storage not enabled' };
   const cmd = [
     'aws', 's3api', 'put-object',
-    '--endpoint-url', endpoint(),
+    ...cli(),
     '--bucket', bucket(), '--key', key,
     '--body', local,
     '--content-type', 'video/mp4',
@@ -106,7 +187,7 @@ export async function put(local: string, key: string, timeoutS = 3600.0): Promis
 /** A time-limited URL for one object, so the bytes never pass through us. */
 export async function presign(key: string, ttlS = 300): Promise<string | null> {
   if (!enabled()) return null;
-  const cmd = ['aws', 's3', 'presign', `s3://${bucket()}/${key}`, '--endpoint-url', endpoint(), '--expires-in', String(Math.trunc(ttlS))];
+  const cmd = ['aws', 's3', 'presign', `s3://${bucket()}/${key}`, ...cli(), '--expires-in', String(Math.trunc(ttlS))];
   try {
     const p = await procs.run(cmd, { timeoutMs: 120_000, env: awsEnv() });
     if (p.code !== 0) return null;
@@ -118,7 +199,7 @@ export async function presign(key: string, ttlS = 300): Promise<string | null> {
 
 export async function del(key: string): Promise<boolean> {
   if (!enabled()) return false;
-  const cmd = ['aws', 's3api', 'delete-object', '--endpoint-url', endpoint(), '--bucket', bucket(), '--key', key];
+  const cmd = ['aws', 's3api', 'delete-object', ...cli(), '--bucket', bucket(), '--key', key];
   try {
     const p = await procs.run(cmd, { timeoutMs: 300_000, env: awsEnv() });
     return p.code === 0;
@@ -129,7 +210,7 @@ export async function del(key: string): Promise<boolean> {
 
 export async function exists(key: string): Promise<boolean> {
   if (!enabled()) return false;
-  const cmd = ['aws', 's3api', 'head-object', '--endpoint-url', endpoint(), '--bucket', bucket(), '--key', key];
+  const cmd = ['aws', 's3api', 'head-object', ...cli(), '--bucket', bucket(), '--key', key];
   try {
     const p = await procs.run(cmd, { timeoutMs: 120_000, env: awsEnv() });
     return p.code === 0;
@@ -144,7 +225,7 @@ export async function exists(key: string): Promise<boolean> {
  */
 export async function head(key: string): Promise<{ bytes: number; content_type: string | null; etag: string } | null> {
   if (!enabled()) return null;
-  const cmd = ['aws', 's3api', 'head-object', '--endpoint-url', endpoint(), '--bucket', bucket(), '--key', key, '--output', 'json'];
+  const cmd = ['aws', 's3api', 'head-object', ...cli(), '--bucket', bucket(), '--key', key, '--output', 'json'];
   let d: Record<string, any>;
   try {
     const p = await procs.run(cmd, { timeoutMs: 120_000, env: awsEnv() });
@@ -162,9 +243,9 @@ export async function head(key: string): Promise<{ bytes: number; content_type: 
 
 /** Bring one object down to local disk: the other direction of `put`. */
 export async function fetchObject(key: string, local: string, timeoutS = 3600.0): Promise<Record<string, unknown>> {
-  if (!enabled()) return { ok: false, why: 'R2 not enabled' };
+  if (!enabled()) return { ok: false, why: 'storage not enabled' };
   mkdirSync(path.dirname(local), { recursive: true });
-  const cmd = ['aws', 's3api', 'get-object', '--endpoint-url', endpoint(), '--bucket', bucket(), '--key', key, local];
+  const cmd = ['aws', 's3api', 'get-object', ...cli(), '--bucket', bucket(), '--key', key, local];
   let p: procs.RunResult;
   try {
     p = await procs.run(cmd, { timeoutMs: timeoutS * 1000, env: awsEnv() });
@@ -217,20 +298,20 @@ export function stagingKey(userId: number, uploadId: string, filename: string): 
  */
 export function presignPut(key: string, ttlS = 900, _contentType = 'application/octet-stream'): string | null {
   if (!enabled()) return null;
-  const c = loadCfg();
-  const access = c.R2_ACCESS_KEY_ID ?? '';
-  const secret = c.R2_SECRET_ACCESS_KEY ?? '';
-  if (!access || !secret) return null;
+  const t = target();
+  if (!complete(t)) return null;
+  const access = t.access;
+  const secret = t.secret;
 
-  const host = `${c.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  const region = 'auto';
+  const host = t.host;
+  const region = t.region;
   const service = 's3';
   const iso = new Date().toISOString(); // 2026-08-24T10:00:00.000Z
   const stamp = iso.slice(0, 19).replace(/[-:]/g, '') + 'Z';
   const day = stamp.slice(0, 8);
   const scope = `${day}/${region}/${service}/aws4_request`;
 
-  const canonicalUri = '/' + pyQuote(`${bucket()}/${key}`, '/');
+  const canonicalUri = '/' + pyQuote(t.pathStyle ? `${t.bucket}/${key}` : key, '/');
   const params: Record<string, string> = {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': `${access}/${scope}`,
@@ -257,7 +338,7 @@ export function presignPut(key: string, ttlS = 900, _contentType = 'application/
  */
 export async function sweepStaging(olderThanHours = 6.0): Promise<number> {
   if (!enabled()) return 0;
-  const cmd = ['aws', 's3api', 'list-objects-v2', '--endpoint-url', endpoint(), '--bucket', bucket(), '--prefix', `${STAGING_PREFIX}/`, '--output', 'json'];
+  const cmd = ['aws', 's3api', 'list-objects-v2', ...cli(), '--bucket', bucket(), '--prefix', `${STAGING_PREFIX}/`, '--output', 'json'];
   let items: Array<Record<string, any>>;
   try {
     const p = await procs.run(cmd, { timeoutMs: 300_000, env: awsEnv() });

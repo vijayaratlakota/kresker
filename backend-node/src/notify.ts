@@ -70,9 +70,10 @@ function fromHeader(): string {
 // something went wrong; this address receives.
 const MAIL_REPLY_TO = env.VS_MAIL_REPLY_TO ?? 'support@kresker.com';
 
-// The brand mark, a PNG on the public bucket (mail clients refuse SVG). Empty means the
-// header falls back to the wordmark alone.
-const MAIL_LOGO_URL = env.VS_MAIL_LOGO_URL ?? 'https://pub-ecadf7ff6f844029a4030f2afadfb990.r2.dev/v1/brand/kresker-mark.png';
+// The brand mark, a PNG on the public media CDN (mail clients refuse SVG). Empty means
+// the header falls back to the wordmark alone. AWS CloudFront in front of the private
+// kresker-media bucket since October 2026; the old R2 public URL stopped answering.
+const MAIL_LOGO_URL = env.VS_MAIL_LOGO_URL ?? 'https://d3iq4yczk6aieh.cloudfront.net/v1/brand/kresker-mark.png';
 
 const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 

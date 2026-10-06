@@ -404,9 +404,9 @@ export async function runJob(jobId: string): Promise<void> {
       artifact(jobId, 'r2_upload', rep);
       if (rep.ok) {
         r2Key = rep.key as string;
-        db.addEvent(jobId, 'exporting', 99, `in R2 as ${r2Key} (${pyFixed(Number(rep.bytes ?? 0) / 1048576, 1)} MB)`, null, true);
+        db.addEvent(jobId, 'exporting', 99, `in storage as ${r2Key} (${pyFixed(Number(rep.bytes ?? 0) / 1048576, 1)} MB)`, null, true);
       } else {
-        db.addEvent(jobId, 'exporting', 99, `R2 upload failed (${pySlice(pyStr(rep.why ?? null), 160)}); serving from local disk instead`, null, true);
+        db.addEvent(jobId, 'exporting', 99, `storage upload failed (${pySlice(pyStr(rep.why ?? null), 160)}); serving from local disk instead`, null, true);
       }
     }
 

@@ -179,10 +179,12 @@ export interface Health {
 }
 
 export interface StorageStatus {
-  backend: 'local-disk' | 'cloudflare-r2';
+  backend: 'local-disk' | 'aws-s3' | 'cloudflare-r2';
+  /** Storage credentials are in place, for whichever provider (the name predates S3). */
   r2_configured: boolean;
   r2_enabled_flag: boolean;
   bucket: string | null;
+  region?: string | null;
   prefix: string;
   env_file: string;
   note: string;

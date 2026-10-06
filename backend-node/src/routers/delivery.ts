@@ -83,8 +83,12 @@ router.get('/dl/{token}', { name: 'deliver', path: { token: t.str() } }, async (
   const filename = media.downloadFilename(job.target_lang, jobId, 'video');
 
   // Prefer storage: the bytes go straight from the bucket to the customer.
+  //
+  // Checked first rather than assumed. A dub stored before a move to a new bucket (R2 to
+  // S3, October 2026) has a key the current bucket has never seen, and a signed link to
+  // nothing hands the customer an XML error page. Those fall through to the local copy.
   const r2Key = 'output_r2_key' in job ? job.output_r2_key : null;
-  if (r2Key && storage.enabled()) {
+  if (r2Key && storage.enabled() && (await storage.exists(r2Key))) {
     const url = await storage.presign(r2Key, DOWNLOAD_TOKEN_TTL_S);
     if (url) return new RedirectResponse(url, 307);
   }

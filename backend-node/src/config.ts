@@ -141,7 +141,9 @@ export const GPU_USE_PRIVATE_IP = ['1', 'true', 'yes'].includes((env.VS_GPU_USE_
 // signed into a URL as one and reported as one.
 export const UPLOAD_URL_TTL_S = Math.trunc(parseFloat(env.VS_UPLOAD_URL_TTL_S || '900'));
 
-// ── Cloudflare R2, for delivering finished videos ───────────────────────────
+// ── object storage (AWS S3 or Cloudflare R2), for uploads and finished videos ──
+// The VS_R2_* names predate S3 support; storage.ts picks the provider from the keys in
+// the file VS_R2_ENV points at.
 export const R2_ENV_FILE = env.VS_R2_ENV || path.join(env.USERPROFILE || '~', '.secrets', 'r2.env');
 export const R2_ENABLED = (env.VS_R2_ENABLED || '0') === '1';
 export const R2_PREFIX = env.VS_R2_PREFIX || 'dubs';
