@@ -55,11 +55,13 @@ only caller.
 
 | Method | What it does | Returns, or raises |
 |---|---|---|
+| `sysinfo()` | asks the engine for its version and device | the engine's info, or `EngineUnavailable` if it cannot be reached |
 | `waitReady(timeoutS, pollS, onWait)` | polls the engine until it answers, e.g. while the GPU server boots | the engine's info, or `EngineUnavailable` |
 | `upload(videoPath, jobId)` | streams the video to the engine | the engine's reply |
 | `waitPrep(jobId, timeoutS, pollS, onWait)` | waits for the voice to be separated from the background | the job record, with `vocals_path` |
 | `transcribeStream(jobId, numSpeakers, onProgress)` | transcription, speaker detection and voice cloning, over server-sent events | `[segments, warnings]` |
 | `storedSegments(jobId)` | the engine's own copy of the lines, with the ids it renders by | segments |
+| `jobRecord(jobId)` | the engine's stored record for the job | the record, or `null` |
 | `detectedSourceLang(jobId)` | the language the engine heard | a code such as `hi`, or `null` |
 | `translate(body)` | translates every line to fit its time slot | `[lines, rawReply]`; `EngineError` on a refusal or a reply in an unknown shape |
 | `generate(jobId, body)` | starts voice cloning and rendering | a task id; `EngineError` if none comes back |
